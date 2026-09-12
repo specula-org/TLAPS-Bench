@@ -28,6 +28,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [ticket_nested](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/ticket_nested.ivy) | Ivy liveness | – | 2 | 2 |
 | [tlb](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/tlb.ivy) | Ivy liveness | – | 2 | 2 |
 | [split_queue_2_new](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/split_queue_2_new.ivy) | Ivy liveness | – | 1 | 1 |
+| [MongoDB](https://github.com/mongodb-labs/vldb25-dist-txns/blob/74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla) | MongoDB distributed transactions | – | 1 | 1 |
 | [OpenAddressing](https://github.com/lemmy/Examples/tree/mku-OA/specifications/TLC) | OpenAddressing | 1 | 5 | 6 |
 | [Data](https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data) | TLAPS distribution examples | 15 | 9 | 24 |
 | [Consensus](https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus) | TLAPS distribution examples | 13 | 10 | 23 |
@@ -94,4 +95,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 71 examples — 706 proof-completion + 244 proof-from-scratch = 950 tasks.**
+**Total: 72 examples — 706 proof-completion + 245 proof-from-scratch = 951 tasks.**

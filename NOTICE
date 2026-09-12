@@ -16,6 +16,24 @@ LICENSES/Apache-2.0.txt and LICENSES/BSD-2-Clause.txt, respectively.
 
 == Benchmark specifications ==
 
+MongoDB distributed transactions — benchmark group MongoDB
+    MultiShardTxn.tla, Storage.tla, ClientCentric.tla, and Util.tla are copied
+    unchanged from mongodb-labs/vldb25-dist-txns at commit
+    74526c1201109405172eb845413154f547a815ee:
+    https://github.com/mongodb-labs/vldb25-dist-txns/tree/74526c1201109405172eb845413154f547a815ee
+    Artifact for William Schultz and Murat Demirbas, "Design and Modular
+    Verification of Distributed Transactions in MongoDB" (PVLDB 2025).
+    No repository-wide license file is present at this revision; these
+    materials are not relicensed under this repository's MIT license.
+    ClientCentric.tla credits Tim Soethout and identifies its BSD-2-Clause
+    source as https://github.com/cwi-swat/tla-ci. Its license is preserved in
+    LICENSES/tla-ci-BSD-2-Clause.txt (Copyright 2020, ING Bank / CWI), copied
+    from tla-ci at da10d932270879f5e9d21eb3ed192b2d57d99109.
+    Util.tla credits Stephan Merz for PermSeqs, from "TLA+ Case Study:
+    A Resource Allocator" (2004).
+    MultiShardTxnSnapshot.tla is a local theorem wrapper that selects the
+    upstream snapshot settings. No reference proof is supplied.
+
 tlaplus/Examples  —  MIT, except where noted below  —  https://github.com/tlaplus/Examples
     Every benchmark group whose name is prefixed `tlaplus_examples_` (including
     tlaplus_examples_GermanProtocol, the German cache-coherence protocol).

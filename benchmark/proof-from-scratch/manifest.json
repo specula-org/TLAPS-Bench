@@ -261,6 +261,16 @@
       "Euclid/GCD_GCD3Defs.tla"
     ]
   },
+  "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla": {
+    "spec_id": "MongoDB/MultiShardTxnSnapshot.tla",
+    "context": [
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/ClientCentric.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/MultiShardTxn.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Storage.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Util.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrectDefs.tla"
+    ]
+  },
   "OpenAddressing/OpenAddressing_CompleteAsSafety.tla": {
     "spec_id": "OpenAddressing/OpenAddressing.tla",
     "context": [

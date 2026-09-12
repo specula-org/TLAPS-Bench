@@ -574,7 +574,6 @@ def copy_deps_layered(dump, source_path, out_dir, reachable):
 
 
 _IDENTIFIER = re.compile(r"(?<!\\)\b[A-Za-z_]\w*\b")
-_QUALIFIED_USE = re.compile(r"(?<!\\)\b([A-Za-z_]\w*)!([A-Za-z_]\w*)\b")
 
 
 def _text_without_strings(text):
@@ -616,9 +615,12 @@ def _scan_identifiers(text):
     Skip the right-hand name of ``P!Spec``; ``instance_qualified_uses`` seeds it.
     """
     names = set()
-    cleaned = _text_without_strings(text)
+    cleaned = _text_without_strings(strip_comments(text))
     for match in _IDENTIFIER.finditer(cleaned):
-        if match.start() > 0 and cleaned[match.start() - 1] == "!":
+        previous = match.start() - 1
+        while previous >= 0 and cleaned[previous].isspace():
+            previous -= 1
+        if previous >= 0 and cleaned[previous] == "!":
             continue
         tok = match.group(0)
         names.add(tok)
@@ -628,11 +630,34 @@ def _scan_identifiers(text):
 
 
 def instance_qualified_uses(*texts):
-    """``C!Spec`` uses as ``(instance, name)`` pairs, ignoring string literals."""
+    """``C!Spec`` and ``C(args)!Spec`` uses as ``(instance, name)`` pairs."""
 
     uses = set()
     for text in texts:
-        uses.update((inst, name) for inst, name in _QUALIFIED_USE.findall(_text_without_strings(text)))
+        cleaned = _text_without_strings(strip_comments(text))
+        for instance in _IDENTIFIER.finditer(cleaned):
+            cursor = instance.end()
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            if cursor < len(cleaned) and cleaned[cursor] == "(":
+                depth = 1
+                cursor += 1
+                while cursor < len(cleaned) and depth:
+                    if cleaned[cursor] == "(":
+                        depth += 1
+                    elif cleaned[cursor] == ")":
+                        depth -= 1
+                    cursor += 1
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            if cursor >= len(cleaned) or cleaned[cursor] != "!":
+                continue
+            cursor += 1
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            member = _IDENTIFIER.match(cleaned, cursor)
+            if member:
+                uses.add((instance.group(), member.group()))
     return uses
 
 
@@ -727,7 +752,7 @@ def dep_keep_names(
     The closure is over ``(module, name)`` pairs, not bare names: a local
     ``Inv`` in the task must not keep an unrelated ``Inv`` in ``Consensus.tla``
     just because the identifier matches. Cross-module edges come from EXTENDS,
-    unnamed INSTANCE, and ``C!Spec`` uses.
+    unnamed INSTANCE, and ``C!Spec`` / ``C(args)!Spec`` uses.
 
     The closure still spans the whole group, not each file: dependencies
     reference each other (``PaxosProof`` uses ``chosen`` from a sibling), so

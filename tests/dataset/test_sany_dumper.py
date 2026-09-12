@@ -3,10 +3,29 @@
 import importlib
 import subprocess
 
-from dataset.proof_from_scratch.generate import compute_reachable, dump_sany
+from dataset.proof_from_scratch.generate import compute_reachable, dep_keep_names, dump_sany, prune_dep_module
 from tlacore.sany.dump import SanyStatus, run_normalized, run_raw
 
 sany_dump = importlib.import_module("tlacore.sany.dump")
+
+
+def test_parameterized_instance_dependencies_survive_pruning(tmp_path):
+    inner = tmp_path / "Inner.tla"
+    outer = tmp_path / "Outer.tla"
+    inner.write_text("---- MODULE Inner ----\nCONSTANT seed\nValue == seed\nUnusedInvariant == TRUE\n====\n")
+    outer.write_text(
+        "---- MODULE Outer ----\nEXTENDS Naturals\n"
+        "S(p) == INSTANCE Inner WITH seed <- p\n"
+        "Used == S(1 + 0)!Value\nUnused == S(0)!UnusedInvariant\n====\n"
+    )
+
+    kept = dep_keep_names([str(outer), str(inner)], {"Used"}, imported_modules=["Outer"])
+
+    assert kept[str(inner)] == {"Value"}
+    pruned = {path: prune_dep_module(str(path), kept[str(path)]) for path in (outer, inner)}
+    for path, text in pruned.items():
+        path.write_text(text)
+    assert {operator["name"] for operator in dump_sany(str(outer))["operators"]} == {"Used"}
 
 
 def test_named_operator_argument_is_reachable(tmp_path):
