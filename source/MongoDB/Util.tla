@@ -14,7 +14,7 @@ ReduceSet(op(_, _), set, base) ==
 
 ReduceSeq(op(_, _), seq, acc) == FoldFunction(op, acc, seq)
 
-Index(seq, e) ==  CHOOSE i \in 1..Len(seq): seq[i] = e
+Index(seq, e) == min({i \in 1..Len(seq) : seq[i] = e})
 
 SetToSeq(S) == CHOOSE f \in [1..Cardinality(S) -> S] : IsInjective(f)
 

@@ -1,10 +1,10 @@
 {
   "repository": "https://github.com/mongodb-labs/vldb25-dist-txns",
-  "commit": "74526c1201109405172eb845413154f547a815ee",
+  "commit": "7e299d4bc94ef9cdd24e91985944bb1e46623601",
   "files": {
     "MultiShardTxn.tla": "27866ff0c6819a0567a7aff7d1becc31f334ad3070aae84a74bd135cd1e1ebee",
     "Storage.tla": "dfab057d1647dd5ccb951a3e7fb0d0dd4af68f29857ae79450d857e6f2aba6e5",
     "ClientCentric.tla": "07c5d434a7bb3401168fe0cf3d7a793f37e2d2fef04d3a76dbe5855383158ff1",
-    "Util.tla": "5c44cc019dd1682eda92d72a450ee55f1859af84f532dee586771067066fdc95"
+    "Util.tla": "4ad9a142f9682cffe5886791e4687cebc8c4afeb36a77582342aea9572634b4c"
   }
 }

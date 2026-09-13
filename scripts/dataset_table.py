@@ -113,7 +113,7 @@ _GROUP_URL = {
     "two_thread_mutex": "https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs",
     "MongoDB": (
         "https://github.com/mongodb-labs/vldb25-dist-txns/blob/"
-        "74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla"
+        "7e299d4bc94ef9cdd24e91985944bb1e46623601/MultiShardTxn.tla"
     ),
 }
 
