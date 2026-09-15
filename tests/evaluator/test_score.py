@@ -1,7 +1,7 @@
 """Scoring from results.json.
 
-A task passes iff check_verdict == "PASS"; CHEATING/FAIL/TIMEOUT/ERROR all count
-as not passed, and CHEATING is never shown as its own category. Strict
+A task passes iff check_verdict == "PASS"; CHEATING/FAIL/TIMEOUT count as not
+passed, while ERROR is excluded for retry. CHEATING is never shown as its own category. Strict
 specification pass rate is primary; task-level and specification-macro scores
 remain diagnostics. SKIP is dropped from scoring entirely (neither passed nor
 failed) and only reported as a side count.
@@ -21,6 +21,7 @@ from evaluator.score import (
     continuation_budget,
     continuation_interrupted,
     continuation_passed,
+    is_non_genuine,
     is_pass,
     is_pass_with_continuations,
     is_skipped,
@@ -38,8 +39,18 @@ EQUAL = SCORERS["equal"]
 
 
 def _r(verdict, module="M", **kw):
-    d = {"check_verdict": verdict, "module": module, "input_tokens": 0, "output_tokens": 0, "time_secs": 0}
+    d = {
+        "check_verdict": verdict,
+        "module": module,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "agent_time_secs": 0,
+        "grading_time_secs": 0,
+        "time_secs": 0,
+    }
     d.update(kw)
+    if "time_secs" in kw and "agent_time_secs" not in kw and "grading_time_secs" not in kw:
+        d["agent_time_secs"] = kw["time_secs"]
     return d
 
 
@@ -117,8 +128,56 @@ def test_specification_equal_excludes_non_applicable_and_unscored_results():
 
     assert score.specification_macro_pct == 100.0
     assert (score.tasks_passed, score.applicable_tasks) == (1, 1)
-    assert (score.complete_specifications, score.represented_specifications) == (1, 1)
+    assert (score.complete_specifications, score.represented_specifications) == (1, 2)
+    assert score.unresolved_specifications == 1
+    assert score.error_affected_specifications == 1
     assert score.non_applicable_results == 1
+
+
+@pytest.mark.parametrize(
+    ("verdicts", "complete", "failed", "unresolved", "resolved", "pass_pct"),
+    [
+        (("PASS", "ERROR"), 0, 0, 1, 0, 0.0),
+        (("FAIL", "ERROR"), 0, 1, 0, 1, 0.0),
+        (("PASS", "PASS"), 1, 0, 0, 1, 100.0),
+    ],
+)
+def test_specification_state_is_tristate(verdicts, complete, failed, unresolved, resolved, pass_pct):
+    specification_ids = scope_specification_ids(
+        "proof-completion",
+        {"A/One.tla": "A/A.tla", "A/Two.tla": "A/A.tla"},
+    )
+    results = [
+        _r(verdict, mode="proof-completion", benchmark=task)
+        for verdict, task in zip(verdicts, ("A/One.tla", "A/Two.tla"), strict=True)
+    ]
+
+    score = specification_equal_score(results, specification_ids)
+
+    assert score.complete_specifications == complete
+    assert score.failed_specifications == failed
+    assert score.unresolved_specifications == unresolved
+    assert score.resolved_specifications == resolved
+    assert score.specification_pass_pct == pass_pct
+    assert score.error_affected_specifications == (1 if "ERROR" in verdicts else 0)
+
+
+def test_scorecard_reports_unresolved_and_error_affected_specifications():
+    specification_ids = scope_specification_ids(
+        "proof-completion",
+        {"A/One.tla": "A/A.tla", "A/Two.tla": "A/A.tla"},
+    )
+    results = [
+        _r("PASS", mode="proof-completion", benchmark="A/One.tla"),
+        _r("ERROR", mode="proof-completion", benchmark="A/Two.tla"),
+    ]
+    run = {"path": "x", "id": "x", "backend": "codex", "mode": "proof-completion", "results": results}
+
+    card = scorecard_md(run, EQUAL, SPECIFICATION_EQUAL, specification_ids)
+
+    assert "**Specification pass rate (all leaves complete)**: 0/0 resolved specifications (0.0%)" in card
+    assert "**Unresolved specifications**: 1 excluded until their errors are retried" in card
+    assert "**Specifications affected by errors**: 1 contain excluded ERROR/interrupted leaves" in card
 
 
 def test_specification_scorecard_shows_strict_primary_before_secondary_diagnostics():
@@ -139,9 +198,9 @@ def test_specification_scorecard_shows_strict_primary_before_secondary_diagnosti
 
     md = scorecard_md(run, EQUAL, SPECIFICATION_EQUAL, specification_ids)
 
-    primary = "**Specification pass rate (all leaves complete)**: 1/2 specifications (50.0%)"
+    primary = "**Specification pass rate (all leaves complete)**: 1/2 resolved specifications (50.0%)"
     task_level = "**Task-micro pass rate**: 2/3 (66.7%)"
-    specification_macro = "**Specification-macro pass rate**: 75.0% across 2 specifications"
+    specification_macro = "**Specification-macro pass rate**: 75.0% across 2 resolved specifications"
     assert primary in md
     assert task_level in md
     assert specification_macro in md
@@ -220,18 +279,23 @@ def test_scorecard_separates_tokens_time_and_equivalent_cost():
     md = scorecard_md(run, EQUAL, "equal")
 
     assert "**Cost**:" not in md
-    assert "**Tokens**: 5 in / 7 out" in md
+    assert "**Tokens**: 5 input / 7 output" in md
+    assert "**Total agent time**: 4.0s" in md
+    assert "**Total grading time**: 0.0s" in md
     assert "**Total task time**: 4.0s" in md
     assert "**Equivalent cost**: $0.375000" in md
 
 
-def test_scorecard_preserves_legacy_format_without_equivalent_cost():
+def test_scorecard_reports_split_time_without_equivalent_cost():
     results = [_r("PASS", input_tokens=1, output_tokens=2, time_secs=1.25)]
     run = {"path": "x/results.json", "id": "x", "backend": "cursor", "mode": "proof-completion", "results": results}
 
     md = scorecard_md(run, EQUAL, "equal")
 
-    assert "**Cost**: 1 in / 2 out tokens · 1s total" in md
+    assert "**Tokens**: 1 input / 2 output" in md
+    assert "**Total agent time**: 1.2s" in md
+    assert "**Total grading time**: 0.0s" in md
+    assert "**Total task time**: 1.2s" in md
     assert "**Equivalent cost**:" not in md
 
 
@@ -244,6 +308,22 @@ def test_scorecard_does_not_turn_missing_metrics_into_zero():
 
     assert "**Total task time**: unavailable" in md
     assert "**Equivalent cost**: unavailable" in md
+
+
+def test_scorecard_does_not_render_unavailable_structured_tokens_as_zero():
+    result = _r(
+        "PASS",
+        usage={
+            "available": False,
+            "complete": False,
+            "is_lower_bound": False,
+            "input_tokens": None,
+            "output_tokens": None,
+        },
+    )
+    run = {"path": "x/results.json", "id": "x", "backend": "codex", "mode": "proof-completion", "results": [result]}
+
+    assert "**Tokens**: unavailable" in scorecard_md(run, EQUAL, "equal")
 
 
 def test_scorecard_preserves_known_exact_zero_metrics():
@@ -297,7 +377,7 @@ def test_scorecard_excludes_non_genuine_time_and_cost_and_reports_cost_warning()
     md = scorecard_md(run, EQUAL, "equal")
 
     # Preserve the legacy token summary; only time and cost use formal rows.
-    assert "**Tokens**: 2,008 in / 2,000 out" in md
+    assert "**Tokens**: 2,008 input / 2,000 output" in md
     assert "**Total task time**: 1.5s" in md
     assert "**Equivalent cost**: $0.150000" in md
     assert "## Cost warnings" in md
@@ -353,7 +433,7 @@ def test_comparison_preserves_legacy_columns_without_equivalent_cost():
 
     assert "| Time |" in md
     assert "Equivalent cost" not in md
-    assert "| legacy | cursor | proof-completion | 100.0% | 1/1 | 0/0 | 1s |" in md
+    assert "| legacy | cursor | proof-completion | 100.0% | 1/1 | 0/0 | 1.2s |" in md
 
 
 def test_mixed_comparison_excludes_cursor_infra_accounting():
@@ -377,7 +457,9 @@ def test_mixed_comparison_excludes_cursor_infra_accounting():
 
     md = comparison_md(runs, EQUAL, "equal")
 
-    assert "| deferred | cursor | proof-completion | 100.0% | 1/1 (+1 infra-cut) | 0/0 | 2.0s | unavailable |" in md
+    assert (
+        "| deferred | cursor | proof-completion | 100.0% | 1/1 (+1 error/interrupted) | 0/0 | 2.0s | unavailable |"
+    ) in md
 
 
 def test_load_run_from_dir(tmp_path):
@@ -413,10 +495,7 @@ def test_all_skip_is_zero_not_crash():
     assert n_skipped(results) == 2
 
 
-def test_non_genuine_terminations_are_excluded_either_verdict():
-    # A startup failure can leave a no-op workspace that grades PASS on a
-    # defective task. INFRA_ERROR / QUOTA_EXHAUSTED results must count neither
-    # as passes nor failures; they need a rerun.
+def test_verified_pass_after_interruption_counts_but_unresolved_results_do_not():
     results = [
         _r("PASS"),
         _r("FAIL"),
@@ -425,8 +504,8 @@ def test_non_genuine_terminations_are_excluded_either_verdict():
         _r("ERROR", termination_reason="QUOTA_EXHAUSTED"),
     ]
     pct, n_pass, n_total = weighted_score(results, EQUAL)
-    assert (n_pass, n_total, pct) == (1, 2, 50.0)
-    assert n_non_genuine(results) == 3
+    assert (n_pass, n_total, pct) == (2, 3, pytest.approx(200 / 3))
+    assert n_non_genuine(results) == 2
 
 
 def test_ok_timeout_and_legacy_results_stay_scored():
@@ -443,11 +522,11 @@ def test_ok_timeout_and_legacy_results_stay_scored():
 
 
 def test_scorecard_reports_non_genuine_count():
-    results = [_r("PASS"), _r("PASS", termination_reason="INFRA_ERROR")]
+    results = [_r("PASS"), _r("ERROR")]
     run = {"path": "x", "id": "r", "backend": "copilot", "mode": "proof-completion", "results": results}
     card = scorecard_md(run, EQUAL, "equal")
     assert "**Pass rate**: 1/1 (100.0%)" in card
-    assert "1 infra/quota-cut (excluded — re-run)" in card
+    assert "1 error/interrupted (excluded — re-run)" in card
 
 
 def test_scorecard_with_no_formal_results_reports_accounting_unavailable():
@@ -538,6 +617,28 @@ def test_continuation_interrupted_only_for_unresolved_cut_chains():
     assert not continuation_interrupted(_r("FAIL"))  # no rounds recorded
 
 
+def test_partial_module_progress_after_interruption_requires_retry():
+    result = _r(
+        "FAIL",
+        termination_reason="QUOTA_EXHAUSTED",
+        graded_after_interruption=True,
+        module_result={"complete": False},
+    )
+
+    assert is_non_genuine(result)
+
+
+def test_invalid_module_submission_after_interruption_requires_retry():
+    result = _r(
+        "FAIL",
+        termination_reason="INFRA_ERROR",
+        invalid_submission_after_interruption=True,
+    )
+
+    assert is_non_genuine(result)
+    assert continuation_interrupted(_r("FAIL", continuations=[{"round": 1, **result}]))
+
+
 def test_continuation_budget_uniform_or_none():
     assert continuation_budget([_r("FAIL", max_continuations=3), _r("PASS")]) == 3
     assert continuation_budget([_r("FAIL", max_continuations=3), _r("FAIL", max_continuations=5)]) is None
@@ -565,7 +666,7 @@ def test_scorecard_labels_continuation_budget_and_excludes_cut_chains():
     assert "**Pass rate**: 0/3 (0.0%)" in md  # the cut chain's genuine first FAIL stays scored
     assert (
         "**Task-micro pass rate with continuations (≤3)**: 1/2 (50.0%) — 1 recovered by continuation "
-        "(pass@1 above is first-attempt only) · 1 chain(s) infra/quota-cut (excluded — re-run)"
+        "(pass@1 above is first-attempt only) · 1 chain(s) interrupted (excluded — re-run)"
     ) in md
 
 
@@ -646,8 +747,8 @@ def test_main_single_prints_scorecard(tmp_path, monkeypatch, capsys):
     assert main() == 0
     out = capsys.readouterr().out
     assert "# Scorecard" in out
-    assert "**Specification pass rate (all leaves complete)**: 0/1 specification (0.0%)" in out
-    assert "**Specification-macro pass rate**: 50.0% across 1 specification" in out
+    assert "**Specification pass rate (all leaves complete)**: 0/1 resolved specification (0.0%)" in out
+    assert "**Specification-macro pass rate**: 50.0% across 1 resolved specification" in out
     assert "**Task-micro pass rate**: 1/2 (50.0%)" in out
 
 

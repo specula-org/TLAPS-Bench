@@ -98,6 +98,26 @@ def test_cursor_trusts_zero_terminal_usage(tmp_path):
     assert (usage.input_tokens, usage.output_tokens) == (0, 0)
 
 
+def test_cursor_retry_detection_distinguishes_activity_from_an_unreadable_stream(tmp_path):
+    activity = tmp_path / "activity.jsonl"
+    _write_jsonl(
+        activity,
+        {
+            "type": "tool_call",
+            "subtype": "completed",
+            "call_id": "edit-1",
+            "tool_call": {"editToolCall": {"args": {"path": "Task.tla"}}},
+        },
+    )
+    malformed = tmp_path / "malformed.jsonl"
+    malformed.write_text("not json\n")
+    backend = CursorBackend()
+
+    assert backend.retry_may_duplicate_model_work(str(activity)) is True
+    assert backend.retry_may_duplicate_model_work(str(malformed)) is False
+    assert backend.retry_may_duplicate_model_work(str(tmp_path / "missing.jsonl")) is False
+
+
 def test_cursor_transcript_uses_the_tool_field_among_metadata(tmp_path):
     output = tmp_path / "output.jsonl"
     _write_jsonl(

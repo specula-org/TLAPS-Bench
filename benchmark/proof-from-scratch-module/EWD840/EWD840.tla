@@ -1,0 +1,11 @@
+---- MODULE EWD840 ----
+EXTENDS EWD840Defs
+
+\* BEGIN AGENT HELPERS
+\* END AGENT HELPERS
+
+THEOREM Spec => []TerminationDetection
+\* BEGIN AGENT PROOF EWD840/EWD840_TerminationDetection.tla
+PROOF OMITTED
+\* END AGENT PROOF EWD840/EWD840_TerminationDetection.tla
+====

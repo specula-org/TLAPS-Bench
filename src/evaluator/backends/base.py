@@ -363,6 +363,8 @@ class Backend(ABC):
         early-verdict policy in their sibling backend base class.
         """
 
+        if not allow_materialization:
+            return SubmissionPlan(copy_solution=False)
         return SubmissionPlan()
 
     def resolve_infra_retries(self, configured: int | None) -> int:

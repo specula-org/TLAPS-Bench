@@ -7,14 +7,16 @@ CONSTANTS
 ,   R 
 ,   Leader(_) 
 
+ASSUME RoundsArePositiveIntegers == R \subseteq Nat \ {0}
+
+ASSUME LeadersAreNodes == \A r \in R : Leader(r) \in N
+
 Node(v) == v[1]
 Round(v) == IF v = <<>> THEN 0 ELSE v[2] 
 
 LeaderVertex(r) == IF r > 0 THEN <<Leader(r), r>> ELSE <<>>
 IsLeader(v) == LeaderVertex(Round(v)) = v
 Genesis == <<>>
-
-ASSUME GenesisIsLeader == IsLeader(Genesis) 
 
 OrderSet(S) ==
     LET orderSet[s \in SUBSET S] == IF s = {} THEN <<>> ELSE

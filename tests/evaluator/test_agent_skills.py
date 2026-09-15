@@ -449,6 +449,21 @@ def test_supported_backends_receive_byte_exact_skills_in_clean_fresh_workspaces(
             runner.shutil.rmtree(workspace)
 
 
+def test_agent_skill_snapshot_freezes_bytes_and_has_content_identity(tmp_path):
+    catalog = tmp_path / "catalog"
+    expected = _write_catalog(catalog)
+    backend = get_backend("codex")
+
+    frozen = runner.AgentSkillsSnapshot.capture(backend, catalog)
+    (catalog / "zeta-skill" / "references" / "payload.bin").write_bytes(b"changed after capture")
+    changed = runner.AgentSkillsSnapshot.capture(backend, catalog)
+    destination = tmp_path / "snapshot"
+    frozen.materialize(destination)
+
+    assert frozen.digest() != changed.digest()
+    assert (destination / "alpha-skill" / "SKILL.md").read_bytes() == expected["alpha-skill"]["SKILL.md"]
+
+
 @pytest.mark.parametrize("backend_name", UNSUPPORTED_BACKENDS)
 def test_unsupported_backends_receive_no_skills_and_report_empty_metadata(tmp_path, monkeypatch, backend_name):
     catalog = tmp_path / "catalog"
@@ -581,4 +596,6 @@ def test_agentic_prompt_drops_inline_model_checker_guide_without_skill_pointer(t
     assert "check_proof_bin Target.tla --mode proof-from-scratch" in prompt
     assert "Every helper `LEMMA` or `THEOREM` must be named and fully proved" in prompt
     assert 'SMTT("rN")' in prompt
-    assert "Do not modify, replace, or add dependency modules" in prompt
+    assert "temporary wrappers, configs, traces, and other scratch files" in prompt
+    assert "the final task must not import or depend on scratch files" in prompt
+    assert "Do not modify or replace supplied dependency modules" in prompt

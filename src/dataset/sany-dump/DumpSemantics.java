@@ -428,10 +428,15 @@ public class DumpSemantics {
   // ----- theorem-use graph (BY/USE/DEFS, for top-level selection) ----------
 
   static void collectRefs(ProofNode p, Set<String> refs, Set<String> moduleTheoremNames) {
+    Set<Integer> visited = new HashSet<Integer>();
     if (p instanceof LeafProofNode) {
       LeafProofNode lp = (LeafProofNode) p;
-      for (LevelNode f : lp.getFacts()) addRefFromFact(f, refs, moduleTheoremNames);
-      for (SymbolNode d : lp.getDefs()) addRefFromSymbol(d, refs, moduleTheoremNames);
+      for (LevelNode f : lp.getFacts()) {
+        collectTheoremRefsFromFact(f, refs, moduleTheoremNames, visited);
+      }
+      for (SymbolNode d : lp.getDefs()) {
+        collectTheoremRefsFromSymbol(d, refs, moduleTheoremNames, visited);
+      }
     } else if (p instanceof NonLeafProofNode) {
       for (LevelNode step : ((NonLeafProofNode) p).getSteps()) {
         if (step instanceof TheoremNode) {
@@ -439,23 +444,79 @@ public class DumpSemantics {
           if (sub != null) collectRefs(sub, refs, moduleTheoremNames);
         } else if (step instanceof UseOrHideNode) {
           UseOrHideNode u = (UseOrHideNode) step;
-          if (u.facts != null) for (LevelNode f : u.facts) addRefFromFact(f, refs, moduleTheoremNames);
-          if (u.defs != null) for (SymbolNode d : u.defs) addRefFromSymbol(d, refs, moduleTheoremNames);
+          // HIDE removes facts/definitions from the usable context.  It must
+          // not create a proof dependency merely because it names an earlier
+          // theorem.  USE is the directive that makes those facts available.
+          if (u.getKind() != ASTConstants.UseKind) continue;
+          if (u.facts != null) {
+            for (LevelNode f : u.facts) {
+              collectTheoremRefsFromFact(f, refs, moduleTheoremNames, visited);
+            }
+          }
+          if (u.defs != null) {
+            for (SymbolNode d : u.defs) {
+              collectTheoremRefsFromSymbol(d, refs, moduleTheoremNames, visited);
+            }
+          }
         } else if (step instanceof DefStepNode) {
-          // DefStepNode introduces new definitions inside a proof; no refs to extract here.
+          // References inside proof-local DEFINE bodies are collected by the
+          // semantic walk below. They matter for dependency-closed scoring:
+          // `DEFINE Alias == EarlierTheorem` must not hide that dependency.
         }
         // InstanceNode steps and others: no refs.
       }
     }
   }
 
-  static void addRefFromFact(LevelNode fact, Set<String> refs, Set<String> moduleTheoremNames) {
-    if (fact instanceof OpApplNode) {
-      OpApplNode app = (OpApplNode) fact;
-      String name = symbolName(app.getOperator());
-      if (name != null && moduleTheoremNames.contains(name)) refs.add(name);
+  static void collectTheoremRefs(
+      SemanticNode node,
+      Set<String> refs,
+      Set<String> moduleTheoremNames,
+      Set<Integer> visited) {
+    if (node == null || !visited.add(node.getUid())) return;
+    if (node instanceof OpApplNode) {
+      collectTheoremRefsFromSymbol(
+          ((OpApplNode) node).getOperator(), refs, moduleTheoremNames, visited);
+    }
+    SemanticNode[] children;
+    try {
+      children = node.getChildren();
+    } catch (Throwable t) {
+      children = null;
+    }
+    if (children != null) {
+      for (SemanticNode child : children) {
+        collectTheoremRefs(child, refs, moduleTheoremNames, visited);
+      }
     }
   }
+
+  static void collectTheoremRefsFromSymbol(
+      SymbolNode symbol,
+      Set<String> refs,
+      Set<String> moduleTheoremNames,
+      Set<Integer> visited) {
+    addRefFromSymbol(symbol, refs, moduleTheoremNames);
+    if (symbol instanceof OpDefNode) {
+      // An admitted theorem can otherwise be hidden behind a proof-local or
+      // helper-region operator and cited only through `BY ... DEF Alias`.
+      collectTheoremRefs(((OpDefNode) symbol).getBody(), refs, moduleTheoremNames, visited);
+    }
+  }
+
+  static void collectTheoremRefsFromFact(
+      LevelNode fact,
+      Set<String> refs,
+      Set<String> moduleTheoremNames,
+      Set<Integer> visited) {
+    // A BY/USE fact can hide a theorem arbitrarily deeply through user
+    // operators, LET/IN, CASE, or other semantic wrappers. Conservatively walk
+    // the complete fact subtree. This can retain a dependency when a theorem
+    // name occurs in a tautological composite fact, but it cannot award trust
+    // to a proof whose usable fact was derived from an admitted theorem.
+    collectTheoremRefs(fact, refs, moduleTheoremNames, visited);
+  }
+
   static void addRefFromSymbol(SymbolNode sym, Set<String> refs, Set<String> moduleTheoremNames) {
     if (sym == null) return;
     String name = symbolName(sym);

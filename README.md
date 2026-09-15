@@ -38,9 +38,9 @@ can be derived.
 
 | Source | Examples | Proof completion | Proof from scratch | Total |
 |---|--:|--:|--:|--:|
-| [tlaplus/Examples](https://github.com/tlaplus/Examples) | 44 | 357 | 149 | 506 |
-| [TLAPS distribution examples](https://github.com/tlaplus/tlapm) | 14 | 91 | 52 | 143 |
-| **Subtotal** | **58** | **448** | **201** | **649** |
+| [tlaplus/Examples](https://github.com/tlaplus/Examples) | 50 | 357 | 181 | 538 |
+| [TLAPS distribution examples](https://github.com/tlaplus/tlapm) | 14 | 91 | 51 | 142 |
+| **Subtotal** | **64** | **448** | **232** | **680** |
 
 **Systems specifications**
 
@@ -51,10 +51,11 @@ can be derived.
 | [Ivy liveness](https://github.com/kenmcmil/ivy) | 6 | – | 12 | 12 |
 | [etcd (Specula)](https://github.com/specula-org) | 1 | – | 8 | 8 |
 | [OpenAddressing](https://github.com/lemmy/Examples) | 1 | 1 | 5 | 6 |
+| [MongoDB distributed transactions](https://github.com/mongodb-labs/vldb25-dist-txns) | 1 | – | 1 | 1 |
 | [two_thread_mutex (Anvil)](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | 1 | – | 1 | 1 |
-| **Subtotal** | **13** | **258** | **44** | **302** |
+| **Subtotal** | **14** | **258** | **45** | **303** |
 
-**71 examples, 951 tasks in total.** A per-example breakdown is in
+**78 examples, 983 tasks in total.** A per-example breakdown is in
 [`docs/DATASET.md`](docs/DATASET.md).
 
 ## Running

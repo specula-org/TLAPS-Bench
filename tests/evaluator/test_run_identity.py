@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -12,6 +13,18 @@ from evaluator.modes.base import Mode
 
 class _Mode(Mode):
     name = "proof-from-scratch"
+
+
+def _backend(**changes):
+    values = {
+        "name": "codex",
+        "approach": "agentic",
+        "model": "gpt-test",
+        "reasoning_effort": "high",
+        "max_output_tokens": 4096,
+    }
+    values.update(changes)
+    return SimpleNamespace(**values)
 
 
 def test_canonical_inputs_materialize_frozen_library_catalog(tmp_path):
@@ -79,6 +92,20 @@ def test_resume_rejects_changed_execution_sources(tmp_path):
         runner._validate_resume_run_manifest(str(tmp_path), expected)
 
 
+def test_resume_rejects_changed_agent_skill_snapshot(tmp_path):
+    recorded = {
+        "schema_version": 4,
+        "benchmark_revision": "same-revision",
+        "agent_skills_digest": "old-skills",
+        "agent_skills": ["tlaps-proof-hints"],
+    }
+    expected = {**recorded, "agent_skills_digest": "new-skills"}
+    (tmp_path / runner.RUN_MANIFEST_RECORD).write_text(json.dumps(recorded))
+
+    with pytest.raises(ValueError, match="different benchmark, execution"):
+        runner._validate_resume_run_manifest(str(tmp_path), expected)
+
+
 def test_resume_rejects_changed_verification_toolchain(tmp_path):
     recorded = {
         "schema_version": 2,
@@ -90,6 +117,38 @@ def test_resume_rejects_changed_verification_toolchain(tmp_path):
 
     with pytest.raises(ValueError, match="verification-toolchain inputs"):
         runner._validate_resume_run_manifest(str(tmp_path), expected)
+
+
+def test_resume_rejects_changed_agent_or_budget_policy(tmp_path):
+    policy = runner._execution_policy_identity(
+        _backend(),
+        use_container=True,
+        timeout=100,
+        check_timeout=20,
+        infra_retries=3,
+        max_continuations=1,
+        session_dir="/tmp/tlaps-sessions",
+    )
+    recorded = {"schema_version": 3, "execution_policy": policy}
+    (tmp_path / runner.RUN_MANIFEST_RECORD).write_text(json.dumps(recorded))
+
+    for changed in (
+        {**policy, "model": "different-model"},
+        {**policy, "reasoning_effort": "low"},
+        {**policy, "timeout": 101},
+        {**policy, "check_timeout": 21},
+        {**policy, "infra_retries": 0},
+        {**policy, "max_continuations": 2},
+        {**policy, "environment": "local"},
+        {**policy, "session": {**policy["session"], "persistence": False}},
+        {**policy, "session": {**policy["session"], "root": "/tmp/other-sessions"}},
+        {**policy, "session": {**policy["session"], "key_scheme": "different"}},
+    ):
+        with pytest.raises(ValueError, match="different benchmark, execution"):
+            runner._validate_resume_run_manifest(
+                str(tmp_path),
+                {**recorded, "execution_policy": changed},
+            )
 
 
 def test_resume_rejects_legacy_results_without_run_manifest(tmp_path):

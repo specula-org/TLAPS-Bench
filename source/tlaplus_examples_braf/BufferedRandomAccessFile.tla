@@ -18,8 +18,9 @@ EXTENDS Naturals, Sequences, TLC, Common
 
 CONSTANT BuffSz
 
-\* Added for tlaps-bench; see the note in Common.tla.
-ASSUME BuffSzPositive == BuffSz \in Nat \ {0}
+\* Seek's `pos \div BuffSz` needs a nonzero divisor, and Inv2 is unsatisfiable
+\* when BuffSz = 0.
+ASSUME BuffSzIsPositive == BuffSz \in Nat \ {0}
 
 VARIABLES
     \* in-memory variables (BufferedRandomAccessFile class fields)

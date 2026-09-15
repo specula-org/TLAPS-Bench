@@ -51,6 +51,8 @@ def source_label(group):
         return "OpenAddressing"
     if group == "two_thread_mutex":
         return "two_thread_mutex (Anvil)"
+    if group == "MongoDB":
+        return "MongoDB distributed transactions"
     return "TLAPS distribution examples"
 
 
@@ -64,6 +66,7 @@ SOURCE_URL = {
     "etcd (Specula)": "https://github.com/specula-org",
     "OpenAddressing": "https://github.com/lemmy/Examples",
     "two_thread_mutex (Anvil)": "https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs",
+    "MongoDB distributed transactions": "https://github.com/mongodb-labs/vldb25-dist-txns",
 }
 
 
@@ -108,6 +111,10 @@ _GROUP_URL = {
         "https://github.com/tlaplus/Examples/tree/91c22ea537853196ed1e03e9ad91693ec37642de/specifications/ewd687a"
     ),
     "two_thread_mutex": "https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs",
+    "MongoDB": (
+        "https://github.com/mongodb-labs/vldb25-dist-txns/blob/"
+        "74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla"
+    ),
 }
 
 

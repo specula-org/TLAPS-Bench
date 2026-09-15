@@ -16,10 +16,12 @@ Usage:
 
 import argparse
 import contextlib
+import copy
 import fcntl
 import glob
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -67,6 +69,22 @@ from evaluator.backends.base import Backend, SubmissionDisposition
 from evaluator.cost import calculate_equivalent_cost_usd, public_price_error
 from evaluator.modes import get_mode, list_modes
 from evaluator.modes.base import Mode
+from evaluator.proof_module_artifact import (
+    ModuleArtifactError,
+    publish_module_artifact,
+    read_module_artifact,
+    result_module_artifact,
+)
+from evaluator.proof_module_checkpoint import (
+    ModuleCheckpointError,
+    ModuleCheckpointIdentity,
+    prepare_module_checkpoints,
+    write_module_checkpoint,
+)
+from evaluator.proof_module_checkpoint import (
+    run_identity_sha256 as module_run_identity_sha256,
+)
+from evaluator.proof_module_result import MODULE_RESULT_PREFIX, ModuleResultError, parse_module_result_json
 from evaluator.score import (
     SCORERS,
     applicable_manifest_results,
@@ -77,12 +95,20 @@ from evaluator.score import (
     is_skipped,
     n_non_genuine,
     n_skipped,
+    proof_unit_rate_line,
     scope_specification_ids,
     specification_score_lines,
     weighted_score,
 )
 from evaluator.termination import TerminationContext, TerminationReason, classify, startup_error_snippet
-from evaluator.usage import UsageSummary, nonnegative_float
+from evaluator.usage import (
+    UsageSummary,
+    aggregate_token_usage,
+    format_token_usage,
+    nonnegative_float,
+    nonnegative_int,
+    result_token_usage,
+)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # File at <repo>/src/evaluator/runner.py — ascend two levels for repo root.
@@ -91,6 +117,7 @@ SKILLS_DIR = os.path.join(REPO_ROOT, "skills")
 TASK_LIST_RECORD = "task-list.json"
 RUN_MANIFEST_RECORD = "run-manifest.json"
 NAMED_TASK_LISTS = {"core": "core.txt"}
+SESSION_KEY_SCHEME = "mode-relative-task-v1"
 
 VERDICT_ICONS = {"PASS": "✅", "FAIL": "❌", "CHEATING": "⚠️", "TIMEOUT": "⏱️", "ERROR": "💥"}
 
@@ -122,7 +149,17 @@ _COST_TIME_BACKENDS = frozenset(
     }
 )
 _RUNNER_OWNED_ACCOUNTING_KEYS = frozenset(
-    {"usage", "input_tokens", "output_tokens", "time_secs", "equivalent_cost_usd"}
+    {
+        "usage",
+        "input_tokens",
+        "output_tokens",
+        "agent_time_secs",
+        "grading_time_secs",
+        "grader_error_time_secs",
+        "logical_timeout_used_secs",
+        "time_secs",
+        "equivalent_cost_usd",
+    }
 )
 
 
@@ -232,6 +269,53 @@ def _sum_accounting_values(left: object, right: object) -> float | None:
     if left_value is None or right_value is None:
         return None
     return left_value + right_value
+
+
+def _recompute_task_time(result: dict[str, object]) -> None:
+    """Keep total task time equal to agent plus grading time."""
+
+    result["time_secs"] = _sum_accounting_values(
+        result.get("agent_time_secs"),
+        result.get("grading_time_secs"),
+    )
+
+
+def _ensure_time_breakdown(result: dict[str, object]) -> None:
+    """Adapt a legacy total-only result before adding new accounting."""
+
+    total = nonnegative_float(result.get("time_secs"))
+    grading = nonnegative_float(result.get("grading_time_secs")) or 0.0
+    agent = nonnegative_float(result.get("agent_time_secs"))
+    if agent is not None and "grading_time_secs" in result:
+        return
+    result["grading_time_secs"] = grading
+    result["agent_time_secs"] = total - grading if total is not None and total >= grading else None
+
+
+def _set_agent_time(result: dict[str, object], value: object) -> None:
+    result["agent_time_secs"] = nonnegative_float(value)
+    result.setdefault("grading_time_secs", 0.0)
+    _recompute_task_time(result)
+
+
+def _add_grading_time(result: dict[str, object], elapsed: float) -> float:
+    """Accumulate one grading attempt and return the amount added."""
+
+    _ensure_time_breakdown(result)
+    prior_grading = nonnegative_float(result.get("grading_time_secs"))
+    if prior_grading is None:
+        prior_grading = 0.0
+    result["grading_time_secs"] = prior_grading + elapsed
+    _recompute_task_time(result)
+    return elapsed
+
+
+def _add_child_grading_time(result: dict[str, object], elapsed: float) -> None:
+    """Add a continuation grader's time to the run-level aggregate."""
+
+    prior = nonnegative_float(result.get("grading_time_secs"))
+    result["grading_time_secs"] = None if prior is None else prior + elapsed
+    _recompute_task_time(result)
 
 
 def _retry_may_duplicate_model_work(
@@ -463,6 +547,34 @@ def wait_for_memory(min_free_gb: float, max_waits: int, log_prefix: str = "") ->
 _summary_lock = threading.Lock()
 
 
+MODULE_RESUME_RETRY_FIRST = "retry-first-attempt"
+MODULE_RESUME_GRADE_SAVED = "grade-saved-submission"
+MODULE_RESUME_CONTINUE = "run-next-continuation"
+MODULE_RESUME_COMPLETE = "complete"
+
+
+@dataclass(frozen=True)
+class ModuleResume:
+    """Validated durable state needed to resume one module task exactly."""
+
+    action: str
+    result: dict[str, object]
+    submission: bytes | None
+    artifact_receipt: dict[str, object] | None
+    checkpoint_sequence: int
+
+    def __post_init__(self) -> None:
+        if self.action not in {
+            MODULE_RESUME_RETRY_FIRST,
+            MODULE_RESUME_GRADE_SAVED,
+            MODULE_RESUME_CONTINUE,
+            MODULE_RESUME_COMPLETE,
+        }:
+            raise ValueError(f"unknown module resume action {self.action!r}")
+        if self.checkpoint_sequence <= 0:
+            raise ValueError("module resume checkpoint sequence must be positive")
+
+
 @dataclass
 class WorkItem:
     """A single (benchmark, backend, mode) task fed to the worker pool."""
@@ -501,7 +613,219 @@ class WorkItem:
     session_dir: str = ""
     # Replay-required modes capture every task before the worker pool starts.
     canonical_inputs: "CanonicalInputs | None" = None
+    # One process-wide byte snapshot is shared by every work item so parallel
+    # modules and a resume cannot observe different project skill inputs.
+    agent_skills_snapshot: "AgentSkillsSnapshot | None" = None
     run_identity: dict[str, object] | None = None
+    module_resume: ModuleResume | None = None
+    module_checkpoint_identity: ModuleCheckpointIdentity | None = None
+
+
+_LOGICAL_PROOF_EVIDENCE_KEYS = (
+    "module_result",
+    "trusted_proof_unit_count",
+    "trusted_proof_unit_ids",
+    "obligations",
+    "obligations_complete",
+    "obligations_failed",
+    "obligations_total",
+    "sany_status",
+    "sany_valid",
+    "failed_gates",
+    "cheat_checks",
+)
+_LOGICAL_ATTEMPT_OUTCOME_KEYS = (
+    *_LOGICAL_PROOF_EVIDENCE_KEYS,
+    "graded_after_interruption",
+    "invalid_submission_after_interruption",
+    "grader_error",
+    "infra_retries",
+    "infra_retry_reasons",
+)
+
+
+def _result_usage_summary(result: dict[str, object]) -> UsageSummary:
+    usage = result.get("usage")
+    if isinstance(usage, dict):
+        return UsageSummary.from_dict(usage)
+    input_tokens = nonnegative_int(result.get("input_tokens", 0))
+    output_tokens = nonnegative_int(result.get("output_tokens", 0))
+    if input_tokens is None or output_tokens is None:
+        raise ModuleCheckpointError("logical attempt has invalid legacy token accounting")
+    return UsageSummary.from_legacy(input_tokens, output_tokens, source="runner.legacy_logical_attempt")
+
+
+def _logical_attempt_has_accounted_work(result: dict[str, object]) -> bool:
+    _ensure_time_breakdown(result)
+    if (nonnegative_float(result.get("logical_timeout_used_secs")) or 0.0) > 0:
+        return True
+    if (nonnegative_float(result.get("agent_time_secs")) or 0.0) > 0:
+        return True
+    if any(
+        result.get(field) is not None
+        for field in ("module_artifact", "graded_after_interruption", "invalid_submission_after_interruption")
+    ):
+        return True
+    usage = _result_usage_summary(result)
+    if (usage.model_requests or 0) > 0 or usage.requests:
+        return True
+    return any((getattr(usage, field) or 0) > 0 for field in _USAGE_TOKEN_FIELDS)
+
+
+def _logical_timeout_budget(result: dict[str, object], configured_timeout: float) -> float:
+    raw = result.get("logical_timeout_secs", configured_timeout)
+    budget = nonnegative_float(raw)
+    configured = nonnegative_float(configured_timeout)
+    if budget is None or configured is None:
+        raise ModuleCheckpointError("logical attempt timeout must be a finite non-negative number")
+    if not math.isclose(budget, configured, rel_tol=0, abs_tol=1e-9):
+        raise ModuleCheckpointError("logical attempt timeout differs from the recorded run configuration")
+    result["logical_timeout_secs"] = budget
+    return budget
+
+
+def _remaining_logical_timeout(result: dict[str, object], configured_timeout: float) -> float | None:
+    """Return None for unlimited, otherwise the unspent agent-time budget."""
+
+    budget = _logical_timeout_budget(result, configured_timeout)
+    if budget == 0:
+        result["logical_timeout_remaining_secs"] = None
+        return None
+    _ensure_time_breakdown(result)
+    spent = nonnegative_float(result.get("logical_timeout_used_secs"))
+    if spent is None:
+        spent = nonnegative_float(result.get("agent_time_secs"))
+    if spent is None:
+        if _logical_attempt_has_accounted_work(result):
+            raise ModuleCheckpointError("cannot resume a timed logical attempt with unavailable agent time")
+        spent = 0.0
+    remaining = max(0.0, budget - spent)
+    result["logical_timeout_remaining_secs"] = remaining
+    return remaining
+
+
+def _mark_logical_attempt_timeout(result: dict[str, object]) -> None:
+    result["agent_exit"] = -1
+    result["check_verdict"] = "TIMEOUT"
+    result["termination_reason"] = TerminationReason.TIMEOUT
+    result["error"] = "logical attempt timeout exhausted before resume"
+    result["logical_timeout_remaining_secs"] = 0.0
+    result.pop("graded_after_interruption", None)
+    result.pop("invalid_submission_after_interruption", None)
+
+
+def _refresh_logical_timeout_remaining(result: dict[str, object]) -> None:
+    budget = nonnegative_float(result.get("logical_timeout_secs"))
+    if budget is None:
+        return
+    if budget == 0:
+        result["logical_timeout_remaining_secs"] = None
+        return
+    spent = nonnegative_float(result.get("logical_timeout_used_secs"))
+    if spent is None:
+        spent = nonnegative_float(result.get("agent_time_secs"))
+    result["logical_timeout_remaining_secs"] = None if spent is None else max(0.0, budget - spent)
+
+
+def _reset_logical_attempt_segment(result: dict[str, object], backend: Backend) -> None:
+    """Clear one interrupted segment while retaining its durable task state."""
+
+    for key in _LOGICAL_ATTEMPT_OUTCOME_KEYS:
+        result.pop(key, None)
+    result["agent_exit"] = -1
+    result["check_verdict"] = "ERROR"
+    result["termination_reason"] = TerminationReason.OK
+    result["error"] = ""
+    result["agent_time_secs"] = None if _supports_cost_time(backend) else 0.0
+    result["grading_time_secs"] = 0.0
+    result["logical_timeout_used_secs"] = 0.0
+    result["time_secs"] = None if _supports_cost_time(backend) else 0.0
+    result["usage"] = UsageSummary(
+        input_tokens=0,
+        output_tokens=0,
+        model_requests=0,
+        sources=("runner.logical_attempt_segment",),
+        available=True,
+        complete=True,
+    ).to_dict()
+    result["input_tokens"] = 0
+    result["output_tokens"] = 0
+    result.pop("tool_calls", None)
+    result.pop("grader_error_time_secs", None)
+    if _supports_cost_time(backend):
+        result["equivalent_cost_usd"] = None
+
+
+def _merge_logical_attempt_accounting(
+    result: dict[str, object],
+    previous: dict[str, object],
+    segment_usage: UsageSummary,
+    *,
+    include_segment: bool,
+    backend: Backend,
+) -> None:
+    """Merge process segments without creating a new benchmark attempt."""
+
+    resume_count = previous.get("logical_resume_count", 0)
+    if type(resume_count) is not int or resume_count < 0:
+        raise ModuleCheckpointError("logical attempt has an invalid resume count")
+    result["logical_resume_count"] = resume_count + 1
+    if not include_segment:
+        for key in _RUNNER_OWNED_ACCOUNTING_KEYS:
+            if key in previous:
+                result[key] = copy.deepcopy(previous[key])
+            else:
+                result.pop(key, None)
+        for key in _LOGICAL_PROOF_EVIDENCE_KEYS:
+            if key in previous:
+                result[key] = copy.deepcopy(previous[key])
+        _refresh_logical_timeout_remaining(result)
+        return
+
+    previous_has_work = _logical_attempt_has_accounted_work(previous)
+    if not previous_has_work:
+        _refresh_logical_timeout_remaining(result)
+        return
+
+    _ensure_time_breakdown(previous)
+    aggregate_usage = _result_usage_summary(previous).merge(segment_usage)
+    result["usage"] = aggregate_usage.to_dict()
+    result["input_tokens"] = aggregate_usage.legacy_input_tokens
+    result["output_tokens"] = aggregate_usage.legacy_output_tokens
+    result["agent_time_secs"] = _sum_accounting_values(previous.get("agent_time_secs"), result.get("agent_time_secs"))
+    result["grading_time_secs"] = _sum_accounting_values(
+        previous.get("grading_time_secs"), result.get("grading_time_secs")
+    )
+    previous_timeout_used = nonnegative_float(previous.get("logical_timeout_used_secs"))
+    if previous_timeout_used is None:
+        previous_timeout_used = previous.get("agent_time_secs")
+    segment_timeout_used = nonnegative_float(result.get("logical_timeout_used_secs"))
+    if segment_timeout_used is None:
+        segment_timeout_used = result.get("agent_time_secs")
+    result["logical_timeout_used_secs"] = _sum_accounting_values(previous_timeout_used, segment_timeout_used)
+    _recompute_task_time(result)
+    if _supports_cost_time(backend):
+        result["equivalent_cost_usd"] = _sum_accounting_values(
+            previous.get("equivalent_cost_usd"), result.get("equivalent_cost_usd")
+        )
+    if "tool_calls" in previous or "tool_calls" in result:
+        result["tool_calls"] = (
+            toolcalls.ToolCallSummary.from_dict(previous.get("tool_calls"))
+            .merge(toolcalls.ToolCallSummary.from_dict(result.get("tool_calls")))
+            .to_dict()
+        )
+    previous_grader_error_time = nonnegative_float(previous.get("grader_error_time_secs")) or 0.0
+    segment_grader_error_time = nonnegative_float(result.get("grader_error_time_secs")) or 0.0
+    if previous_grader_error_time or segment_grader_error_time:
+        result["grader_error_time_secs"] = previous_grader_error_time + segment_grader_error_time
+    _refresh_logical_timeout_remaining(result)
+
+
+def _logical_attempt_execution_item(item: WorkItem, result: dict[str, object]) -> WorkItem | None:
+    remaining = _remaining_logical_timeout(result, item.timeout)
+    if remaining is not None and remaining <= 0:
+        return None
+    return item if remaining is None else replace(item, timeout=remaining)
 
 
 @dataclass(frozen=True)
@@ -535,6 +859,101 @@ class CanonicalInputs:
         if self.proof_library_catalog is not None:
             _write_bytes(os.path.join(destination, CATALOG_FILENAME), self.proof_library_catalog)
 
+    def digest(self) -> str:
+        digest = hashlib.sha256()
+
+        def update(value: bytes) -> None:
+            digest.update(len(value).to_bytes(8, byteorder="big"))
+            digest.update(value)
+
+        update(b"proof-module-canonical-input-v1")
+        update(self.target_name.encode())
+        update(self.target_bytes)
+        for name, content in self.dependencies:
+            update(name.encode())
+            update(content)
+        update(self.proof_library_catalog or b"")
+        return digest.hexdigest()
+
+
+@dataclass(frozen=True)
+class AgentSkillFile:
+    """One regular file in a frozen project Agent Skill catalog."""
+
+    relative_path: str
+    content: bytes
+    mode: int
+
+
+@dataclass(frozen=True)
+class AgentSkillsSnapshot:
+    """Portable, immutable bytes supplied to every agent in one run."""
+
+    names: tuple[str, ...]
+    directories: tuple[tuple[str, int], ...]
+    files: tuple[AgentSkillFile, ...]
+
+    @classmethod
+    def capture(cls, backend: Backend, root: str | Path) -> "AgentSkillsSnapshot":
+        if backend.project_skills_dir is None:
+            return cls((), (), ())
+
+        root = Path(root)
+        skills = discover_agent_skills(root)
+        directories: list[tuple[str, int]] = []
+        files: list[AgentSkillFile] = []
+        for skill in skills:
+            paths = [skill.source_dir, *skill.source_dir.rglob("*")]
+            for path in sorted(paths, key=lambda candidate: candidate.relative_to(root).as_posix()):
+                relative = path.relative_to(root).as_posix()
+                if path.is_symlink():
+                    raise ValueError(f"Agent Skill snapshots do not allow symlinks: {path}")
+                metadata = path.stat()
+                mode = stat.S_IMODE(metadata.st_mode)
+                if stat.S_ISDIR(metadata.st_mode):
+                    directories.append((relative, mode))
+                elif stat.S_ISREG(metadata.st_mode):
+                    files.append(AgentSkillFile(relative, path.read_bytes(), mode))
+                else:
+                    raise ValueError(f"Agent Skill snapshots require regular files and directories: {path}")
+        return cls(
+            tuple(skill.name for skill in skills),
+            tuple(directories),
+            tuple(files),
+        )
+
+    def digest(self) -> str:
+        digest = hashlib.sha256()
+        _update_identity_digest(digest, b"agent-skills-snapshot-v1")
+        for name in self.names:
+            _update_identity_digest(digest, b"name")
+            _update_identity_digest(digest, name.encode())
+        for relative, mode in self.directories:
+            _update_identity_digest(digest, b"directory")
+            _update_identity_digest(digest, relative.encode())
+            _update_identity_digest(digest, mode.to_bytes(4, byteorder="big"))
+        for skill_file in self.files:
+            _update_identity_digest(digest, b"file")
+            _update_identity_digest(digest, skill_file.relative_path.encode())
+            _update_identity_digest(digest, skill_file.mode.to_bytes(4, byteorder="big"))
+            _update_identity_digest(digest, skill_file.content)
+        return digest.hexdigest()
+
+    def materialize(self, destination: str | Path) -> None:
+        destination = Path(destination)
+        destination.mkdir(parents=True, exist_ok=True)
+        if any(destination.iterdir()):
+            raise ValueError(f"Agent Skill snapshot destination must be empty: {destination}")
+        for relative, mode in self.directories:
+            path = destination / relative
+            path.mkdir(parents=True, exist_ok=False)
+            path.chmod(mode)
+        for skill_file in self.files:
+            path = destination / skill_file.relative_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(skill_file.content)
+            path.chmod(skill_file.mode)
+
 
 def _read_bytes(path: str) -> bytes:
     with open(path, "rb") as stream:
@@ -546,17 +965,16 @@ def _write_bytes(path: str, content: bytes) -> None:
         stream.write(content)
 
 
-def _snapshot_agent_skills(backend: Backend, destination: str) -> list[str]:
+def _snapshot_agent_skills(
+    backend: Backend,
+    destination: str,
+    snapshot: AgentSkillsSnapshot | None = None,
+) -> list[str]:
     """Capture the catalog this backend can discover and return its skill names."""
 
-    os.makedirs(destination, exist_ok=True)
-    if backend.project_skills_dir is None:
-        return []
-
-    skills = discover_agent_skills(SKILLS_DIR)
-    for skill in skills:
-        shutil.copytree(skill.source_dir, os.path.join(destination, skill.name))
-    return [skill.name for skill in skills]
+    snapshot = snapshot or AgentSkillsSnapshot.capture(backend, SKILLS_DIR)
+    snapshot.materialize(destination)
+    return list(snapshot.names)
 
 
 def _copy_skills_to_workspace(skills_snapshot_dir: str, workspace: str, project_skills_dir: str) -> None:
@@ -602,6 +1020,53 @@ def _make_canonical_dir(name_no_ext: str, canonical_inputs: CanonicalInputs) -> 
         raise
 
 
+@contextlib.contextmanager
+def _module_grading_inputs(
+    item: WorkItem,
+    attempt: dict[str, object],
+    canonical_inputs: CanonicalInputs,
+    basename: str,
+    name_no_ext: str,
+):
+    """Yield an artifact-only submission workspace and independent canonical copy."""
+
+    if canonical_inputs.target_name != basename:
+        raise ModuleArtifactError("module artifact target name does not match its canonical input")
+    submission = read_module_artifact(item.output_dir, attempt.get("module_artifact"))
+    grading_workspace = _make_canonical_dir(f"{name_no_ext}_grading", canonical_inputs)
+    canonical_dir = None
+    try:
+        _write_bytes(os.path.join(grading_workspace, basename), submission)
+        canonical_dir = _make_canonical_dir(name_no_ext, canonical_inputs)
+        yield grading_workspace, canonical_dir
+    finally:
+        shutil.rmtree(grading_workspace, ignore_errors=True)
+        if canonical_dir is not None:
+            shutil.rmtree(canonical_dir, ignore_errors=True)
+
+
+@contextlib.contextmanager
+def _standard_grading_inputs(
+    item: WorkItem,
+    workspace: str,
+    canonical_inputs: CanonicalInputs,
+    name_no_ext: str,
+    canonical_dir: str | None,
+):
+    """Yield the existing workspace and an independent canonical copy when required."""
+
+    grading_canonical_dir = canonical_dir
+    created_canonical_dir = False
+    if getattr(item.mode, "canonical_replay_required", False):
+        grading_canonical_dir = _make_canonical_dir(name_no_ext, canonical_inputs)
+        created_canonical_dir = True
+    try:
+        yield workspace, grading_canonical_dir
+    finally:
+        if created_canonical_dir:
+            shutil.rmtree(grading_canonical_dir, ignore_errors=True)
+
+
 def _make_workspace(
     backend_name: str,
     name_no_ext: str,
@@ -610,6 +1075,7 @@ def _make_workspace(
     skills_snapshot_dir: str | None = None,
     project_skills_dir: str | None = None,
     read_only_dependencies: bool = False,
+    initial_target_bytes: bytes | None = None,
 ) -> str:
     """Create a fresh Git workspace with canonical inputs and project skills.
 
@@ -618,6 +1084,8 @@ def _make_workspace(
     workspace = tempfile.mkdtemp(prefix=f"{backend_name}_bench_{name_no_ext}_")
     try:
         canonical_inputs.materialize(workspace)
+        if initial_target_bytes is not None:
+            _write_bytes(os.path.join(workspace, canonical_inputs.target_name), initial_target_bytes)
         if project_skills_dir is not None:
             if skills_snapshot_dir is None:
                 raise ValueError("a skills snapshot is required when project skill discovery is enabled")
@@ -659,6 +1127,7 @@ class ExecutionOutcome:
     quota_exhausted: bool
     quota_retry_suppressed: bool
     infra_retriable: bool  # still a no-model-work infra failure after all retries
+    model_work_observed: bool
     infra_reasons: list[str]
     usage: UsageSummary
 
@@ -694,12 +1163,13 @@ def _run_backend_with_retries(
     continuation round passes its existing workspace instead — the partial
     proof in it IS the input, and a no-work startup death can't have touched it.
 
-    Fills result's time_secs / usage / input_tokens / output_tokens / agent_exit /
+    Fills result's agent_time_secs / time_secs / usage / input_tokens / output_tokens / agent_exit /
     error / termination_reason (plus infra_retries / infra_retry_reasons after
     any retries); the caller owns quota/infra exhaustion verdicts and messages.
-    time_secs records only the final experiment attempt. Infra/quota launches
-    are saved separately beside their raw artifacts and never enter the formal
-    result. Returns the final attempt's workspace + canonical snapshot, which
+    agent_time_secs records only the final experiment attempt and time_secs is
+    recomputed as agent plus grading time. Infra/quota launches are saved
+    separately beside their raw artifacts and never enter the formal result.
+    Returns the final attempt's workspace + canonical snapshot, which
     the caller must clean up (earlier attempts' dirs are cleaned here, including
     when an attempt raises).
     """
@@ -710,6 +1180,7 @@ def _run_backend_with_retries(
     canonical_dir = None
     active_secs = 0.0
     attempt_secs: float | None = None
+    attempt_timeout_used_secs: float | None = None
     quota_exhausted = False
     quota_retry_suppressed = False
     infra_retriable = False
@@ -730,6 +1201,7 @@ def _run_backend_with_retries(
 
             canonical_dir = _make_canonical_dir(name_no_ext, canonical_inputs)
             if fixed_workspace is None:
+                resume_submission = item.module_resume.submission if item.module_resume is not None else None
                 workspace = _make_workspace(
                     backend.name,
                     name_no_ext,
@@ -737,13 +1209,14 @@ def _run_backend_with_retries(
                     skills_snapshot_dir=skills_snapshot_dir,
                     project_skills_dir=backend.project_skills_dir,
                     read_only_dependencies=read_only_dependencies,
+                    initial_target_bytes=resume_submission,
                 )
 
             wait_for_memory(item.min_free_gb, 120, log_prefix=f"[{name_no_ext}] ")
 
             # Defaults keep the closure bound to this attempt.
             def _run_once(workspace=workspace, canonical_dir=canonical_dir):
-                nonlocal active_secs, attempt_secs
+                nonlocal active_secs, attempt_secs, attempt_timeout_used_secs
                 result["error"] = ""
                 # Establish a valid empty-stream marker before process/container
                 # startup. A launch exception is then distinguishable from a
@@ -783,11 +1256,8 @@ def _run_backend_with_retries(
                         checker_bin,
                         canonical_dir,
                     )
-                elapsed = (
-                    container_agent_secs
-                    if item.use_container and _supports_cost_time(backend)
-                    else time.monotonic() - t0
-                )
+                wall_elapsed = time.monotonic() - t0
+                elapsed = container_agent_secs if item.use_container and _supports_cost_time(backend) else wall_elapsed
                 # Cooperative backends may spend a bounded grace period flushing
                 # audit events after the logical deadline. That is not extra model
                 # time and must not inflate the benchmark runtime metric.
@@ -798,7 +1268,9 @@ def _run_backend_with_retries(
                     and "timeout after" in result.get("error", "")
                 ):
                     elapsed = min(elapsed, item.timeout)
+                    wall_elapsed = min(wall_elapsed, item.timeout)
                 attempt_secs = elapsed
+                attempt_timeout_used_secs = wall_elapsed
                 if elapsed is not None:
                     active_secs += elapsed
 
@@ -833,7 +1305,8 @@ def _run_backend_with_retries(
                 log_prefix=f"[{name_no_ext}] ",
                 prepare_retry=_prepare_quota_retry,
             )
-            result["time_secs"] = attempt_secs if _supports_cost_time(backend) else active_secs
+            _set_agent_time(result, attempt_secs if _supports_cost_time(backend) else active_secs)
+            result["logical_timeout_used_secs"] = attempt_timeout_used_secs
 
             # Parse agent output on every path — including quota exhaustion — so
             # the result records any tokens the agent did emit (rather than
@@ -936,9 +1409,15 @@ def _run_backend_with_retries(
     if infra_reasons:
         result["infra_retries"] = attempt  # retries performed (0-based final attempt index)
         result["infra_retry_reasons"] = infra_reasons
-    non_experiment_attempt = _supports_cost_time(backend) and (
-        quota_exhausted or result.get("termination_reason") == TerminationReason.INFRA_ERROR
+    model_work_observed = _retry_may_duplicate_model_work(
+        backend,
+        agent_jsonl,
+        attempt_usage,
+        attempt_usage.legacy_output_tokens,
     )
+    interrupted = quota_exhausted or result.get("termination_reason") == TerminationReason.INFRA_ERROR
+    graded_module_progress = item.module_checkpoint_identity is not None and model_work_observed
+    non_experiment_attempt = _supports_cost_time(backend) and interrupted and not graded_module_progress
     if non_experiment_attempt:
         category = "quota-attempts" if quota_exhausted else "attempts"
         _write_attempt_accounting(
@@ -952,11 +1431,15 @@ def _run_backend_with_retries(
             available=False,
             warnings=("infra/quota accounting is stored separately under agent artifacts",),
         )
+        result["agent_time_secs"] = None
+        result["logical_timeout_used_secs"] = 0.0
         result["time_secs"] = None
         result["equivalent_cost_usd"] = None
         result["usage"] = attempt_usage.to_dict()
         result["input_tokens"] = 0
         result["output_tokens"] = 0
+    elif interrupted and not model_work_observed:
+        result["logical_timeout_used_secs"] = 0.0
     outcome_usage = attempt_usage if _supports_cost_time(backend) else (aggregate_usage or attempt_usage)
     return ExecutionOutcome(
         workspace,
@@ -965,6 +1448,7 @@ def _run_backend_with_retries(
         quota_exhausted,
         quota_retry_suppressed,
         infra_retriable,
+        model_work_observed,
         infra_reasons,
         outcome_usage,
     )
@@ -980,6 +1464,159 @@ def _record_result(results: list[dict], new_result: dict) -> None:
     benchmark = new_result["benchmark"]
     results[:] = [result for result in results if result.get("benchmark") != benchmark]
     results.append(new_result)
+
+
+def _load_resume_results(output_dir: str) -> list[dict]:
+    """Load a resumable result list without accepting ambiguous persisted data."""
+
+    path = os.path.join(output_dir, "results.json")
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as stream:
+            value = json.load(stream)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"cannot read prior results {path!r}: {exc}") from exc
+    if type(value) is not list or any(type(result) is not dict for result in value):
+        raise ValueError(f"prior results {path!r} must be a JSON list of objects")
+    benchmark_ids = [result.get("benchmark") for result in value]
+    if any(type(benchmark) is not str or not benchmark for benchmark in benchmark_ids):
+        raise ValueError(f"prior results {path!r} contain a missing or invalid benchmark ID")
+    if len(benchmark_ids) != len(set(benchmark_ids)):
+        raise ValueError(f"prior results {path!r} contain duplicate benchmark IDs")
+    return value
+
+
+def _validate_resume_result_accounting(results: list[dict], *, supports_cost_time: bool) -> None:
+    """Reject values that would make cumulative resume reporting ambiguous."""
+
+    totals: dict[str, list[float]] = {"time_secs": [], "equivalent_cost_usd": []}
+    for result in results:
+        benchmark = result["benchmark"]
+        verdict = result.get("check_verdict")
+        if type(verdict) is not str or not verdict:
+            raise ValueError(f"prior result {benchmark!r} has no non-empty check_verdict")
+        for field in ("input_tokens", "output_tokens"):
+            value = result.get(field, 0)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"prior result {benchmark!r} has invalid {field}: expected a non-negative integer")
+        time_secs = result.get("time_secs")
+        if time_secs is None:
+            if not supports_cost_time:
+                raise ValueError(f"prior result {benchmark!r} has invalid time_secs: expected a non-negative number")
+        elif nonnegative_float(time_secs) is None or isinstance(time_secs, bool):
+            raise ValueError(f"prior result {benchmark!r} has invalid time_secs: expected a finite non-negative number")
+        else:
+            totals["time_secs"].append(float(time_secs))
+        split_times: dict[str, float] = {}
+        for field in ("agent_time_secs", "grading_time_secs"):
+            if field not in result:
+                continue
+            if result.get(field) is None and supports_cost_time and time_secs is None:
+                continue
+            value = nonnegative_float(result.get(field))
+            if value is None or isinstance(result.get(field), bool):
+                raise ValueError(f"prior result {benchmark!r} has invalid {field}")
+            split_times[field] = value
+        if (
+            len(split_times) == 2
+            and time_secs is not None
+            and not math.isclose(
+                split_times["agent_time_secs"] + split_times["grading_time_secs"],
+                float(time_secs),
+                rel_tol=1e-9,
+                abs_tol=1e-9,
+            )
+        ):
+            raise ValueError(f"prior result {benchmark!r} has inconsistent split and total time")
+        grader_error_time = result.get("grader_error_time_secs")
+        if grader_error_time is not None and (
+            nonnegative_float(grader_error_time) is None or isinstance(grader_error_time, bool)
+        ):
+            raise ValueError(f"prior result {benchmark!r} has invalid grader_error_time_secs")
+        equivalent_cost = result.get("equivalent_cost_usd")
+        if equivalent_cost is not None:
+            if nonnegative_float(equivalent_cost) is None or isinstance(equivalent_cost, bool):
+                raise ValueError(
+                    f"prior result {benchmark!r} has invalid equivalent_cost_usd: expected a finite non-negative number"
+                )
+            totals["equivalent_cost_usd"].append(float(equivalent_cost))
+    for field, values in totals.items():
+        if not math.isfinite(sum(values)):
+            raise ValueError(f"prior result {field} total is not finite")
+
+
+def _recover_module_resume(
+    output_dir: str,
+    previous_results: list[dict],
+    checkpoint_identities: dict[str, ModuleCheckpointIdentity],
+    checkpoints: dict,
+    *,
+    max_continuations: int,
+) -> tuple[list[dict], dict[str, ModuleResume], set[str]]:
+    """Recover exact module stages rather than starting a new pass@1 attempt."""
+
+    for result in previous_results:
+        benchmark = result["benchmark"]
+        if benchmark not in checkpoint_identities:
+            raise ValueError(f"prior result {benchmark!r} is outside the selected module-task cohort")
+        if benchmark not in checkpoints:
+            raise ValueError(
+                "cannot resume theorem-level or pre-checkpoint proof-from-scratch results; "
+                f"module task {benchmark!r} has no durable module checkpoint"
+            )
+
+    results: list[dict] = []
+    resumes: dict[str, ModuleResume] = {}
+    completed: set[str] = set()
+    for task_id, checkpoint in checkpoints.items():
+        result = copy.deepcopy(checkpoint.result)
+        receipt = result_module_artifact(result)
+        content = read_module_artifact(output_dir, receipt) if receipt is not None else None
+        action = _module_resume_action(result, max_continuations=max_continuations)
+        state = ModuleResume(
+            action=action,
+            result=result,
+            submission=content,
+            artifact_receipt=dict(receipt) if receipt is not None else None,
+            checkpoint_sequence=checkpoint.sequence,
+        )
+        _record_result(results, result)
+        if action == MODULE_RESUME_COMPLETE:
+            completed.add(task_id)
+        else:
+            resumes[task_id] = state
+    return results, resumes, completed
+
+
+def _module_resume_action(result: dict[str, object], *, max_continuations: int) -> str:
+    """Return the next exact action without discarding prior attempt evidence.
+
+    A pending-grading marker is written immediately after publishing an
+    artifact, so a restart grades those saved bytes before any model call. A
+    completed first attempt is never rewritten as pass@1. An interrupted
+    attempt resumes from its saved bytes with cumulative accounting and only
+    its remaining timeout; it does not gain another attempt or continuation.
+    """
+
+    if result.get("module_grading_pending") is not None:
+        return MODULE_RESUME_GRADE_SAVED
+    if _resume_should_skip(result):
+        return MODULE_RESUME_COMPLETE
+    if is_non_genuine(result):
+        return MODULE_RESUME_RETRY_FIRST
+
+    raw_rounds = result.get("continuations")
+    rounds = raw_rounds if isinstance(raw_rounds, list) else []
+    if rounds and isinstance(rounds[-1], dict) and is_non_genuine(rounds[-1]):
+        # Resume the same logical round and budget slot. Its prior process
+        # segment remains visible for diagnostics, while accounting and timeout
+        # stay cumulative on the active round.
+        return MODULE_RESUME_CONTINUE
+
+    if len(rounds) < max_continuations:
+        return MODULE_RESUME_CONTINUE
+    return MODULE_RESUME_COMPLETE
 
 
 def _resume_done_benchmarks(results: list[dict]) -> set[str]:
@@ -1192,17 +1829,56 @@ def _proof_from_scratch_run_identity(
     mode: Mode,
     catalog: OfficialLibraryCatalog,
     toolchain: dict[str, object],
+    execution_policy: dict[str, object],
+    agent_skills_snapshot: AgentSkillsSnapshot,
 ) -> dict[str, object]:
     return {
-        "schema_version": 2,
+        "schema_version": 5,
         "mode": mode.name,
         "benchmark_revision": _benchmark_revision(),
         "execution_source_digest": _image_source_fingerprint(),
+        "agent_skills_digest": agent_skills_snapshot.digest(),
+        "agent_skills": list(agent_skills_snapshot.names),
         "corpus_digest": _corpus_digest(mode, catalog.digest),
         "proof_library_digest": catalog.digest,
         "proof_library_sources": {name: dict(source) for name, source in catalog.sources.items()},
         "verification_toolchain_digest": toolchain["digest"],
         "verification_toolchain": toolchain,
+        "execution_policy": execution_policy,
+    }
+
+
+def _execution_policy_identity(
+    backend: Backend,
+    *,
+    use_container: bool,
+    timeout: int,
+    check_timeout: int,
+    infra_retries: int,
+    max_continuations: int,
+    session_dir: str,
+) -> dict[str, object]:
+    """Freeze every option that can change an attempt or its reported score."""
+
+    return {
+        "backend": backend.name,
+        "approach": backend.approach,
+        "model": getattr(backend, "model", None),
+        "reasoning_effort": backend.reasoning_effort,
+        "max_output_tokens": backend.max_output_tokens,
+        "environment": "container" if use_container else "local",
+        "timeout": timeout,
+        "check_timeout": check_timeout,
+        "infra_retries": infra_retries,
+        "max_continuations": max_continuations,
+        # A resumed module must see the same backend state tree. Unlike the
+        # task artifact, this mutable CLI state is not copied into the output
+        # checkpoint; pre-existing contents remain an operator-controlled input.
+        "session": {
+            "persistence": bool(session_dir),
+            "root": session_dir or None,
+            "key_scheme": SESSION_KEY_SCHEME,
+        },
     }
 
 
@@ -1314,10 +1990,11 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
             v = r["check_verdict"]
             verdicts[v] = verdicts.get(v, 0) + 1
 
-        total_input = sum(r.get("input_tokens", 0) for r in results)
-        total_output = sum(r.get("output_tokens", 0) for r in results)
-        formal_results = _formal_results(results) if supports_cost_time else []
-        total_task_time = _sum_required_metric(formal_results, "time_secs") if supports_cost_time else None
+        total_tokens = aggregate_token_usage(results)
+        formal_results = _formal_results(results)
+        total_agent_time = _sum_required_metric(formal_results, "agent_time_secs")
+        total_grading_time = _sum_required_metric(formal_results, "grading_time_secs")
+        total_task_time = _sum_required_metric(formal_results, "time_secs")
         total_equivalent_cost = (
             _sum_required_metric(formal_results, "equivalent_cost_usd") if supports_cost_time else None
         )
@@ -1334,6 +2011,7 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
             lines.append(f"**Corpus digest**: `{next(iter(corpus_digests))}`")
         if len(library_digests) == 1:
             lines.append(f"**Official proof libraries**: `{next(iter(library_digests))}`")
+        diagnostic_score_lines: list[str] = []
         if specification_ids is None:
             # Generic/custom modes may not expose a specification identity map.
             pass_pct, n_pass, scored = weighted_score(results, SCORERS["equal"])
@@ -1343,8 +2021,8 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
             if n_skip:
                 pass_line += f" · {n_skip} skipped"
             if non_genuine:
-                pass_line += f" · {non_genuine} infra/quota-cut (excluded — re-run)"
-            lines.append(pass_line)
+                pass_line += f" · {non_genuine} error/interrupted (excluded — re-run)"
+            diagnostic_score_lines.append(pass_line)
             continuation_results = results
         else:
             score_lines, specification_score = specification_score_lines(results, specification_ids)
@@ -1353,19 +2031,30 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
                     "**Specification pass rate**: pending until the run completes "
                     f"({total}/{total_benchmarks} tasks finished)"
                 )
-            lines.extend(score_lines)
+            diagnostic_score_lines.extend(score_lines)
             n_pass = specification_score.tasks_passed
             continuation_results = applicable_manifest_results(results, specification_ids)
-        # Separate, clearly-labeled metric — the pass rate above stays pass@1.
+        # One module scores k/n trusted theorems (#132), so this is the primary
+        # proof-from-scratch metric. Whole-module PASS remains a diagnostic.
+        unit_line = proof_unit_rate_line(continuation_results)
+        if unit_line:
+            lines.append(unit_line)
+        lines.extend(diagnostic_score_lines)
+        # Separate, clearly-labeled continuation metrics; pass@1 stays intact.
         cont_line = continuation_rate_line(continuation_results, SCORERS["equal"], n_pass)
         if cont_line:
             lines.append(cont_line)
-        lines.append(
-            f"**Total tokens**: {total_input:,} input / {total_output:,} output" + ("" if supports_cost_time else "\n")
-        )
+        continuation_unit_line = proof_unit_rate_line(continuation_results, with_continuations=True)
+        if continuation_unit_line and any(result.get("continuations") for result in continuation_results):
+            lines.append(continuation_unit_line)
+        lines.append(f"**Total tokens**: {format_token_usage(total_tokens, verbose=True)}")
+        lines.append(f"**Total agent time**: {_format_task_time(total_agent_time)}")
+        lines.append(f"**Total grading time**: {_format_task_time(total_grading_time)}")
+        lines.append(f"**Total task time**: {_format_task_time(total_task_time)}")
         if supports_cost_time:
-            lines.append(f"**Total task time**: {_format_task_time(total_task_time)}")
             lines.append(f"**Equivalent cost**: {_format_equivalent_cost(total_equivalent_cost)}\n")
+        else:
+            lines.append("")
 
         lines.append("## Summary\n")
         lines.append("| Verdict | Count |")
@@ -1379,11 +2068,15 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
 
         lines.append("## Details\n")
         if supports_cost_time:
-            lines.append("| Benchmark | Verdict | Time | Equivalent cost | Obligations | Tokens (in/out) | Notes |")
-            lines.append("|-----------|---------|------|----------------:|-------------|-----------------|-------|")
+            lines.append(
+                "| Benchmark | Verdict | Agent | Grading | Total | Equivalent cost | Obligations | Tokens (in/out) | Notes |"
+            )
+            lines.append(
+                "|-----------|---------|------:|--------:|------:|----------------:|-------------|-----------------|-------|"
+            )
         else:
-            lines.append("| Benchmark | Verdict | Time | Obligations | Tokens (in/out) | Notes |")
-            lines.append("|-----------|---------|------|-------------|-----------------|-------|")
+            lines.append("| Benchmark | Verdict | Agent | Grading | Total | Obligations | Tokens (in/out) | Notes |")
+            lines.append("|-----------|---------|------:|--------:|------:|-------------|-----------------|-------|")
         for r in sorted(results, key=lambda x: x["benchmark"]):
             icon = VERDICT_ICONS.get(r["check_verdict"], "❓")
             notes = r.get("error", "")
@@ -1403,9 +2096,22 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
             cont = _continuation_note(r)
             if cont:
                 notes = (cont + " " + notes).strip()
-            tokens = f"{r.get('input_tokens', 0):,}/{r.get('output_tokens', 0):,}"
+            if r.get("proof_unit_count"):
+                trusted_count = r.get("trusted_proof_unit_count", 0)
+                unit_note = f"pass@1 trusted {trusted_count}/{r['proof_unit_count']} proof units"
+                graded_rounds = [
+                    round_result
+                    for round_result in (r.get("continuations") or [])
+                    if isinstance(round_result, dict) and "trusted_proof_unit_count" in round_result
+                ]
+                if graded_rounds:
+                    latest_count = graded_rounds[-1]["trusted_proof_unit_count"]
+                    unit_note += f"; latest continuation trusted {latest_count}/{r['proof_unit_count']}"
+                notes = (unit_note + " " + notes).strip()
+            tokens = format_token_usage(result_token_usage(r))
             if "obligations" in r:
-                obs = str(r["obligations"])
+                prefix = "≥" if r.get("obligations_complete") is False else ""
+                obs = f"{prefix}{r['obligations']}"
             elif "obligations_failed" in r:
                 obs = f"{r['obligations_failed']}/{r['obligations_total']} failed"
             else:
@@ -1413,13 +2119,17 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
             if supports_cost_time:
                 lines.append(
                     f"| `{r['benchmark']}` | {icon} {r['check_verdict']} | "
+                    f"{_format_task_time(r.get('agent_time_secs'))} | "
+                    f"{_format_task_time(r.get('grading_time_secs'))} | "
                     f"{_format_task_time(r.get('time_secs'))} | "
                     f"{_format_equivalent_cost(r.get('equivalent_cost_usd'))} | {obs} | {tokens} | {notes} |"
                 )
             else:
                 lines.append(
                     f"| `{r['benchmark']}` | {icon} {r['check_verdict']} | "
-                    f"{r['time_secs']:.0f}s | {obs} | {tokens} | {notes} |"
+                    f"{_format_task_time(r.get('agent_time_secs'))} | "
+                    f"{_format_task_time(r.get('grading_time_secs'))} | "
+                    f"{_format_task_time(r.get('time_secs'))} | {obs} | {tokens} | {notes} |"
                 )
         lines.append("")
         cost_warnings = _equivalent_cost_warnings(results) if supports_cost_time else []
@@ -1433,8 +2143,161 @@ def update_summary(results, output_dir, total_benchmarks, backend_name, mode_nam
         with open(report_path, "w") as f:
             f.write(report)
 
-        with open(os.path.join(output_dir, "results.json"), "w") as f:
-            json.dump(results, f, indent=2)
+        _atomic_json_write(os.path.join(output_dir, "results.json"), results)
+
+
+def _atomic_json_write(path: str, value: object) -> None:
+    directory = os.path.dirname(path)
+    os.makedirs(directory, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{os.path.basename(path)}.", suffix=".tmp", dir=directory)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+            json.dump(value, stream, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary)
+
+
+def _persist_work_item_result(item: WorkItem, result_dir: str, result: dict) -> bool:
+    checkpointed = True
+    if item.module_checkpoint_identity is not None:
+        try:
+            write_module_checkpoint(item.output_dir, item.module_checkpoint_identity, result)
+        except ModuleCheckpointError as exc:
+            checkpointed = False
+            result["check_verdict"] = "ERROR"
+            result["error"] = f"cannot checkpoint module progress: {exc}"
+            result["termination_reason"] = TerminationReason.INFRA_ERROR
+    _atomic_json_write(os.path.join(result_dir, "result.json"), result)
+    return checkpointed
+
+
+def _preserve_module_submission(
+    item: WorkItem,
+    solution_path: str,
+    *,
+    disposition: str,
+    copy_solution: bool,
+    submission_error: str | None = None,
+) -> tuple[str | None, dict | None]:
+    """Preserve a submitted module, or report a model-owned invalid submission.
+
+    A workspace starts with the canonical task file.  A backend that cannot
+    materialize a response must therefore not let that untouched file become
+    the module artifact (or the input to grading).  Missing and empty files
+    and non-regular target paths are ordinary failed submissions; failures to
+    publish otherwise valid bytes remain infrastructure errors at the call site.
+    """
+    if item.module_checkpoint_identity is None:
+        return None, None
+
+    if disposition != SubmissionDisposition.GRADE or not copy_solution:
+        if os.path.lexists(solution_path):
+            if os.path.islink(solution_path) or os.path.isfile(solution_path):
+                os.unlink(solution_path)
+        return (
+            submission_error or "module submission was not materialized",
+            None,
+        )
+
+    if os.path.islink(solution_path):
+        return "module submission path is a symlink", None
+    try:
+        metadata = os.lstat(solution_path)
+    except FileNotFoundError:
+        return "module submission is missing", None
+    if not stat.S_ISREG(metadata.st_mode):
+        return "module submission path is not a regular file", None
+    descriptor = os.open(
+        solution_path,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    )
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return "module submission path is not a regular file", None
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = -1
+            content = stream.read()
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if not content:
+        return "module submission is empty", None
+    return None, publish_module_artifact(item.output_dir, content)
+
+
+def _restore_latest_durable_module(
+    item: WorkItem,
+    solution_path: str,
+    result: dict,
+    canonical_inputs: CanonicalInputs,
+) -> None:
+    """Match the workspace state a resume reconstructs after invalid output."""
+
+    receipt = result_module_artifact(result)
+    content = read_module_artifact(item.output_dir, receipt) if receipt is not None else canonical_inputs.target_bytes
+    if os.path.lexists(solution_path):
+        if os.path.islink(solution_path) or not os.path.isdir(solution_path):
+            os.unlink(solution_path)
+        else:
+            shutil.rmtree(solution_path)
+    _write_bytes(solution_path, content)
+
+
+def _grade_resumed_module_submission(
+    item: WorkItem,
+    workspace: str,
+    result: dict,
+    result_dir: str,
+    grading_dir: str,
+    basename: str,
+    name_no_ext: str,
+    canonical_inputs: CanonicalInputs,
+) -> None:
+    """Grade the exact artifact named by a pending checkpoint, without an agent."""
+
+    pending_round = result.get("module_grading_pending")
+    if type(pending_round) is not int or pending_round < 0:
+        raise ModuleCheckpointError("resumed module has no valid pending grading round")
+    if pending_round == 0:
+        attempt = result
+        attempt_dir = grading_dir
+    else:
+        rounds = result.get("continuations")
+        if not isinstance(rounds, list) or pending_round != len(rounds) or not isinstance(rounds[-1], dict):
+            raise ModuleCheckpointError("resumed module pending grading does not identify its latest continuation")
+        attempt = rounds[-1]
+        attempt_dir = os.path.join(result_dir, "continuations", f"round-{pending_round}")
+        os.makedirs(attempt_dir, exist_ok=True)
+
+    solution_path = os.path.join(workspace, basename)
+    if not os.path.isfile(solution_path):
+        raise ModuleArtifactError("resumed module artifact did not materialize as a regular task file")
+    shutil.copy2(solution_path, os.path.join(attempt_dir, "solution.tla"))
+    grading_before = nonnegative_float(attempt.get("grading_time_secs")) or 0.0
+    _grade_submission(
+        item,
+        attempt,
+        workspace,
+        attempt_dir,
+        os.path.join(attempt_dir, "check.result"),
+        basename,
+        name_no_ext,
+        canonical_inputs,
+        None,
+    )
+    if pending_round > 0:
+        _ensure_time_breakdown(result)
+        latest_grading = nonnegative_float(attempt.get("grading_time_secs"))
+        prior_grading = nonnegative_float(result.get("grading_time_secs"))
+        if latest_grading is not None and prior_grading is not None:
+            _add_child_grading_time(result, latest_grading - grading_before)
+    if isinstance(attempt.get("module_result"), dict) and attempt.get("check_verdict") != "ERROR":
+        result.pop("module_grading_pending", None)
 
 
 def run_single_benchmark(item: WorkItem):
@@ -1446,17 +2309,21 @@ def run_single_benchmark(item: WorkItem):
     # invalid direct Python call can clear prior artifacts or touch quota/state.
     item.infra_retries = backend.validate_options(item.infra_retries, item.max_continuations)
 
-    rel_path = os.path.relpath(item.benchmark_path, mode.benchmark_dir())
-    module_dir = os.path.basename(os.path.dirname(item.benchmark_path))
+    rel_path = os.path.relpath(item.benchmark_path, mode.benchmark_dir()).replace(os.sep, "/")
+    module_dir = os.path.dirname(rel_path).replace(os.sep, "/")
     basename = os.path.basename(item.benchmark_path)
     name_no_ext = os.path.splitext(basename)[0]
 
     # Structured result directory: input/, agent/, grading/
-    result_dir = os.path.join(item.output_dir, module_dir, name_no_ext)
+    result_dir = os.path.join(item.output_dir, os.path.splitext(rel_path)[0])
     input_dir = os.path.join(result_dir, "input")
     agent_dir = os.path.join(result_dir, "agent")
     grading_dir = os.path.join(result_dir, "grading")
-    _reset_benchmark_artifacts(item.output_dir, result_dir)
+    _reset_benchmark_artifacts(
+        item.output_dir,
+        result_dir,
+        resume_checkpoint_sequence=(item.module_resume.checkpoint_sequence if item.module_resume is not None else None),
+    )
     for d in (input_dir, agent_dir, grading_dir):
         os.makedirs(d, exist_ok=True)
 
@@ -1468,7 +2335,11 @@ def run_single_benchmark(item: WorkItem):
         "mode": mode.name,
         "agent_exit": -1,
         "check_verdict": "ERROR",
+        "agent_time_secs": None if _supports_cost_time(backend) else 0,
+        "grading_time_secs": 0.0,
+        "logical_timeout_used_secs": 0.0,
         "time_secs": None if _supports_cost_time(backend) else 0,
+        "logical_timeout_secs": item.timeout,
         "error": "",
         # Skill availability, not evidence that the client invoked a skill.
         "agent_skills": [],
@@ -1478,47 +2349,99 @@ def run_single_benchmark(item: WorkItem):
         "termination_reason": TerminationReason.OK,
         **backend.initial_result_metadata(),
     }
+    module_resume = item.module_resume
+    recovered_result = module_resume is not None and module_resume.action in {
+        MODULE_RESUME_RETRY_FIRST,
+        MODULE_RESUME_GRADE_SAVED,
+        MODULE_RESUME_CONTINUE,
+    }
+    control_flow_resume = module_resume is not None and module_resume.action in {
+        MODULE_RESUME_GRADE_SAVED,
+        MODULE_RESUME_CONTINUE,
+    }
+    retrying_first_attempt = module_resume is not None and module_resume.action == MODULE_RESUME_RETRY_FIRST
+    if recovered_result:
+        result = copy.deepcopy(module_resume.result)
+    module_spec_loader = getattr(mode, "module_task_spec", None)
+    if module_spec_loader is not None:
+        module_spec = module_spec_loader(item.benchmark_path)
+        result["proof_unit_ids"] = list(module_spec.proof_unit_ids)
+        result["proof_unit_count"] = len(module_spec.proof_unit_ids)
+        result.setdefault("trusted_proof_unit_count", 0)
+    if module_resume is not None:
+        result["resumed_from_checkpoint"] = True
+        result["resume_checkpoint_sequence"] = module_resume.checkpoint_sequence
+        if module_resume.submission is not None:
+            result["resume_submission_sha256"] = hashlib.sha256(module_resume.submission).hexdigest()
+        if module_resume.artifact_receipt is not None:
+            result["resume_artifact_sha256"] = module_resume.artifact_receipt["sha256"]
     if item.run_identity is not None:
         result["corpus_digest"] = item.run_identity["corpus_digest"]
         result["proof_library_digest"] = item.run_identity["proof_library_digest"]
-    if _supports_cost_time(backend):
+    if _supports_cost_time(backend) and not recovered_result:
         result["equivalent_cost_usd"] = None
     # Usage is runner-owned structured evidence; backend metadata must not
     # accidentally replace it with a similarly named custom field.
-    result["usage"] = UsageSummary(
-        input_tokens=0,
-        output_tokens=0,
-        model_requests=0,
-        sources=("runner",),
-        available=True,
-        complete=True,
-    ).to_dict()
-    if item.max_continuations > 0:
+    if not recovered_result:
+        result["usage"] = UsageSummary(
+            input_tokens=0,
+            output_tokens=0,
+            model_requests=0,
+            sources=("runner",),
+            available=True,
+            complete=True,
+        ).to_dict()
+    if item.max_continuations > 0 and not recovered_result:
         # Run-level config, stamped on EVERY result — first-attempt PASSes and
         # non-genuine early exits included — so the continuation metric can
         # state its ≤N budget without guessing from the chains that happened to run.
         result["max_continuations"] = item.max_continuations
 
     skills_snapshot_dir = os.path.join(input_dir, "skills")
-    result["agent_skills"] = _snapshot_agent_skills(backend, skills_snapshot_dir)
+    current_agent_skills = _snapshot_agent_skills(
+        backend,
+        skills_snapshot_dir,
+        item.agent_skills_snapshot,
+    )
+    if not recovered_result:
+        result["agent_skills"] = current_agent_skills
 
-    if not quota.wait_for_quota(
+    logical_execution_item = item
+    first_attempt_timeout_exhausted = False
+    if retrying_first_attempt:
+        maybe_item = _logical_attempt_execution_item(item, result)
+        if maybe_item is None:
+            _mark_logical_attempt_timeout(result)
+            if item.max_continuations <= 0:
+                _persist_work_item_result(item, result_dir, result)
+                return result
+            first_attempt_timeout_exhausted = True
+        else:
+            logical_execution_item = maybe_item
+
+    grading_only_resume = control_flow_resume and module_resume.action == MODULE_RESUME_GRADE_SAVED
+    quota_available = grading_only_resume or quota.wait_for_quota(
         item.usage_script,
         item.quota_5h,
         item.quota_7d,
         item.quota_max_waits,
         log_prefix=f"[{name_no_ext}] ",
-    ):
+    )
+    if not quota_available:
+        if recovered_result:
+            _persist_work_item_result(item, result_dir, result)
+            return result
         result["agent_exit"] = -3
         result["error"] = "quota exceeded (max waits reached); skipped"
         result["input_tokens"] = 0
         result["output_tokens"] = 0
         result["termination_reason"] = TerminationReason.QUOTA_EXHAUSTED
+        if item.module_checkpoint_identity is not None:
+            _persist_work_item_result(item, result_dir, result)
         return result
 
     workspace = None
     canonical_dir = None
-    grading_canonical_dir = None
     try:
         canonical_inputs = item.canonical_inputs
         if canonical_inputs is None:
@@ -1529,6 +2452,80 @@ def run_single_benchmark(item: WorkItem):
 
         # Save input artifacts
         canonical_inputs.materialize(input_dir, target_name="benchmark.tla")
+        if module_resume is not None and module_resume.submission is not None:
+            _write_bytes(os.path.join(input_dir, "resume.tla"), module_resume.submission)
+
+        if first_attempt_timeout_exhausted:
+            workspace = _make_workspace(
+                backend.name,
+                name_no_ext,
+                canonical_inputs,
+                skills_snapshot_dir=skills_snapshot_dir,
+                project_skills_dir=backend.project_skills_dir,
+                read_only_dependencies=getattr(mode, "read_only_dependencies", False),
+                initial_target_bytes=module_resume.submission,
+            )
+            if not _persist_work_item_result(item, result_dir, result):
+                return result
+            _run_continuations(
+                item,
+                workspace,
+                result,
+                result_dir,
+                basename,
+                name_no_ext,
+                canonical_inputs,
+                checker_bin,
+            )
+            return result
+
+        if control_flow_resume:
+            workspace = _make_workspace(
+                backend.name,
+                name_no_ext,
+                canonical_inputs,
+                skills_snapshot_dir=skills_snapshot_dir,
+                project_skills_dir=backend.project_skills_dir,
+                read_only_dependencies=getattr(mode, "read_only_dependencies", False),
+                initial_target_bytes=module_resume.submission,
+            )
+            if module_resume.action == MODULE_RESUME_GRADE_SAVED:
+                _grade_resumed_module_submission(
+                    item,
+                    workspace,
+                    result,
+                    result_dir,
+                    grading_dir,
+                    basename,
+                    name_no_ext,
+                    canonical_inputs,
+                )
+                if not _persist_work_item_result(item, result_dir, result):
+                    return result
+                if result.get("module_grading_pending") is not None:
+                    return result
+            if module_resume.action == MODULE_RESUME_CONTINUE or (
+                not is_pass_with_continuations(result) and not is_non_genuine(result)
+            ):
+                if module_resume.action == MODULE_RESUME_GRADE_SAVED and not quota.wait_for_quota(
+                    item.usage_script,
+                    item.quota_5h,
+                    item.quota_7d,
+                    item.quota_max_waits,
+                    log_prefix=f"[{name_no_ext}] ",
+                ):
+                    return result
+                _run_continuations(
+                    item,
+                    workspace,
+                    result,
+                    result_dir,
+                    basename,
+                    name_no_ext,
+                    canonical_inputs,
+                    checker_bin,
+                )
+            return result
 
         prompt = _build_prompt_from_canonical_inputs(
             backend,
@@ -1538,6 +2535,12 @@ def run_single_benchmark(item: WorkItem):
             item.tlapm_path,
             item.tlapm_lib,
         )
+        if module_resume is not None and module_resume.submission is not None:
+            prompt += (
+                "\n\n# Resumed progress\n\n"
+                "The editable task file already contains the last durably saved partial module from this run. "
+                "Continue from that work and keep any proof units that are already correct.\n"
+            )
         with open(os.path.join(input_dir, "prompt.txt"), "w") as f:
             f.write(prompt)
 
@@ -1548,8 +2551,11 @@ def run_single_benchmark(item: WorkItem):
         # Infra retry loop: a run cut short before the model did ANY work says
         # nothing about the model, so it is retried on a fresh workspace instead
         # of graded. Structured usage is authoritative when available.
+        previous_logical_attempt = copy.deepcopy(result) if retrying_first_attempt else None
+        if previous_logical_attempt is not None:
+            _reset_logical_attempt_segment(result, backend)
         run = _run_backend_with_retries(
-            item,
+            logical_execution_item,
             prompt,
             agent_dir,
             agent_jsonl,
@@ -1562,6 +2568,23 @@ def run_single_benchmark(item: WorkItem):
             skills_snapshot_dir=skills_snapshot_dir,
         )
         workspace, canonical_dir = run.workspace, run.canonical_dir
+        attempt_interrupted = run.quota_exhausted or result.get("termination_reason") == TerminationReason.INFRA_ERROR
+        if previous_logical_attempt is not None:
+            _merge_logical_attempt_accounting(
+                result,
+                previous_logical_attempt,
+                run.usage,
+                include_segment=run.model_work_observed or not attempt_interrupted,
+                backend=backend,
+            )
+        else:
+            _refresh_logical_timeout_remaining(result)
+        interrupted_after_model_work = run.model_work_observed and attempt_interrupted
+        if interrupted_after_model_work:
+            # The flag is checkpointed with a pending artifact. It only makes
+            # the attempt genuine after a module_result is also present, so a
+            # crash between publication and grading still resumes safely.
+            result["graded_after_interruption"] = True
 
         destination = os.path.join(workspace, basename)
         submission = backend.prepare_submission(
@@ -1569,7 +2592,7 @@ def run_single_benchmark(item: WorkItem):
             destination,
             result["termination_reason"],
             result.get("error", ""),
-            allow_materialization=not run.quota_exhausted and not run.infra_retriable,
+            allow_materialization=not attempt_interrupted or run.model_work_observed,
         )
         _apply_submission_metadata(result, submission.metadata)
         if submission.error is not None:
@@ -1577,16 +2600,43 @@ def run_single_benchmark(item: WorkItem):
 
         with open(os.path.join(agent_dir, "transcript.txt"), "w") as f:
             f.write(f"Benchmark: {rel_path}\n")
+            f.write(f"Agent time: {_format_task_time(result.get('agent_time_secs'))}\n")
             if _supports_cost_time(backend):
-                f.write(f"Time: {_format_task_time(result.get('time_secs'))}\n")
                 f.write(f"Equivalent cost: {_format_equivalent_cost(result.get('equivalent_cost_usd'))}\n")
-            else:
-                f.write(f"Time: {result['time_secs']:.0f}s\n")
-            f.write(f"Tokens: {result['input_tokens']:,} input / {result['output_tokens']:,} output\n")
+            f.write(f"Tokens: {format_token_usage(result_token_usage(result), verbose=True)}\n")
             f.write("=" * 60 + "\n\n")
             f.write(run.transcript)
 
         solution_path = os.path.join(workspace, basename)
+        module_submission_failure = None
+        has_new_module_submission = not attempt_interrupted or run.model_work_observed
+        if item.module_checkpoint_identity is not None and has_new_module_submission:
+            try:
+                module_submission_failure, module_artifact = _preserve_module_submission(
+                    item,
+                    solution_path,
+                    disposition=submission.disposition,
+                    copy_solution=submission.copy_solution,
+                    submission_error=submission.error,
+                )
+                if module_artifact is not None:
+                    result["module_artifact"] = module_artifact
+                    result["module_grading_pending"] = 0
+                    if not _persist_work_item_result(item, result_dir, result):
+                        return result
+                elif module_submission_failure is not None and interrupted_after_model_work:
+                    # Missing/empty output after observed model work has no new
+                    # bytes to grade. Keep the marker so resume retains its
+                    # accounting while continuing the same logical pass@1; an
+                    # existing module_artifact remains the durable fallback.
+                    result.pop("graded_after_interruption", None)
+                    result["invalid_submission_after_interruption"] = True
+            except (OSError, ModuleArtifactError) as exc:
+                result["check_verdict"] = "ERROR"
+                result["error"] = f"cannot preserve submitted module: {exc}"
+                result["termination_reason"] = TerminationReason.INFRA_ERROR
+                return result
+
         if submission.copy_solution and os.path.isfile(solution_path):
             shutil.copy2(solution_path, os.path.join(agent_dir, "solution.tla"))
 
@@ -1609,52 +2659,67 @@ def run_single_benchmark(item: WorkItem):
                 else "provider usage limit; exhausted quota retries"
             )
             result["termination_reason"] = TerminationReason.QUOTA_EXHAUSTED
-            with open(os.path.join(result_dir, "result.json"), "w") as f:
-                json.dump(result, f, indent=2)
-            return result
+            if item.module_checkpoint_identity is None or (
+                result.get("module_artifact") is None and module_submission_failure is None
+            ):
+                return result
 
-        if run.infra_retriable:
-            # Out of retries with no genuine attempt made: grading the untouched
-            # workspace would turn infra noise into a proof verdict (FAIL, or even
-            # a bogus PASS). Mark ERROR (retriable via --resume), skip the grader.
+        if attempt_interrupted and not run.model_work_observed:
+            # No formal attempt was made. Whether this particular interruption
+            # qualified for an inline retry does not change that fact: never
+            # materialize or grade the untouched canonical workspace.
             result["check_verdict"] = "ERROR"
             if not result.get("error"):
-                result["error"] = f"startup/infra failure ({run.infra_reasons[-1]}); exhausted infra retries"
-            with open(os.path.join(result_dir, "result.json"), "w") as f:
-                json.dump(result, f, indent=2)
+                if run.infra_reasons:
+                    result["error"] = f"startup/infra failure ({run.infra_reasons[-1]}); exhausted infra retries"
+                else:
+                    result["error"] = "agent run ended before any model work was observed"
+            return result
+
+        if module_submission_failure is not None:
+            result["check_verdict"] = "FAIL"
+            result["error"] = module_submission_failure
+            if item.module_checkpoint_identity is not None and not _persist_work_item_result(item, result_dir, result):
+                return result
+            if not run.quota_exhausted and item.max_continuations > 0 and not is_non_genuine(result):
+                _restore_latest_durable_module(item, solution_path, result, canonical_inputs)
+                _run_continuations(
+                    item,
+                    workspace,
+                    result,
+                    result_dir,
+                    basename,
+                    name_no_ext,
+                    canonical_inputs,
+                    checker_bin,
+                )
             return result
 
         if submission.disposition != SubmissionDisposition.GRADE:
             result["check_verdict"] = submission.disposition
-            with open(os.path.join(result_dir, "result.json"), "w") as f:
-                json.dump(result, f, indent=2)
             return result
 
         # Run grader
         check_result_path = os.path.join(grading_dir, "check.result")
-        grading_canonical_dir = canonical_dir
-        if getattr(mode, "canonical_replay_required", False):
-            grading_canonical_dir = _make_canonical_dir(name_no_ext, canonical_inputs)
-        if item.use_container:
-            _run_grader_container(
-                item,
-                workspace,
-                basename,
-                grading_dir,
-                check_result_path,
-                result,
-                grading_canonical_dir,
-            )
-        else:
-            _run_grader_local(
-                item,
-                workspace,
-                basename,
-                grading_dir,
-                check_result_path,
-                result,
-                grading_canonical_dir,
-            )
+        _grade_submission(
+            item,
+            result,
+            workspace,
+            grading_dir,
+            check_result_path,
+            basename,
+            name_no_ext,
+            canonical_inputs,
+            canonical_dir,
+        )
+        if interrupted_after_model_work and result.get("module_result") is not None:
+            result["graded_after_interruption"] = True
+        if isinstance(result.get("module_result"), dict) and result.get("check_verdict") != "ERROR":
+            result.pop("module_grading_pending", None)
+        if item.module_checkpoint_identity is not None and not _persist_work_item_result(item, result_dir, result):
+            return result
+        if result.get("module_grading_pending") is not None:
+            return result
 
         # Opt-in continuation rounds: a genuine non-PASS keeps its workspace and
         # the agent is asked to build on its own partial proof. The pass@1 fields
@@ -1671,22 +2736,22 @@ def run_single_benchmark(item: WorkItem):
                 checker_bin,
             )
 
-        # Write per-benchmark result.json
-        with open(os.path.join(result_dir, "result.json"), "w") as f:
-            json.dump(result, f, indent=2)
-
     finally:
         if workspace:
             shutil.rmtree(workspace, ignore_errors=True)
-        if grading_canonical_dir and grading_canonical_dir != canonical_dir:
-            shutil.rmtree(grading_canonical_dir, ignore_errors=True)
         if canonical_dir:
             shutil.rmtree(canonical_dir, ignore_errors=True)
+        _persist_work_item_result(item, result_dir, result)
 
     return result
 
 
-def _reset_benchmark_artifacts(output_dir: str, result_dir: str) -> None:
+def _reset_benchmark_artifacts(
+    output_dir: str,
+    result_dir: str,
+    *,
+    resume_checkpoint_sequence: int | None = None,
+) -> None:
     """Remove runner-owned artifacts without following generated-path symlinks."""
     output_root = os.path.abspath(output_dir)
     result_path = os.path.abspath(result_dir)
@@ -1710,7 +2775,28 @@ def _reset_benchmark_artifacts(output_dir: str, result_dir: str) -> None:
         raise RuntimeError(f"benchmark result path resolves outside output directory: {result_dir}")
 
     os.makedirs(result_dir, exist_ok=True)
-    for name in ("input", "agent", "grading", "continuations", "result.json"):
+    owned_names = ("input", "agent", "grading", "continuations", "result.json")
+    if resume_checkpoint_sequence is not None:
+        if resume_checkpoint_sequence <= 0:
+            raise RuntimeError("resume checkpoint sequence must be positive")
+        history_root = os.path.join(result_dir, "resume-history")
+        if os.path.islink(history_root) or (os.path.lexists(history_root) and not os.path.isdir(history_root)):
+            raise RuntimeError(f"refusing unsafe resume history path: {history_root}")
+        existing = [name for name in owned_names if os.path.lexists(os.path.join(result_dir, name))]
+        if existing:
+            os.makedirs(history_root, exist_ok=True)
+            prefix = f"checkpoint-{resume_checkpoint_sequence}"
+            history_dir = os.path.join(history_root, prefix)
+            suffix = 1
+            while os.path.lexists(history_dir):
+                history_dir = os.path.join(history_root, f"{prefix}-resume-{suffix}")
+                suffix += 1
+            os.mkdir(history_dir)
+            for name in existing:
+                os.replace(os.path.join(result_dir, name), os.path.join(history_dir, name))
+        return
+
+    for name in owned_names:
         path = os.path.join(result_dir, name)
         if not os.path.lexists(path):
             continue
@@ -1781,9 +2867,9 @@ def _run_continuations(
     the partial proof is still there — with a continuation prompt telling it to
     build on that prior work, then re-grades; rounds stop at the first PASS, at
     the --max-continuations budget, or when a round is cut short by infra/quota.
-    A chain cut short is interrupted, not failed: scoring excludes it from the
-    continuation rate (see score.continuation_interrupted) and --resume reruns
-    the benchmark.
+    A cut round is unresolved: scoring excludes it, and --resume continues that
+    same logical round with its saved proof, accumulated accounting, and
+    remaining timeout.
 
     The top-level result keeps the FIRST attempt's verdict, so pass@1 is
     reported unchanged; each round's verdict/cost is appended to
@@ -1793,10 +2879,21 @@ def _run_continuations(
     <result_dir>/continuations/round-N/, shaped like the agent/ + grading/ dirs.
     """
     mode = item.mode
+    _ensure_time_breakdown(result)
     prompt = mode.build_continuation_prompt(basename, item.tlapm_path, item.tlapm_lib)
     agent_check_file = os.path.join(workspace, name_no_ext + ".result")
     rounds: list[dict] = result.setdefault("continuations", [])
-    for rnd in range(1, item.max_continuations + 1):
+    retry_round = None
+    retry_attempt: dict[str, object] | None = None
+    if rounds and is_non_genuine(rounds[-1]):
+        interrupted = rounds.pop()
+        retry_round = interrupted.get("round")
+        if type(retry_round) is not int or retry_round <= 0:
+            raise ModuleCheckpointError("interrupted continuation has no valid round number")
+        result.setdefault("interrupted_continuations", []).append(interrupted)
+        retry_attempt = copy.deepcopy(interrupted)
+    first_round = retry_round if retry_round is not None else len(rounds) + 1
+    for rnd in range(first_round, item.max_continuations + 1):
         prev_verdict = rounds[-1]["check_verdict"] if rounds else result["check_verdict"]
         print(
             f"[{name_no_ext}] {prev_verdict} — continuing in same workspace (round {rnd}/{item.max_continuations})",
@@ -1808,21 +2905,42 @@ def _run_continuations(
             f.write(prompt)
         agent_jsonl = os.path.join(round_dir, "output.jsonl")
         agent_stderr = os.path.join(round_dir, "stderr.txt")
-        round_result = {
-            "round": rnd,
-            "agent_exit": -1,
-            "check_verdict": "ERROR",
-            "time_secs": 0,
-            "error": "",
-            "termination_reason": TerminationReason.OK,
-        }
+        previous_logical_attempt = retry_attempt if retry_attempt is not None and retry_round == rnd else None
+        execution_item = item
+        if previous_logical_attempt is not None:
+            round_result = copy.deepcopy(previous_logical_attempt)
+            maybe_item = _logical_attempt_execution_item(item, round_result)
+            if maybe_item is None:
+                _mark_logical_attempt_timeout(round_result)
+                rounds.append(round_result)
+                if item.module_checkpoint_identity is not None:
+                    if not _persist_work_item_result(item, result_dir, result):
+                        break
+                retry_attempt = None
+                continue
+            execution_item = maybe_item
+            _reset_logical_attempt_segment(round_result, item.backend)
+            retry_attempt = None
+        else:
+            round_result = {
+                "round": rnd,
+                "agent_exit": -1,
+                "check_verdict": "ERROR",
+                "agent_time_secs": 0,
+                "grading_time_secs": 0.0,
+                "logical_timeout_used_secs": 0.0,
+                "time_secs": 0,
+                "logical_timeout_secs": item.timeout,
+                "error": "",
+                "termination_reason": TerminationReason.OK,
+            }
         # The in-workspace self-check file survives from the previous round (the
         # agent may want to read what failed), so note its state to copy it as
         # this round's evidence only if this round's agent (re)wrote it.
         check_mtime_before = os.stat(agent_check_file).st_mtime_ns if os.path.isfile(agent_check_file) else None
 
         run = _run_backend_with_retries(
-            item,
+            execution_item,
             prompt,
             round_dir,
             agent_jsonl,
@@ -1834,12 +2952,15 @@ def _run_continuations(
             name_no_ext,
             fixed_workspace=workspace,
         )
-        grading_canonical_dir = None
         try:
             round_usage = run.usage.with_context(continuation_round=rnd)
             round_result["usage"] = round_usage.to_dict()
             round_result["input_tokens"] = round_usage.legacy_input_tokens
             round_result["output_tokens"] = round_usage.legacy_output_tokens
+            segment_agent_time = round_result.get("agent_time_secs")
+            segment_grading_time = round_result.get("grading_time_secs")
+            segment_equivalent_cost = round_result.get("equivalent_cost_usd")
+            segment_tool_calls = copy.deepcopy(round_result.get("tool_calls"))
             if run.quota_exhausted:
                 round_result["agent_exit"] = -3
                 round_result["error"] = (
@@ -1851,24 +2972,45 @@ def _run_continuations(
             elif run.infra_retriable:
                 round_result["error"] = f"startup/infra failure ({run.infra_reasons[-1]}); exhausted infra retries"
 
-            formal_round = not is_non_genuine(round_result)
+            round_interrupted = (
+                run.quota_exhausted or round_result.get("termination_reason") == TerminationReason.INFRA_ERROR
+            )
+            if previous_logical_attempt is not None:
+                _merge_logical_attempt_accounting(
+                    round_result,
+                    previous_logical_attempt,
+                    round_usage,
+                    include_segment=run.model_work_observed or not round_interrupted,
+                    backend=item.backend,
+                )
+            else:
+                _refresh_logical_timeout_remaining(round_result)
+
+            formal_round = not round_interrupted or (
+                item.module_checkpoint_identity is not None and run.model_work_observed
+            )
             if formal_round or not _supports_cost_time(item.backend):
                 aggregate_usage = UsageSummary.from_dict(result.get("usage")).merge(round_usage)
                 result["usage"] = aggregate_usage.to_dict()
                 if "tool_calls" in result or "tool_calls" in round_result:
                     result["tool_calls"] = (
                         toolcalls.ToolCallSummary.from_dict(result.get("tool_calls"))
-                        .merge(toolcalls.ToolCallSummary.from_dict(round_result.get("tool_calls")))
+                        .merge(toolcalls.ToolCallSummary.from_dict(segment_tool_calls))
                         .to_dict()
                     )
-                result["time_secs"] = _sum_accounting_values(
-                    result.get("time_secs"),
-                    round_result.get("time_secs"),
+                result["agent_time_secs"] = _sum_accounting_values(
+                    result.get("agent_time_secs"),
+                    segment_agent_time,
                 )
+                result["grading_time_secs"] = _sum_accounting_values(
+                    result.get("grading_time_secs"),
+                    segment_grading_time,
+                )
+                _recompute_task_time(result)
                 if _supports_cost_time(item.backend):
                     result["equivalent_cost_usd"] = _sum_accounting_values(
                         result.get("equivalent_cost_usd"),
-                        round_result.get("equivalent_cost_usd"),
+                        segment_equivalent_cost,
                     )
                 result["input_tokens"] = aggregate_usage.legacy_input_tokens
                 result["output_tokens"] = aggregate_usage.legacy_output_tokens
@@ -1882,40 +3024,80 @@ def _run_continuations(
             if check_mtime_after is not None and check_mtime_after != check_mtime_before:
                 shutil.copy2(agent_check_file, os.path.join(round_dir, "agent_check.result"))
 
-            # Same rule as the first attempt: never grade a round the model
-            # never got to work on (quota cap or 0-token startup death).
-            cut_short = run.quota_exhausted or run.infra_retriable
-            if not cut_short:
-                grading_canonical_dir = run.canonical_dir
-                if getattr(mode, "canonical_replay_required", False):
-                    grading_canonical_dir = _make_canonical_dir(name_no_ext, canonical_inputs)
+            # A provider interruption can happen after the module was edited.
+            # Preserve and grade those exact bytes for partial progress. A
+            # zero-work startup failure still has no experiment to grade.
+            cut_short = round_interrupted
+            module_submission_failure = None
+            has_new_module_submission = not round_interrupted or run.model_work_observed
+            if item.module_checkpoint_identity is not None and has_new_module_submission:
+                try:
+                    module_submission_failure, module_artifact = _preserve_module_submission(
+                        item,
+                        solution_path,
+                        disposition=SubmissionDisposition.GRADE,
+                        copy_solution=True,
+                    )
+                    if module_artifact is not None:
+                        round_result["module_artifact"] = module_artifact
+                except (OSError, ModuleArtifactError) as exc:
+                    round_result["check_verdict"] = "ERROR"
+                    round_result["error"] = f"cannot preserve submitted module: {exc}"
+                    round_result["termination_reason"] = TerminationReason.INFRA_ERROR
+                    cut_short = True
+            if module_submission_failure is not None:
+                round_result["check_verdict"] = "FAIL"
+                round_result["error"] = module_submission_failure
+                if round_interrupted and run.model_work_observed:
+                    round_result["invalid_submission_after_interruption"] = True
+
+            grade_interrupted_module = (
+                item.module_checkpoint_identity is not None
+                and round_interrupted
+                and run.model_work_observed
+                and round_result.get("module_artifact") is not None
+            )
+            if grade_interrupted_module:
+                # Preserve the model-work fact in the pending checkpoint. The
+                # round remains non-genuine until a resumed grader supplies a
+                # module_result, but that result must make the already-spent
+                # formal round genuine instead of rerunning it.
+                round_result["graded_after_interruption"] = True
+            rounds.append(round_result)
+            if module_submission_failure is not None:
+                _restore_latest_durable_module(item, solution_path, result, canonical_inputs)
+            if round_result.get("module_artifact") is not None:
+                result["module_grading_pending"] = rnd
+                if not _persist_work_item_result(item, result_dir, result):
+                    cut_short = True
+            if module_submission_failure is None and (not cut_short or grade_interrupted_module):
                 check_result_path = os.path.join(round_dir, "check.result")
-                if item.use_container:
-                    _run_grader_container(
-                        item,
-                        workspace,
-                        basename,
-                        round_dir,
-                        check_result_path,
-                        round_result,
-                        grading_canonical_dir,
-                    )
-                else:
-                    _run_grader_local(
-                        item,
-                        workspace,
-                        basename,
-                        round_dir,
-                        check_result_path,
-                        round_result,
-                        grading_canonical_dir,
-                    )
+                grading_before = nonnegative_float(round_result.get("grading_time_secs")) or 0.0
+                _grade_submission(
+                    item,
+                    round_result,
+                    workspace,
+                    round_dir,
+                    check_result_path,
+                    basename,
+                    name_no_ext,
+                    canonical_inputs,
+                    run.canonical_dir,
+                )
+                grading_after = nonnegative_float(round_result.get("grading_time_secs"))
+                if grading_after is not None:
+                    _add_child_grading_time(result, grading_after - grading_before)
+                if isinstance(round_result.get("module_result"), dict) and round_result.get("check_verdict") != "ERROR":
+                    result.pop("module_grading_pending", None)
+                elif result.get("module_grading_pending") == rnd:
+                    cut_short = True
+                if round_result.get("check_verdict") == "ERROR":
+                    cut_short = True
         finally:
-            if grading_canonical_dir and grading_canonical_dir != run.canonical_dir:
-                shutil.rmtree(grading_canonical_dir, ignore_errors=True)
             shutil.rmtree(run.canonical_dir, ignore_errors=True)
 
-        rounds.append(round_result)
+        if item.module_checkpoint_identity is not None:
+            _persist_work_item_result(item, result_dir, result)
         if round_result["check_verdict"] == "PASS":
             print(f"[{name_no_ext}] recovered: PASS on continuation round {rnd}", flush=True)
             break
@@ -1929,9 +3111,9 @@ def _resolve_session_dir(session_dir_arg: str | None, keep_container: bool, use_
     if not use_container:
         return ""
     if session_dir_arg:
-        return os.path.abspath(session_dir_arg)
+        return os.path.realpath(os.path.abspath(session_dir_arg))
     if keep_container:
-        return os.path.expanduser(os.path.join("~", ".tlaps-bench", "sessions"))
+        return os.path.realpath(os.path.expanduser(os.path.join("~", ".tlaps-bench", "sessions")))
     return ""
 
 
@@ -1943,6 +3125,20 @@ def _prepare_session_dir(session_dir: str) -> None:
     if not os.path.exists(gitignore):
         with open(gitignore, "w") as f:
             f.write("# tlaps-bench session data (may contain credentials) — do not commit\n*\n")
+
+
+def _work_item_session_key(item: WorkItem) -> str:
+    """Return one collision-resistant persistent session key per physical task."""
+
+    root = os.path.abspath(item.mode.benchmark_dir())
+    task = os.path.abspath(item.benchmark_path)
+    if os.path.commonpath((root, task)) != root:
+        raise ValueError(f"benchmark task escapes its mode root: {item.benchmark_path}")
+    relative = os.path.relpath(task, root).replace(os.sep, "/")
+    stem = os.path.splitext(relative)[0].replace("/", "__")
+    slug = re.sub(r"[^A-Za-z0-9_.-]", "_", stem).strip("._-") or "task"
+    digest = hashlib.sha256(relative.encode()).hexdigest()[:12]
+    return f"{slug[:80]}-{digest}"
 
 
 def _run_backend_container(
@@ -1987,14 +3183,15 @@ def _run_backend_container(
         # uuid suffix keeps retained containers unique across retries and jobs
         config.container_name = f"tlaps-bench-{safe}-{uuid.uuid4().hex[:8]}"
     if item.session_dir and backend.session_state_dir:
-        # A retained container keys its session by container name (each kept
-        # container ↔ its own dir); otherwise by benchmark, so retries and
-        # continuations resume the same session.
-        host_session = os.path.join(item.session_dir, backend.name, config.container_name or safe)
+        # Every module owns one stable session across retries, continuations,
+        # and --resume. The full mode-relative task identity prevents modules
+        # with the same basename from sharing or concurrently mounting state.
+        session_key = _work_item_session_key(item)
+        host_session = os.path.join(item.session_dir, backend.name, session_key)
         config.session_dir = host_session
         config.session_container_path = backend.session_state_dir
         print(
-            f"[session-dir] persisting {backend.name} session state for '{name_no_ext}' "
+            f"[session-dir] persisting {backend.name} session state for '{session_key}' "
             f"to {host_session} (restore with scripts/restore-session.sh)",
             flush=True,
         )
@@ -2293,7 +3490,14 @@ def _run_grader_container(
             dbg.write(f"exit code: {exit_code}\n")
             dbg.write(f"stdout:\n{stdout}\n")
             dbg.write(f"stderr:\n{stderr}\n")
-        _parse_grader_result(exit_code, stdout, result)
+        module_spec = getattr(mode, "module_task_spec", None)
+        expected_units = tuple(module_spec(item.benchmark_path).proof_unit_ids) if module_spec is not None else None
+        _parse_grader_result(
+            exit_code,
+            stdout,
+            result,
+            expected_module_unit_ids=expected_units,
+        )
     except subprocess.TimeoutExpired:
         result["check_verdict"] = "TIMEOUT"
     except Exception as e:
@@ -2345,7 +3549,14 @@ def _run_grader_local(
             dbg.write(f"exit code: {check_proc.returncode}\n")
             dbg.write(f"stdout:\n{check_proc.stdout}\n")
             dbg.write(f"stderr:\n{check_proc.stderr}\n")
-        _parse_grader_result(check_proc.returncode, check_proc.stdout, result)
+        module_spec = getattr(mode, "module_task_spec", None)
+        expected_units = tuple(module_spec(item.benchmark_path).proof_unit_ids) if module_spec is not None else None
+        _parse_grader_result(
+            check_proc.returncode,
+            check_proc.stdout,
+            result,
+            expected_module_unit_ids=expected_units,
+        )
     except subprocess.TimeoutExpired:
         result["check_verdict"] = "TIMEOUT"
     except Exception as e:
@@ -2353,7 +3564,86 @@ def _run_grader_local(
         result["error"] = str(e)
 
 
-def _parse_grader_result(exit_code: int, stdout: str, result: dict) -> None:
+def _grade_submission(
+    item: WorkItem,
+    attempt: dict[str, object],
+    workspace: str,
+    grading_dir: str,
+    check_result_path: str,
+    basename: str,
+    name_no_ext: str,
+    canonical_inputs: CanonicalInputs,
+    canonical_dir: str | None,
+) -> None:
+    """Grade a submission, isolating preserved module artifacts from scratch files."""
+
+    previous_grader_error = attempt.pop("grader_error", None)
+    if previous_grader_error and attempt.get("error") == previous_grader_error:
+        attempt["error"] = ""
+    for key in (
+        "module_result",
+        "trusted_proof_unit_ids",
+        "obligations",
+        "obligations_complete",
+        "obligations_failed",
+        "obligations_total",
+        "sany_status",
+        "sany_valid",
+        "failed_gates",
+        "cheat_checks",
+    ):
+        attempt.pop(key, None)
+    if "trusted_proof_unit_count" in attempt:
+        attempt["trusted_proof_unit_count"] = 0
+    started = time.monotonic()
+    try:
+        if item.module_checkpoint_identity is not None:
+            inputs = _module_grading_inputs(item, attempt, canonical_inputs, basename, name_no_ext)
+        else:
+            inputs = _standard_grading_inputs(item, workspace, canonical_inputs, name_no_ext, canonical_dir)
+        with inputs as (grading_workspace, grading_canonical_dir):
+            if item.use_container:
+                _run_grader_container(
+                    item,
+                    grading_workspace,
+                    basename,
+                    grading_dir,
+                    check_result_path,
+                    attempt,
+                    grading_canonical_dir,
+                )
+            else:
+                _run_grader_local(
+                    item,
+                    grading_workspace,
+                    basename,
+                    grading_dir,
+                    check_result_path,
+                    attempt,
+                    grading_canonical_dir,
+                )
+    except (OSError, ModuleArtifactError) as exc:
+        attempt["check_verdict"] = "ERROR"
+        attempt["error"] = f"cannot materialize grading inputs: {exc}"
+    finally:
+        elapsed = time.monotonic() - started
+        if attempt.get("check_verdict") == "ERROR":
+            attempt["grader_error"] = str(attempt.get("error", ""))
+            prior = nonnegative_float(attempt.get("grader_error_time_secs")) or 0.0
+            attempt["grader_error_time_secs"] = prior + elapsed
+            _ensure_time_breakdown(attempt)
+            _recompute_task_time(attempt)
+        else:
+            _add_grading_time(attempt, elapsed)
+
+
+def _parse_grader_result(
+    exit_code: int,
+    stdout: str,
+    result: dict,
+    *,
+    expected_module_unit_ids: tuple[str, ...] | None = None,
+) -> None:
     """Parse grader exit code + stdout into result dict."""
     # The merged checker is binary: exit 0 = PASS, 1 = FAIL (a cheat is just a
     # FAIL, not a separate exit code). Anything else is unexpected → ERROR.
@@ -2363,14 +3653,72 @@ def _parse_grader_result(exit_code: int, stdout: str, result: dict) -> None:
         result["check_verdict"] = "FAIL"
     else:
         result["check_verdict"] = "ERROR"
-    sm = re.search(r"^SANY-STATUS:\s*(valid|invalid|unavailable)\s*$", stdout or "", re.MULTILINE)
-    if sm:
-        result["sany_status"] = sm.group(1)
-        result["sany_valid"] = sm.group(1) == "valid"
-    else:
+    sany_matches = re.findall(
+        r"^SANY-STATUS:[ \t]*([^\r\n]*?)[ \t]*$",
+        stdout or "",
+        re.MULTILINE,
+    )
+    if not sany_matches:
         result["check_verdict"] = "ERROR"
         result["error"] = "grader did not report a SANY status"
         return
+    if len(sany_matches) != 1:
+        result["check_verdict"] = "ERROR"
+        result["error"] = "grader reported multiple SANY status markers; expected exactly one"
+        return
+    sany_status = sany_matches[0]
+    if sany_status not in {"valid", "invalid", "unavailable"}:
+        result["check_verdict"] = "ERROR"
+        result["error"] = f"grader reported an invalid SANY status marker: {sany_status!r}"
+        return
+    result["sany_status"] = sany_status
+    result["sany_valid"] = sany_status == "valid"
+    declared_timeout = bool(re.search(r"^CHECK-TIMEOUT:", stdout or "", re.MULTILINE))
+    module_matches = re.findall(
+        rf"^{re.escape(MODULE_RESULT_PREFIX)}(.+)$",
+        stdout or "",
+        re.MULTILINE,
+    )
+    if expected_module_unit_ids is not None:
+        if len(module_matches) != 1:
+            if len(module_matches) == 0 and exit_code not in (0, 1) and declared_timeout:
+                result["check_verdict"] = "TIMEOUT"
+                return
+            result["check_verdict"] = "ERROR"
+            result["error"] = "module grader did not report exactly one machine-readable module result"
+            return
+        try:
+            module_result = parse_module_result_json(module_matches[0], expected_module_unit_ids)
+        except ModuleResultError as exc:
+            result["check_verdict"] = "ERROR"
+            result["error"] = f"module grader reported an invalid result: {exc}"
+            return
+        result["module_result"] = module_result
+        trusted = module_result["trusted_proof_unit_ids"]
+        result["proof_unit_count"] = len(expected_module_unit_ids)
+        result["trusted_proof_unit_count"] = len(trusted)
+        result["trusted_proof_unit_ids"] = list(trusted)
+        units = module_result["units"]
+        if units and any("obligations" in unit for unit in units):
+            known_obligations = [unit["obligations"] for unit in units if isinstance(unit.get("obligations"), int)]
+            result["obligations"] = sum(known_obligations)
+            result["obligations_complete"] = len(known_obligations) == len(units)
+        if exit_code == 0 and not module_result["complete"]:
+            result["check_verdict"] = "ERROR"
+            result["error"] = "module grader exited PASS without trusting every proof unit"
+            return
+        if exit_code == 1 and module_result["complete"]:
+            result["check_verdict"] = "ERROR"
+            result["error"] = "module grader exited FAIL for a complete trusted module"
+            return
+        if exit_code not in (0, 1):
+            raw_verdicts = {unit["raw_verdict"] for unit in module_result["units"]}
+            result["check_verdict"] = "TIMEOUT" if "TIMEOUT" in raw_verdicts else "ERROR"
+        if module_result["sany_status"] != sany_status:
+            result["check_verdict"] = "ERROR"
+            result["error"] = "module grader SANY status disagrees with SANY-STATUS marker"
+            return
+
     # Which gate(s) failed (the grade is binary; this keeps the analysis signal).
     gm = re.search(r"GATES-FAILED:\s*([^\n]+)", stdout or "")
     if gm:
@@ -2385,14 +3733,15 @@ def _parse_grader_result(exit_code: int, stdout: str, result: dict) -> None:
         if cm:
             result["check_verdict"] = "CHEATING"
             result["cheat_checks"] = [c.strip() for c in cm.group(1).split(",") if c.strip()]
-    ob_matches = re.findall(r"All (\d+) obligation", stdout)
-    if ob_matches:
-        result["obligations"] = int(ob_matches[-1])
-    else:
-        fail_match = re.search(r"(\d+)/(\d+) obligation", stdout)
-        if fail_match:
-            result["obligations_failed"] = int(fail_match.group(1))
-            result["obligations_total"] = int(fail_match.group(2))
+    if expected_module_unit_ids is None:
+        ob_matches = re.findall(r"All (\d+) obligation", stdout)
+        if ob_matches:
+            result["obligations"] = int(ob_matches[-1])
+        else:
+            fail_match = re.search(r"(\d+)/(\d+) obligation", stdout)
+            if fail_match:
+                result["obligations_failed"] = int(fail_match.group(1))
+                result["obligations_total"] = int(fail_match.group(2))
 
 
 # A one-word prompt that needs no tools and no workspace files — keeps the
@@ -2682,6 +4031,14 @@ def main():
             2, f"{parser.prog}: error: no benchmarks found for mode {mode.name!r} under {mode.benchmark_dir()}\n"
         )
 
+    # Module runs always persist the exact selected cohort, including Full and
+    # --filter runs. A resume must select the same physical module tasks.
+    recorded_task_ids = task_ids
+    if getattr(mode, "module_task_spec", None) is not None:
+        recorded_task_ids = [
+            os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/") for path in benchmark_files
+        ]
+
     if getattr(mode, "requires_workspace_tools", False) and not backend.capabilities.workspace_tools:
         parser.exit(
             2,
@@ -2700,9 +4057,10 @@ def main():
         else:
             output_dir = os.path.join(REPO_ROOT, "results", mode.name, backend.name, timestamp)
     output_dir = os.path.abspath(output_dir)
+    session_dir = _resolve_session_dir(args.session_dir, args.keep_container, use_container)
     if args.resume:
         try:
-            _validate_resume_task_list(output_dir, mode.name, task_ids)
+            _validate_resume_task_list(output_dir, mode.name, recorded_task_ids)
         except ValueError as exc:
             parser.exit(2, f"{parser.prog}: error: {exc}\n")
 
@@ -2710,6 +4068,22 @@ def main():
     run_identity = None
     container_ready = False
     native_toolchain_ready = False
+
+    # Resolve backend-dependent defaults before freezing or comparing the run
+    # identity. A resume may reuse progress only under the exact same model,
+    # limits, retry policy, and continuation budget.
+    try:
+        backend.set_reasoning_effort(args.reasoning_effort)
+        backend.set_max_output_tokens(args.max_output_tokens)
+        args.infra_retries = backend.validate_options(args.infra_retries, args.max_continuations)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    try:
+        agent_skills_snapshot = AgentSkillsSnapshot.capture(backend, SKILLS_DIR)
+    except (OSError, UnicodeError, ValueError) as exc:
+        parser.exit(2, f"{parser.prog}: error: cannot freeze project Agent Skills: {exc}\n")
+
     if mode.name == "proof-from-scratch":
         try:
             if use_container:
@@ -2723,6 +4097,16 @@ def main():
                 mode,
                 proof_library_catalog,
                 verification_toolchain,
+                _execution_policy_identity(
+                    backend,
+                    use_container=use_container,
+                    timeout=args.timeout,
+                    check_timeout=args.check_timeout,
+                    infra_retries=args.infra_retries,
+                    max_continuations=args.max_continuations,
+                    session_dir=session_dir,
+                ),
+                agent_skills_snapshot,
             )
         except (DockerUnavailableError, OSError, RuntimeError, ValueError) as exc:
             parser.exit(2, f"{parser.prog}: error: cannot freeze proof verification environment: {exc}\n")
@@ -2746,15 +4130,80 @@ def main():
         except (OSError, TaskContractError, ValueError) as exc:
             parser.exit(2, f"{parser.prog}: error: cannot capture canonical inputs: {exc}\n")
 
-    # Resolve capability-dependent defaults only after task discovery. This
-    # preserves the useful fail-fast behavior for a misspelled --filter: no
-    # backend validation, auth probe, image build, or model request happens.
-    try:
-        backend.set_reasoning_effort(args.reasoning_effort)
-        backend.set_max_output_tokens(args.max_output_tokens)
-        args.infra_retries = backend.validate_options(args.infra_retries, args.max_continuations)
-    except ValueError as exc:
-        parser.error(str(exc))
+    module_checkpoint_identities: dict[str, ModuleCheckpointIdentity] = {}
+    module_checkpoints = {}
+    results: list[dict] = []
+    done_pass: set[str] = set()
+    module_resumes: dict[str, ModuleResume] = {}
+    module_spec_loader = getattr(mode, "module_task_spec", None)
+    if module_spec_loader is not None:
+        if run_identity is None:
+            parser.exit(2, f"{parser.prog}: error: module evaluation requires a frozen run identity\n")
+        try:
+            identity_digest = module_run_identity_sha256(run_identity)
+            for benchmark_path in benchmark_files:
+                relative = os.path.relpath(benchmark_path, mode.benchmark_dir()).replace(os.sep, "/")
+                spec = module_spec_loader(benchmark_path)
+                canonical_inputs = canonical_inputs_by_path[benchmark_path]
+                module_checkpoint_identities[relative] = ModuleCheckpointIdentity(
+                    task_id=relative,
+                    proof_unit_ids=tuple(spec.proof_unit_ids),
+                    canonical_input_sha256=canonical_inputs.digest(),
+                    run_identity_sha256=identity_digest,
+                )
+            module_checkpoints = prepare_module_checkpoints(
+                output_dir,
+                module_checkpoint_identities,
+                resume=args.resume,
+            )
+        except (KeyError, ModuleCheckpointError) as exc:
+            parser.exit(2, f"{parser.prog}: error: cannot prepare module checkpoints: {exc}\n")
+
+    if args.resume:
+        try:
+            previous_results = _load_resume_results(output_dir)
+            if module_checkpoint_identities:
+                (
+                    results,
+                    module_resumes,
+                    done_pass,
+                ) = _recover_module_resume(
+                    output_dir,
+                    previous_results,
+                    module_checkpoint_identities,
+                    module_checkpoints,
+                    max_continuations=args.max_continuations,
+                )
+            else:
+                for previous_result in previous_results:
+                    _record_result(results, previous_result)
+            _validate_resume_result_accounting(
+                results,
+                supports_cost_time=_supports_cost_time(backend),
+            )
+            if not module_checkpoint_identities:
+                done_pass = _resume_done_benchmarks(results)
+        except (ModuleArtifactError, ValueError) as exc:
+            parser.exit(2, f"{parser.prog}: error: cannot recover prior results: {exc}\n")
+
+        if module_checkpoint_identities:
+            print(
+                f"Resume: recovered {len(results)} durable module result(s), "
+                f"skipping {len(done_pass)} completed module task(s)"
+            )
+        elif results:
+            n_pass = sum(1 for result in results if _resume_should_skip(result) and not is_skipped(result))
+            n_skip = n_skipped(results)
+            non_genuine = n_non_genuine(results)
+            msg = (
+                f"Resume: loaded {len(results)} prior results, skipping {n_pass} genuine PASS "
+                f"(first-attempt or continuation) + {n_skip} SKIP"
+            )
+            if non_genuine:
+                msg += f"; {non_genuine} error/interrupted result(s) eligible for rerun"
+            print(msg)
+        else:
+            print(f"Resume: no prior results.json or module checkpoints in {output_dir} — running all")
 
     if not _confirm_public_pricing(
         backend,
@@ -2801,7 +4250,6 @@ def main():
     if args.session_dir and not use_container:
         print("WARNING: --session-dir has no effect with --no-container (no container to mount into)")
 
-    session_dir = _resolve_session_dir(args.session_dir, args.keep_container, use_container)
     if session_dir:
         _prepare_session_dir(session_dir)
 
@@ -2819,8 +4267,10 @@ def main():
             print(f"Preflight: skipped — backend {backend.name!r} does not support a model preflight request")
     os.makedirs(output_dir, exist_ok=True)
     try:
-        _write_task_list_record(output_dir, mode.name, task_ids)
-        _write_run_manifest(output_dir, run_identity)
+        if not args.resume or not os.path.isfile(os.path.join(output_dir, TASK_LIST_RECORD)):
+            _write_task_list_record(output_dir, mode.name, recorded_task_ids)
+        if not args.resume or not os.path.isfile(os.path.join(output_dir, RUN_MANIFEST_RECORD)):
+            _write_run_manifest(output_dir, run_identity)
     except OSError as exc:
         parser.exit(2, f"{parser.prog}: error: cannot record run inputs in {output_dir!r}: {exc}\n")
 
@@ -2866,41 +4316,10 @@ def main():
 
     print(f"Found {len(benchmark_files)} benchmarks")
 
-    # Resume: reuse --output-dir, skip benchmarks already genuinely completed
-    # there, and seed `results` so the summary stays cumulative across the rerun.
-    results = []
-    done_pass = set()
-    if args.resume:
-        prev_json = os.path.join(output_dir, "results.json")
-        if os.path.isfile(prev_json):
-            with open(prev_json) as f:
-                previous_results = json.load(f)
-            for previous_result in previous_results:
-                _record_result(results, previous_result)
-            # Skip genuine PASS (already done) and SKIP (operator-marked
-            # frontier benchmarks deliberately excluded from retry). A PASS
-            # produced by INFRA_ERROR / QUOTA_EXHAUSTED is non-genuine and must
-            # be eligible for rerun.
-            done_pass = _resume_done_benchmarks(results)
-            # Count with the same predicate the skip decision uses, so the
-            # message includes benchmarks solved on a continuation round.
-            n_pass = sum(1 for r in results if _resume_should_skip(r) and not is_skipped(r))
-            n_skip = n_skipped(results)
-            non_genuine = n_non_genuine(results)
-            msg = (
-                f"Resume: loaded {len(results)} prior results, skipping {n_pass} genuine PASS "
-                f"(first-attempt or continuation) + {n_skip} SKIP"
-            )
-            if non_genuine:
-                msg += f"; {non_genuine} infra/quota-cut result(s) eligible for rerun"
-            print(msg)
-        else:
-            print(f"Resume: no prior results.json in {output_dir} — running all")
-
     selected_benchmarks = set()
     work_items = []
     for bf in benchmark_files:
-        rel = os.path.relpath(bf, mode.benchmark_dir())
+        rel = os.path.relpath(bf, mode.benchmark_dir()).replace(os.sep, "/")
         selected_benchmarks.add(rel)
         if rel in done_pass:
             continue
@@ -2926,7 +4345,10 @@ def main():
                 keep_container=use_container and args.keep_container,
                 session_dir=session_dir,
                 canonical_inputs=canonical_inputs_by_path.get(bf),
+                agent_skills_snapshot=agent_skills_snapshot,
                 run_identity=run_identity,
+                module_resume=module_resumes.get(rel),
+                module_checkpoint_identity=module_checkpoint_identities.get(rel),
             )
         )
 
@@ -2943,7 +4365,7 @@ def main():
             r = run_single_benchmark(item)
             _record_result(results, r)
             icon = VERDICT_ICONS.get(r["check_verdict"], "❓")
-            tokens = f"{r.get('input_tokens', 0):,}/{r.get('output_tokens', 0):,}"
+            tokens = format_token_usage(result_token_usage(r))
             cont = _continuation_note(r)
             metrics = (
                 f"{_format_task_time(r.get('time_secs'))}, {tokens} tok, "
@@ -2963,7 +4385,7 @@ def main():
                 r = future.result()
                 _record_result(results, r)
                 icon = VERDICT_ICONS.get(r["check_verdict"], "❓")
-                tokens = f"{r.get('input_tokens', 0):,}/{r.get('output_tokens', 0):,}"
+                tokens = format_token_usage(result_token_usage(r))
                 cont = _continuation_note(r)
                 metrics = (
                     f"{_format_task_time(r.get('time_secs'))}, {tokens} tok, "
@@ -2996,12 +4418,12 @@ def main():
     for v in ["PASS", "FAIL", "CHEATING", "TIMEOUT", "ERROR"]:
         if v in verdicts:
             print(f"  {VERDICT_ICONS.get(v, '❓')} {v}: {verdicts[v]}")
-    total_in = sum(r.get("input_tokens", 0) for r in results)
-    total_out = sum(r.get("output_tokens", 0) for r in results)
-    print(f"  Total tokens: {total_in:,} input / {total_out:,} output")
+    print(f"  Total tokens: {format_token_usage(aggregate_token_usage(results), verbose=True)}")
+    formal_results = _formal_results(results)
+    print(f"  Total agent time: {_format_task_time(_sum_required_metric(formal_results, 'agent_time_secs'))}")
+    print(f"  Total grading time: {_format_task_time(_sum_required_metric(formal_results, 'grading_time_secs'))}")
+    print(f"  Total task time: {_format_task_time(_sum_required_metric(formal_results, 'time_secs'))}")
     if _supports_cost_time(backend):
-        formal_results = _formal_results(results)
-        print(f"  Total task time: {_format_task_time(_sum_required_metric(formal_results, 'time_secs'))}")
         print(
             f"  Equivalent cost: {_format_equivalent_cost(_sum_required_metric(formal_results, 'equivalent_cost_usd'))}"
         )

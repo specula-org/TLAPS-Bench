@@ -31,6 +31,7 @@ from dataset.proof_from_scratch.generate import (
     copy_deps_layered,
     dep_keep_names,
     incremental_precondition_error,
+    instance_qualified_uses,
     layered_cross_dir_dedup,
     load_dataset_task_keys,
     positional_targets,
@@ -609,6 +610,8 @@ def test_unnamed_instance_stays_live_without_disabling_pruning(tmp_path, monkeyp
     dep = tmp_path / "Dep.tla"
     dep.write_text("---- MODULE Dep ----\nINSTANCE Other WITH chosen <- chosen\nchosen == 1\nTypeOK == TRUE\n====\n")
     fake_dump = {
+        "module": "Dep",
+        "extends": [],
         "operators": [
             {"name": "chosen", "loc": {"line_start": 3, "line_end": 3}, "references": []},
             {"name": "TypeOK", "loc": {"line_start": 4, "line_end": 4}, "references": []},
@@ -621,9 +624,9 @@ def test_unnamed_instance_stays_live_without_disabling_pruning(tmp_path, monkeyp
     keep = dep_keep_names([str(dep)], set())
 
     assert keep is not None, "an unnamed INSTANCE must not disable pruning"
-    assert "chosen" in keep, "a name the INSTANCE substitutes stays live"
-    assert "TypeOK" not in keep, "an unused proof helper is still pruned"
-    text = prune_dep_module(str(dep), keep)
+    assert "chosen" in keep[str(dep)], "a name the INSTANCE substitutes stays live"
+    assert "TypeOK" not in keep[str(dep)], "an unused proof helper is still pruned"
+    text = prune_dep_module(str(dep), keep[str(dep)])
     assert "INSTANCE Other" in text, "the INSTANCE line itself is never deleted"
     assert "TypeOK" not in text
 
@@ -632,15 +635,19 @@ def test_dep_keep_names_closes_across_sibling_dependencies(tmp_path, monkeypatch
     """Closure must span the group: a definition one dep needs from another
     must survive, or the pruned module stops parsing."""
     a, b = tmp_path / "A.tla", tmp_path / "B.tla"
-    a.write_text("---- MODULE A ----\nUsesChosen == chosen\n====\n")
+    a.write_text("---- MODULE A ----\nEXTENDS B\nUsesChosen == chosen\n====\n")
     b.write_text("---- MODULE B ----\nchosen == 1\nUnused == 2\n====\n")
     dumps = {
         str(a): {
-            "operators": [{"name": "UsesChosen", "loc": {"line_start": 2, "line_end": 2}, "references": ["chosen"]}],
+            "module": "A",
+            "extends": ["B"],
+            "operators": [{"name": "UsesChosen", "loc": {"line_start": 3, "line_end": 3}, "references": ["chosen"]}],
             "instances": [],
             "assumes": [],
         },
         str(b): {
+            "module": "B",
+            "extends": [],
             "operators": [
                 {"name": "chosen", "loc": {"line_start": 2, "line_end": 2}, "references": []},
                 {"name": "Unused", "loc": {"line_start": 3, "line_end": 3}, "references": []},
@@ -653,8 +660,206 @@ def test_dep_keep_names_closes_across_sibling_dependencies(tmp_path, monkeypatch
 
     keep = dep_keep_names([str(a), str(b)], {"UsesChosen"})
 
-    assert "chosen" in keep, "a sibling dep's definition must survive"
-    assert "Unused" not in keep
+    assert "UsesChosen" in keep[str(a)]
+    assert "chosen" in keep[str(b)], "a sibling dep's definition must survive"
+    assert "Unused" not in keep[str(b)]
+
+
+def test_dep_keep_names_does_not_keep_a_homonym_in_another_module(tmp_path, monkeypatch):
+    """A local Inv must not keep Consensus.Inv just because the identifier matches.
+
+    Voting states Spec => []Inv and Spec => C!Spec. The first Inv is Voting's;
+    the second Spec is Consensus's. Matching only the bare name used to copy
+    Consensus.Inv into the read-only context as C!Inv.
+    """
+    consensus = tmp_path / "Consensus.tla"
+    consensus.write_text("---- MODULE Consensus ----\nSpec == TRUE\nInv == TRUE\n====\n")
+    dumps = {
+        str(consensus): {
+            "module": "Consensus",
+            "extends": [],
+            "operators": [
+                {"name": "Spec", "loc": {"line_start": 2, "line_end": 2}, "references": []},
+                {"name": "Inv", "loc": {"line_start": 3, "line_end": 3}, "references": []},
+            ],
+            "instances": [],
+            "assumes": [],
+        }
+    }
+    monkeypatch.setattr(generate, "dump_sany", lambda p: dumps[str(p)])
+
+    keep = dep_keep_names(
+        [str(consensus)],
+        {"Inv", "Spec", "C"},
+        source_defined={"Inv", "Spec", "C"},
+        instance_modules={"C": "Consensus"},
+        qualified_uses={("C", "Spec")},
+    )
+
+    assert "Spec" in keep[str(consensus)]
+    assert "Inv" not in keep[str(consensus)]
+
+
+def test_dep_keep_names_resolves_instance_declared_in_a_sibling(tmp_path, monkeypatch):
+    """C!Spec must find C even when the INSTANCE lives in an EXTENDS'd sibling.
+
+    PaxosProof states V!Next, but V == INSTANCE Voting is in PaxosTuple. Matching
+    only the source module's INSTANCE table dropped Voting.Next.
+    """
+    model = tmp_path / "PaxosTuple.tla"
+    voting = tmp_path / "Voting.tla"
+    model.write_text("---- MODULE PaxosTuple ----\nV == INSTANCE Voting\nNext == TRUE\n====\n")
+    voting.write_text("---- MODULE Voting ----\nNext == TRUE\nInv == TRUE\n====\n")
+    dumps = {
+        str(model): {
+            "module": "PaxosTuple",
+            "extends": [],
+            "operators": [{"name": "Next", "loc": {"line_start": 3, "line_end": 3}, "references": []}],
+            "instances": [{"name": "V", "module": "Voting", "loc": {"line_start": 2, "line_end": 2}}],
+            "assumes": [],
+        },
+        str(voting): {
+            "module": "Voting",
+            "extends": [],
+            "operators": [
+                {"name": "Next", "loc": {"line_start": 2, "line_end": 2}, "references": []},
+                {"name": "Inv", "loc": {"line_start": 3, "line_end": 3}, "references": []},
+            ],
+            "instances": [],
+            "assumes": [],
+        },
+    }
+    monkeypatch.setattr(generate, "dump_sany", lambda p: dumps[str(p)])
+
+    keep = dep_keep_names(
+        [str(model), str(voting)],
+        {"Next", "Inv", "V"},
+        source_defined={"Inv"},
+        instance_modules={},
+        qualified_uses={("V", "Next")},
+        imported_modules=["PaxosTuple"],
+    )
+
+    assert "Next" in keep[str(voting)]
+    assert "Inv" not in keep[str(voting)]
+
+
+def test_dep_keep_names_does_not_seed_an_extends_spec_from_a_qualified_use(tmp_path, monkeypatch):
+    """P!Spec must not keep Lock.Spec just because Lock is EXTENDS'd."""
+    lock = tmp_path / "Lock.tla"
+    peterson = tmp_path / "Peterson.tla"
+    lock.write_text("---- MODULE Lock ----\nInit == TRUE\nproc == TRUE\nNext == proc\nSpec == Init /\\ Next\n====\n")
+    peterson.write_text("---- MODULE Peterson ----\nInit == TRUE\nNext == TRUE\nSpec == Init /\\ Next\n====\n")
+    dumps = {
+        str(lock): {
+            "module": "Lock",
+            "extends": [],
+            "operators": [
+                {"name": "Init", "loc": {"line_start": 2, "line_end": 2}, "references": []},
+                {"name": "proc", "loc": {"line_start": 3, "line_end": 3}, "references": []},
+                {"name": "Next", "loc": {"line_start": 4, "line_end": 4}, "references": ["proc"]},
+                {"name": "Spec", "loc": {"line_start": 5, "line_end": 5}, "references": ["Init", "Next"]},
+            ],
+            "instances": [],
+            "assumes": [],
+        },
+        str(peterson): {
+            "module": "Peterson",
+            "extends": [],
+            "operators": [
+                {"name": "Init", "loc": {"line_start": 2, "line_end": 2}, "references": []},
+                {"name": "Next", "loc": {"line_start": 3, "line_end": 3}, "references": []},
+                {"name": "Spec", "loc": {"line_start": 4, "line_end": 4}, "references": ["Init", "Next"]},
+            ],
+            "instances": [],
+            "assumes": [],
+        },
+    }
+    monkeypatch.setattr(generate, "dump_sany", lambda p: dumps[str(p)])
+
+    keep = dep_keep_names(
+        [str(lock), str(peterson)],
+        referenced_identifiers("InitHS == Init", "THEOREM SpecHS => P!Spec"),
+        source_defined={"InitHS", "SpecHS", "P"},
+        instance_modules={"P": "Peterson"},
+        qualified_uses=instance_qualified_uses("THEOREM SpecHS => P!Spec"),
+        imported_modules=["Lock"],
+    )
+
+    assert "Spec" in keep[str(peterson)]
+    assert "Init" in keep[str(lock)]
+    assert "Spec" not in keep[str(lock)]
+    assert "Next" not in keep[str(lock)]
+    assert "proc" not in keep[str(lock)]
+
+
+def test_unused_operator_qualified_uses_do_not_seed_a_dependency(tmp_path, monkeypatch):
+    """A dropped local operator's C!Inv must not keep Consensus.Inv."""
+    consensus = tmp_path / "Consensus.tla"
+    model = tmp_path / "Model.tla"
+    consensus.write_text("---- MODULE Consensus ----\nSpec == TRUE\nInv == TRUE\n====\n")
+    model.write_text("---- MODULE Model ----\nC == INSTANCE Consensus\nUnused == C!Inv\nSpec == C!Spec\n====\n")
+    dumps = {
+        str(consensus): {
+            "module": "Consensus",
+            "extends": [],
+            "operators": [
+                {"name": "Spec", "loc": {"line_start": 2, "line_end": 2}, "references": []},
+                {"name": "Inv", "loc": {"line_start": 3, "line_end": 3}, "references": []},
+            ],
+            "instances": [],
+            "assumes": [],
+        },
+        str(model): {
+            "module": "Model",
+            "extends": [],
+            "operators": [
+                {"name": "Unused", "loc": {"line_start": 3, "line_end": 3}, "references": ["C"]},
+                {"name": "Spec", "loc": {"line_start": 4, "line_end": 4}, "references": ["C"]},
+            ],
+            "instances": [{"name": "C", "module": "Consensus", "loc": {"line_start": 2, "line_end": 2}}],
+            "assumes": [],
+        },
+    }
+    monkeypatch.setattr(generate, "dump_sany", lambda p: dumps[str(p)])
+
+    keep = dep_keep_names(
+        [str(model), str(consensus)],
+        {"Spec"},
+        source_defined=set(),
+        qualified_uses={("C", "Spec")},
+        imported_modules=["Model"],
+    )
+
+    assert "Spec" in keep[str(consensus)]
+    assert "Inv" not in keep[str(consensus)]
+
+
+def test_instance_qualified_uses_ignore_string_literals():
+    assert instance_qualified_uses('C!Spec /\\ x = "C!Inv"') == {("C", "Spec")}
+
+
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("Storage(s)!Start", {("Storage", "Start")}),
+        ("Storage(F(s), G(H(s)))!Read", {("Storage", "Read")}),
+        ("Storage(Other!Argument) ! Read", {("Storage", "Read"), ("Other", "Argument")}),
+        ('Storage(")!Unused")!Read', {("Storage", "Read")}),
+        ("Storage((* )!Unused *) s)\n! Read", {("Storage", "Read")}),
+    ],
+)
+def test_instance_qualified_uses_with_parameters(expression, expected):
+    assert instance_qualified_uses(expression) == expected
+
+
+def test_referenced_identifiers_skip_the_right_hand_name_of_a_qualified_use():
+    """P!Spec must not put Spec in the bare seed set."""
+    assert "Spec" not in referenced_identifiers("SpecHS => P!Spec")
+    assert "P" in referenced_identifiers("SpecHS => P!Spec")
+    assert "Spec" not in referenced_identifiers("SpecHS => P(1) ! (* context *) Spec")
+    assert "Spec" in referenced_identifiers("Spec => P!Spec")
+    assert "Spec" not in referenced_identifiers('C!Spec /\\ x = "C!Inv"')
 
 
 def test_referenced_identifiers_ignores_tla_backslash_operators():

@@ -1,0 +1,2792 @@
+{
+  "format_version": 1,
+  "corpus_sha256": "8d7a02c262f5da68a14adaf5ecc3413eb22baf7af0988881e26bd07b73e8bd84",
+  "complete": true,
+  "module_tasks": [
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Allocator/Allocator.tla",
+        "source_sha256": "4d828224c5d6672b9d5027d0ca2c3d9ba4c5483ea4a27dd44a0a84a7e27a81c8",
+        "proof_units": [
+          {
+            "task_id": "Allocator/Allocator_InitTypeInvariant.tla",
+            "statement_sha256": "5a28ae12dcf0275f671030de598f5d484dd5ea6b74e3a022e9e1421a78b4b108"
+          },
+          {
+            "task_id": "Allocator/Allocator_NextTypeInvariant.tla",
+            "statement_sha256": "fb6104d376e91cad0b318e73008e8e015e13b8debc88af20c7228ac58803c8d6"
+          },
+          {
+            "task_id": "Allocator/Allocator_InitMutex.tla",
+            "statement_sha256": "4a4285458377e724036be7c5d1a6c7136b5829be5d268dde0c98149dae75cd70"
+          },
+          {
+            "task_id": "Allocator/Allocator_NextMutex.tla",
+            "statement_sha256": "4d9e5db7fcd6c4fa9097ea231d59d1fa125b58a8a223a37bc932996360a6c916"
+          }
+        ]
+      },
+      "context": [
+        "Allocator/AllocatorDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "AtomicBakery/AtomicBakery.tla",
+        "source_sha256": "1a85b93e90fd8ebf0f12b2e7d06bc011363606dfb5c5c42b78c775813d127582",
+        "proof_units": [
+          {
+            "task_id": "AtomicBakery/AtomicBakery_MutualExclusion.tla",
+            "statement_sha256": "aa4ffbb0a65ae03d241fa4b71b9f39b19c04ccb7ec5218e4ebea4fd6380d8a44"
+          }
+        ]
+      },
+      "context": [
+        "AtomicBakery/AtomicBakeryDefs.tla",
+        "AtomicBakery/AtomicBakeryModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "AtomicBakery/AtomicBakeryWithoutSMT.tla",
+        "source_sha256": "45d0128a9d132c4d127ba97f4b333c35f378baae3c7ec336dc35e55a334ebcb2",
+        "proof_units": [
+          {
+            "task_id": "AtomicBakery/AtomicBakeryWithoutSMT_Safety.tla",
+            "statement_sha256": "06e3994f47ff9156cc0dc5cc1e6f46439ad3ec399573dcca7f4829e6b6e29fb9"
+          }
+        ]
+      },
+      "context": [
+        "AtomicBakery/AtomicBakeryWithoutSMTDefs.tla",
+        "AtomicBakery/AtomicBakeryWithoutSMTModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Bakery/Bakery.tla",
+        "source_sha256": "c08e15e7a6899b85be6326f94c6445361418e0d42afb4b855b924106411cd593",
+        "proof_units": [
+          {
+            "task_id": "Bakery/Bakery_MutualExclusion.tla",
+            "statement_sha256": "aa4ffbb0a65ae03d241fa4b71b9f39b19c04ccb7ec5218e4ebea4fd6380d8a44"
+          }
+        ]
+      },
+      "context": [
+        "Bakery/BakeryDefs.tla",
+        "Bakery/BakeryModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "BubbleSort/BubbleSort.tla",
+        "source_sha256": "550b12db33b3ece5b707a302fc8c69550e08366355704a3b1beaa623884b1140",
+        "proof_units": [
+          {
+            "task_id": "BubbleSort/BubbleSort_IsPermOfExchange.tla",
+            "statement_sha256": "fc54c5cf5aa418f1a8c9b00f6958ff3f57c4bc0664fe563d12bd56c616d6cad0"
+          },
+          {
+            "task_id": "BubbleSort/BubbleSort_IsPermOfTransitive.tla",
+            "statement_sha256": "58fb284e30a2377e62386162a530891b35c5a1cbbd671c3d718479add9abfe77"
+          },
+          {
+            "task_id": "BubbleSort/BubbleSort_line202.tla",
+            "statement_sha256": "27083f8e1420a18cdbd27f5d4a1e768b7edf726c7d81b406b185965c5d9ee181"
+          }
+        ]
+      },
+      "context": [
+        "BubbleSort/BubbleSortDefs.tla",
+        "BubbleSort/BubbleSortModel.tla"
+      ],
+      "renamed_bindings": {
+        "BubbleSort/BubbleSort_IsPermOfExchange.tla": {
+          "A": "A1",
+          "i": "i1",
+          "j": "j1"
+        },
+        "BubbleSort/BubbleSort_IsPermOfTransitive.tla": {
+          "A": "A1"
+        }
+      }
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Cantor/Cantor1.tla",
+        "source_sha256": "f0499947825df6ed8446a4cd8b8baf09ef5add57db70d854837dcfef6bd84080",
+        "proof_units": [
+          {
+            "task_id": "Cantor/Cantor1_cantor.tla",
+            "statement_sha256": "bdd9bb21bdbbeabaa7d4e349a8cc067dcb9e4c998d788af16ae5b8335c9638b5"
+          }
+        ]
+      },
+      "context": [
+        "Cantor/Cantor1Defs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Cantor/Cantor5.tla",
+        "source_sha256": "9dec8bb65fab6b0d0d4166ad484db4afcaa3d619e2e20ec234b483a2fc840e17",
+        "proof_units": [
+          {
+            "task_id": "Cantor/Cantor5_cantor.tla",
+            "statement_sha256": "feb64632d7d69cb9fa4dd9bfe3514b313976fd93fffb97859fb24e29ec4e7e4c"
+          }
+        ]
+      },
+      "context": [
+        "Cantor/Cantor5Defs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Cantor/Cantor8.tla",
+        "source_sha256": "9cc5c7627b9b326ca4b0cd7a7b0c77a507e40127d2b720b1460b92eefa96d2da",
+        "proof_units": [
+          {
+            "task_id": "Cantor/Cantor8_Cantor.tla",
+            "statement_sha256": "2f640c7630750e90bb355812b6f99a51b5af713216ffc72f76f9ede52e15aae1"
+          }
+        ]
+      },
+      "context": [
+        "Cantor/Cantor8Defs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Cantor/Cantor9.tla",
+        "source_sha256": "f3c6d81be7f2269ce390d0611457af8920f50db1dd6a9538cc664d1a2e52482b",
+        "proof_units": [
+          {
+            "task_id": "Cantor/Cantor9_Cantor.tla",
+            "statement_sha256": "b586d3f5175ab0810e47db7ca9cb2a1f7f3415f140378f7c8b93ce9734bf6afd"
+          }
+        ]
+      },
+      "context": [
+        "Cantor/Cantor9Defs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Consensus/Consensus.tla",
+        "source_sha256": "7de4e22bb6456180485c954f4567ed9a1146a0608ca9d32ac54ee284fbe740b8",
+        "proof_units": [
+          {
+            "task_id": "Consensus/Consensus_Invariance.tla",
+            "statement_sha256": "8bf85eb29029fd635f78e74f157e4d56ed11fd601eceab8af44f0eb979cffed5"
+          }
+        ]
+      },
+      "context": [
+        "Consensus/Consensus/Sets.tla",
+        "Consensus/ConsensusDefs.tla",
+        "Consensus/ConsensusModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Consensus/PaxosProof.tla",
+        "source_sha256": "3199922a37a4546efb2145a51b0d86f86dda94d6a86de16e720cbd1378309ee1",
+        "proof_units": [
+          {
+            "task_id": "Consensus/PaxosProof_StructOK1.tla",
+            "statement_sha256": "128349887e5d6e6aa1e29a7e2d5210792ebf94287bbf6e5cb6fe963684cab0a5"
+          },
+          {
+            "task_id": "Consensus/PaxosProof_line91.tla",
+            "statement_sha256": "97315bcc7185c4e1e23c25add3a7baf28a2fc8f1d40b3ade3845832a3ee2b34c"
+          },
+          {
+            "task_id": "Consensus/PaxosProof_line130.tla",
+            "statement_sha256": "7d73f3153f756187ae1b64cbdf041b98468eba330512a5112353b16fbc87ed5e"
+          }
+        ]
+      },
+      "context": [
+        "Consensus/PaxosProof/Consensus.tla",
+        "Consensus/PaxosProof/PaxosTuple.tla",
+        "Consensus/PaxosProof/Sets.tla",
+        "Consensus/PaxosProof/Voting.tla",
+        "Consensus/PaxosProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Consensus/Voting.tla",
+        "source_sha256": "e8e78ea511ab39c82cb7da710b2fa2741b631587955e84654e7620092c61d14e",
+        "proof_units": [
+          {
+            "task_id": "Consensus/Voting_QuorumNonEmpty.tla",
+            "statement_sha256": "58d431a9892fdfd76072ac38ff9238d64603b1cc06c9d1b4b1d3abb50aa8e772"
+          },
+          {
+            "task_id": "Consensus/Voting_AllSafeAtZero.tla",
+            "statement_sha256": "37cb513872bc63eaf984c24da55c7884b065605e34c817faf1b65ad1248d4c7c"
+          },
+          {
+            "task_id": "Consensus/Voting_ChoosableThm.tla",
+            "statement_sha256": "f4040bcf87bd34901da2b2826b61a09d16387e61c288db3afa4712e074ab931f"
+          },
+          {
+            "task_id": "Consensus/Voting_Invariant.tla",
+            "statement_sha256": "19c22d720b661967b252e1060442e153b742fb3b9a9b05704e89fc582c266b94"
+          },
+          {
+            "task_id": "Consensus/Voting_Consistent.tla",
+            "statement_sha256": "847c6d862035c1fe4a152179947422b435f3a59989b3d3ee564efe04481dd77c"
+          },
+          {
+            "task_id": "Consensus/Voting_Refinement.tla",
+            "statement_sha256": "26d76db59c2afca5cecbc5d56049fc207fa648d3c8553733be49e497db92a8e0"
+          }
+        ]
+      },
+      "context": [
+        "Consensus/Voting/Consensus.tla",
+        "Consensus/Voting/Sets.tla",
+        "Consensus/VotingDefs.tla",
+        "Consensus/VotingModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Data/GraphTheorem.tla",
+        "source_sha256": "74170d0e19c7b4e66498eb2f5a1da98bf501ba61c48c53ede43363e89540418e",
+        "proof_units": [
+          {
+            "task_id": "Data/GraphTheorem_line62.tla",
+            "statement_sha256": "b9e82da3c3cc1b1685ab23db8c847a5104f7ae59f671402aaa1abeaa7aeb86ab"
+          }
+        ]
+      },
+      "context": [
+        "Data/GraphTheorem/Sets.tla",
+        "Data/GraphTheoremDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Data/SequencesTheorems.tla",
+        "source_sha256": "af72795bce0efef093137c1171988d1d17a2e974e33d5894c52ea34637012435",
+        "proof_units": [
+          {
+            "task_id": "Data/SequencesTheorems_RemoveSeq.tla",
+            "statement_sha256": "f0edbb4e1b13d9f176fd6830288075436a4a44d915b9a7d2a741195029a4c93c"
+          }
+        ]
+      },
+      "context": [
+        "Data/SequencesTheoremsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Data/Sets.tla",
+        "source_sha256": "19aa6ff513fe7fdb9829b4bbc069584754bcce171f46afaba4fe55015c2a6f90",
+        "proof_units": [
+          {
+            "task_id": "Data/Sets_CardinalityTwo.tla",
+            "statement_sha256": "24693e17edaf50a9d4c2bc54bb078f4409f7530f521748072a69b50c19e08ed5"
+          },
+          {
+            "task_id": "Data/Sets_IntervalCardinality.tla",
+            "statement_sha256": "a49c3675db02771e6fe9cc804f5f04da2c3ee5d3e64d264db4a2391cfc831933"
+          },
+          {
+            "task_id": "Data/Sets_CardinalityOneConverse.tla",
+            "statement_sha256": "bbf8124696f552a49ca426301e50d236da565178dc864fa42f9e82376c337bb8"
+          },
+          {
+            "task_id": "Data/Sets_IsBijectionInverse.tla",
+            "statement_sha256": "deaa5cf2855e48fc98a3bf54711d5ac4f20fca4b0e8efb4f56bf94450b0325d5"
+          },
+          {
+            "task_id": "Data/Sets_IsBijectionTransitive.tla",
+            "statement_sha256": "e6f8e06113cc9954aba33c7d44dbfe6bc061eab084656f743d228207167c9012"
+          },
+          {
+            "task_id": "Data/Sets_FiniteSubset.tla",
+            "statement_sha256": "b54f9f74b4e730c0a933a3d696fae7acb47c2d1f71504666d68c9c93d1cb9ec5"
+          },
+          {
+            "task_id": "Data/Sets_PigeonHole.tla",
+            "statement_sha256": "d92e3fa4bab87ca0268b15a3d6b011fe0508691631f01b780a121cc1ebc55b36"
+          }
+        ]
+      },
+      "context": [
+        "Data/SetsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "EWD840/EWD840.tla",
+        "source_sha256": "cf3109387292b6a6c7e99426dbd6d9a8aa21cb0e96498df37588808e2be54c22",
+        "proof_units": [
+          {
+            "task_id": "EWD840/EWD840_TerminationDetection.tla",
+            "statement_sha256": "3e5029bb28118dfc30c145e2917596ce07f39e79346f7ab516468f8f696fd5ed"
+          }
+        ]
+      },
+      "context": [
+        "EWD840/EWD840Defs.tla",
+        "EWD840/EWD840Model.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Euclid/Euclid-Hyperbook/EuclidEx.tla",
+        "source_sha256": "1228398bee9bcd0a73a1727253c3543d15952139951335be2f01c9536a06e7b6",
+        "proof_units": [
+          {
+            "task_id": "Euclid/EuclidEx_PartialCorrectness.tla",
+            "statement_sha256": "a1a992bb934f1bdbe140d6d5bbdc24894481dba3c1fa187e6526397526da3598"
+          }
+        ]
+      },
+      "context": [
+        "Euclid/Euclid-Hyperbook/EuclidEx/GCD.tla",
+        "Euclid/Euclid-Hyperbook/EuclidExDefs.tla",
+        "Euclid/Euclid-Hyperbook/EuclidExModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Euclid/Euclid-Hyperbook/GCD.tla",
+        "source_sha256": "a9114fff15c93abfdd47d3e092679719c63ddf94546385fe31319e8514cb9cd4",
+        "proof_units": [
+          {
+            "task_id": "Euclid/GCD_GCD1.tla",
+            "statement_sha256": "85ef69c3acf420b1dcd73ae5ebffbf1f00d0a389abbc022244d0d89f4b40e8d2"
+          },
+          {
+            "task_id": "Euclid/GCD_GCD2.tla",
+            "statement_sha256": "62834615008b7ca803de6aa6a9881bb3c1bd53c33479d9390d347462c0dc5081"
+          },
+          {
+            "task_id": "Euclid/GCD_GCD3.tla",
+            "statement_sha256": "cf54c02d09af381ac680db397dbb51269329995a88af680596d319e4841e7f4f"
+          }
+        ]
+      },
+      "context": [
+        "Euclid/Euclid-Hyperbook/GCDDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Euclid/Euclid-TLAPS-Example/Euclid.tla",
+        "source_sha256": "e1598c37710a4faeb849cd3c34cc82a54d25eeadbbf829e7927078419aaad3d2",
+        "proof_units": [
+          {
+            "task_id": "Euclid/Euclid_Correctness.tla",
+            "statement_sha256": "b4f06890581e7c15c6ac4534b7f777f6802dd413bbfa653fc5b17445b431aa1e"
+          }
+        ]
+      },
+      "context": [
+        "Euclid/Euclid-TLAPS-Example/EuclidDefs.tla",
+        "Euclid/Euclid-TLAPS-Example/EuclidModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
+        "source_sha256": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
+        "proof_units": [
+          {
+            "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",
+            "statement_sha256": "6fcdbf61cd8d893dd98e65418d8847ec263f51abf13ef905b6ee42c63cf92432"
+          }
+        ]
+      },
+      "context": [
+        "MongoDB/MultiShardTxnSnapshot/ClientCentric.tla",
+        "MongoDB/MultiShardTxnSnapshot/MultiShardTxn.tla",
+        "MongoDB/MultiShardTxnSnapshot/Storage.tla",
+        "MongoDB/MultiShardTxnSnapshot/Util.tla",
+        "MongoDB/MultiShardTxnSnapshotDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "OpenAddressing/OpenAddressing.tla",
+        "source_sha256": "f80fddf429f1afb6aa45af809b68a3f6d33dd835c194674285fd0ed20e9e76b2",
+        "proof_units": [
+          {
+            "task_id": "OpenAddressing/OpenAddressing_CompleteAsSafety.tla",
+            "statement_sha256": "129ce32b90193e291182379ed8ed779061dea0d0914fad9df7a1e78ce1a1afc6"
+          },
+          {
+            "task_id": "OpenAddressing/OpenAddressing_Consistent.tla",
+            "statement_sha256": "3a22d6b223908a25a078f0a9aff0c9dd61cd00631450e3db0a1c652f44fbd24c"
+          },
+          {
+            "task_id": "OpenAddressing/OpenAddressing_Contains.tla",
+            "statement_sha256": "a7f3947483e8429aab1dc1cb362696e6ec4a60b358292d56d0b8761be55c2bf3"
+          },
+          {
+            "task_id": "OpenAddressing/OpenAddressing_Duplicates.tla",
+            "statement_sha256": "6faf5362b25d4b96b84bb4bc8e0291b526b6f6c7484382afbf26a9beca2176f1"
+          },
+          {
+            "task_id": "OpenAddressing/OpenAddressing_Sorted.tla",
+            "statement_sha256": "e2a336cca987fa4dbb8484adf68d9b9d3b42804f879693d20b3d8762d1427191"
+          }
+        ]
+      },
+      "context": [
+        "OpenAddressing/OpenAddressingDefs.tla",
+        "OpenAddressing/OpenAddressingModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Paxos/Consensus.tla",
+        "source_sha256": "056f88c8969a8bd2a0bdb7ea470a623e5b2e893d48b3e555f2cb9e60de4622d8",
+        "proof_units": [
+          {
+            "task_id": "Paxos/Consensus_Inv.tla",
+            "statement_sha256": "dbb0d6edf0c6bf74cd4ec5a6402d9733fa5dd7c20f662eb1161c253889343652"
+          }
+        ]
+      },
+      "context": [
+        "Paxos/ConsensusDefs.tla",
+        "Paxos/ConsensusModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Paxos/Paxos.tla",
+        "source_sha256": "8a6bcb000189263e0fd886d2257043a0aea1cc9ecb8b3b654616639e3845de0d",
+        "proof_units": [
+          {
+            "task_id": "Paxos/Paxos_Invariant.tla",
+            "statement_sha256": "19c22d720b661967b252e1060442e153b742fb3b9a9b05704e89fc582c266b94"
+          },
+          {
+            "task_id": "Paxos/Paxos_Consistent.tla",
+            "statement_sha256": "847c6d862035c1fe4a152179947422b435f3a59989b3d3ee564efe04481dd77c"
+          },
+          {
+            "task_id": "Paxos/Paxos_Refinement.tla",
+            "statement_sha256": "26d76db59c2afca5cecbc5d56049fc207fa648d3c8553733be49e497db92a8e0"
+          }
+        ]
+      },
+      "context": [
+        "Paxos/Paxos/Consensus.tla",
+        "Paxos/PaxosDefs.tla",
+        "Paxos/PaxosModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Paxos/PaxosHistVar.tla",
+        "source_sha256": "ecd2cb853f75552351c58ed1297a8099617be1be9a67d4cb846d650a2520215f",
+        "proof_units": [
+          {
+            "task_id": "Paxos/PaxosHistVar_Invariant.tla",
+            "statement_sha256": "19c22d720b661967b252e1060442e153b742fb3b9a9b05704e89fc582c266b94"
+          },
+          {
+            "task_id": "Paxos/PaxosHistVar_Consistent.tla",
+            "statement_sha256": "847c6d862035c1fe4a152179947422b435f3a59989b3d3ee564efe04481dd77c"
+          }
+        ]
+      },
+      "context": [
+        "Paxos/PaxosHistVarDefs.tla",
+        "Paxos/PaxosHistVarModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Peterson/Peterson.tla",
+        "source_sha256": "5a05d2ac642ea931731333d01b4883497e0b7326f25d6aadc85da4bd849cd6ae",
+        "proof_units": [
+          {
+            "task_id": "Peterson/Peterson_MutualExclusion.tla",
+            "statement_sha256": "aa4ffbb0a65ae03d241fa4b71b9f39b19c04ccb7ec5218e4ebea4fd6380d8a44"
+          },
+          {
+            "task_id": "Peterson/Peterson_Liveness.tla",
+            "statement_sha256": "ce9a668d4b5967526c780f4c6e579731cf2edebacaa3df78ca807655df4d3772"
+          }
+        ]
+      },
+      "context": [
+        "Peterson/PetersonDefs.tla",
+        "Peterson/PetersonModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Record/Record.tla",
+        "source_sha256": "fecf9020091fa96430e20df0612389387c360147c9ec67e5565049386f8d9ee3",
+        "proof_units": [
+          {
+            "task_id": "Record/Record_SV_Spec.tla",
+            "statement_sha256": "066b9323e726f6cf9f9a14e674ad8c424b51baeb484478488b7de8137f0306f1"
+          }
+        ]
+      },
+      "context": [
+        "Record/Record/SimpleVoting.tla",
+        "Record/RecordDefs.tla",
+        "Record/RecordModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "SimpleMutex/SimpleMutex.tla",
+        "source_sha256": "cefc726c328a1c283a9e03ba3495abeaa4d65c5d4e0c37fdc23131c88046bb8d",
+        "proof_units": [
+          {
+            "task_id": "SimpleMutex/SimpleMutex_line140.tla",
+            "statement_sha256": "b147887e6b800d492174927158a8e98b94b1e1fff5d540b277b1b6f951c903db"
+          },
+          {
+            "task_id": "SimpleMutex/SimpleMutex_Safety.tla",
+            "statement_sha256": "eaf5c741e27c7873b550edcd0c800435c2aa11bf37fa30109471a509c748886e"
+          }
+        ]
+      },
+      "context": [
+        "SimpleMutex/SimpleMutexDefs.tla",
+        "SimpleMutex/SimpleMutexModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "SumAndMax/SumAndMax.tla",
+        "source_sha256": "88b3862f8467f2262f23f0a52c6be6a57a5dbc1ab6e70b60252dc8cc51a254fc",
+        "proof_units": [
+          {
+            "task_id": "SumAndMax/SumAndMax_Correctness.tla",
+            "statement_sha256": "7fddc00cb478ef19c7df9db28a756995b84e3fc9dfa1e4ebe8edaa70e99cd001"
+          }
+        ]
+      },
+      "context": [
+        "SumAndMax/SumAndMaxDefs.tla",
+        "SumAndMax/SumAndMaxModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ZooKeeper/Zab.tla",
+        "source_sha256": "2a11eab8086f7d220ddb7f01ff9d03429c3b6a6c421758e34e1e17e5070d01c7",
+        "proof_units": [
+          {
+            "task_id": "ZooKeeper/Zab_Leadership1.tla",
+            "statement_sha256": "f71de16532bf2c2d7ee5280f76986a634919a3dce69926109ef581296cef5a88"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_Leadership2.tla",
+            "statement_sha256": "175b2199068b44376c21e5b8f4d13d59598ba458978a032822b6ea124bfc2ff4"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_PrefixConsistency.tla",
+            "statement_sha256": "8397176dabb1501e239ebf6e610b127dcfde4deffff9cc26739afef730406348"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_Integrity.tla",
+            "statement_sha256": "6d34b1e52db627c5e7936aa106dae91c81ed641cba2b3dba5459dfa24b25adac"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_Agreement.tla",
+            "statement_sha256": "7a9ec8d769f9d318f777d9bec5162cebc9a3feeabd6caf9d9851c21004716838"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_TotalOrder.tla",
+            "statement_sha256": "a4a9af493bd9093a423d9fb5f4302baca00acc56fee71ca3f26063c86855bcea"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_LocalPrimaryOrder.tla",
+            "statement_sha256": "54076b2a58fbb2e5d313922b40386f1f1766a9d68892c8bc461d0b7a1abd8652"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_GlobalPrimaryOrder.tla",
+            "statement_sha256": "2314b7ce0bd5a32fc06d73feceea2ac13a9b05a88adfac7e41625ce6ca14d180"
+          },
+          {
+            "task_id": "ZooKeeper/Zab_PrimaryIntegrity.tla",
+            "statement_sha256": "e153785ab065952956f15cea95f05e0e231de876234dbe42949ba8eda560e0bf"
+          }
+        ]
+      },
+      "context": [
+        "ZooKeeper/ZabDefs.tla",
+        "ZooKeeper/ZabModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ZooKeeper_LowLevel/ZkV3_7_0.tla",
+        "source_sha256": "7bd7c6a0255cb602654e51b2c0a42425695757fce723f1d7468f4698d316693b",
+        "proof_units": [
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_Leadership1.tla",
+            "statement_sha256": "f71de16532bf2c2d7ee5280f76986a634919a3dce69926109ef581296cef5a88"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_Leadership2.tla",
+            "statement_sha256": "175b2199068b44376c21e5b8f4d13d59598ba458978a032822b6ea124bfc2ff4"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_PrefixConsistency.tla",
+            "statement_sha256": "8397176dabb1501e239ebf6e610b127dcfde4deffff9cc26739afef730406348"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_Integrity.tla",
+            "statement_sha256": "6d34b1e52db627c5e7936aa106dae91c81ed641cba2b3dba5459dfa24b25adac"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_Agreement.tla",
+            "statement_sha256": "7a9ec8d769f9d318f777d9bec5162cebc9a3feeabd6caf9d9851c21004716838"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_TotalOrder.tla",
+            "statement_sha256": "a4a9af493bd9093a423d9fb5f4302baca00acc56fee71ca3f26063c86855bcea"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_LocalPrimaryOrder.tla",
+            "statement_sha256": "54076b2a58fbb2e5d313922b40386f1f1766a9d68892c8bc461d0b7a1abd8652"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_GlobalPrimaryOrder.tla",
+            "statement_sha256": "2314b7ce0bd5a32fc06d73feceea2ac13a9b05a88adfac7e41625ce6ca14d180"
+          },
+          {
+            "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_PrimaryIntegrity.tla",
+            "statement_sha256": "e153785ab065952956f15cea95f05e0e231de876234dbe42949ba8eda560e0bf"
+          }
+        ]
+      },
+      "context": [
+        "ZooKeeper_LowLevel/ZkV3_7_0/FastLeaderElection.tla",
+        "ZooKeeper_LowLevel/ZkV3_7_0Defs.tla",
+        "ZooKeeper_LowLevel/ZkV3_7_0Model.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "etcd_raft/etcd_raft.tla",
+        "source_sha256": "7e0b52c35bacb918f0eba4ac2ac9acce9feb25e47e134564d06ba2403d4c3b52",
+        "proof_units": [
+          {
+            "task_id": "etcd_raft/etcd_raft_LogInv.tla",
+            "statement_sha256": "2ee3bea171a700047219e26b46358b28af0917abc9e3dbee03f2b4a9d5efbd8a"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_CommittedIsDurable.tla",
+            "statement_sha256": "ee679c10fda7b023664918134dc0ecd7b4502dd2d523b9c9d974e035ba4799a0"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_ElectionSafety.tla",
+            "statement_sha256": "118ab70737bc2a750d5781d90970941cc5e51de4313c136998940de155a51c82"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_LeaderCompleteness.tla",
+            "statement_sha256": "1946fb0be009edf1054938636a97b1f83d0bf2350e6d29b84953de22fd7971da"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_LogMatching.tla",
+            "statement_sha256": "de9299799df9e01c69a34d9030d5b6bcccc88fa027fcb3843b4b2077d45d2d66"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_MoreThanOneLeader.tla",
+            "statement_sha256": "9c4690cc8726c85f72e0d4fc48f3a6a6fed7a4120803eb5a69a6cd4786a35227"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_MoreUpToDate.tla",
+            "statement_sha256": "38f022e385c89ae0e110d3bad54681ee8fcaebdf3d8a80a5811251895b6ca62c"
+          },
+          {
+            "task_id": "etcd_raft/etcd_raft_QuorumLog.tla",
+            "statement_sha256": "042668e54a03ee5119ed166a69f8bfca8fcd98fab0f634430dd53ecff973db9d"
+          }
+        ]
+      },
+      "context": [
+        "etcd_raft/etcd_raftDefs.tla",
+        "etcd_raft/etcd_raftModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla",
+        "source_sha256": "4b03ca1edd205ffe0dd5b695d44d87cc4a058d5555a99a589bba1af2f640b808",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol_Safety.tla",
+            "statement_sha256": "3f733ed1ef1f36d4493cf08212945976ba3e0f11e37ca074ba64a20dbf63add9"
+          },
+          {
+            "task_id": "ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol_Liveness.tla",
+            "statement_sha256": "da239c92444922607a0c45b2de308aeccc8995822f329cc0e48b708c679cab02"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocolDefs.tla",
+        "ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocolModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla",
+        "source_sha256": "8b941bdd1af7e892804d280ffad38a5fe0fc9602945c033759809b4f4dbf243a",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa_Safety.tla",
+            "statement_sha256": "47b1e39ba74dc2b5dcdd47315ae61cb97b466304ce42476cebbd8449740058f8"
+          },
+          {
+            "task_id": "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa_CorrectnessLiveness.tla",
+            "statement_sha256": "7ef0ff2ad9459bbda41eb8907ed0111adafd6ded7fac89893cd77715bfddaca2"
+          },
+          {
+            "task_id": "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa_RelayLiveness.tla",
+            "statement_sha256": "cd905529fbce3f36c327b4a7b6a95392b3a6cfa33ee9bd559c0cf0bbbc79cbd5"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisaDefs.tla",
+        "ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisaModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla",
+        "source_sha256": "55623c5472e60e52a4458c2fa031538dda5fba9fef74e23523a7a1eb5f681e6c",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new_Liveness.tla",
+            "statement_sha256": "0bd8427ea79ead8e5c57e483d26dfbda6168a9a9980ef33a9d1a75d18187d16c"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_newDefs.tla",
+        "ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_newModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_ticket/ivy_examples_ticket.tla",
+        "source_sha256": "f2c1f61669594cc44efde7009eca614fad1e6f90c9b011e3596d5b4d850b4d33",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_ticket/ivy_examples_ticket_Safety.tla",
+            "statement_sha256": "b8a9a39f2b1bbd4621cd071a6868a731274216a24da220d3d353786380132c7e"
+          },
+          {
+            "task_id": "ivy_examples_ticket/ivy_examples_ticket_Liveness.tla",
+            "statement_sha256": "115f428063c886088b833e9b1cca0b965452c2c2b5c140a70aa3daf59a95b17d"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_ticket/ivy_examples_ticketDefs.tla",
+        "ivy_examples_ticket/ivy_examples_ticketModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla",
+        "source_sha256": "9b8d82e8152748828584101afd36a5a8968f84e9da299a24858413796c0abcfb",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_ticket_nested/ivy_examples_ticket_nested_Safety.tla",
+            "statement_sha256": "b8a9a39f2b1bbd4621cd071a6868a731274216a24da220d3d353786380132c7e"
+          },
+          {
+            "task_id": "ivy_examples_ticket_nested/ivy_examples_ticket_nested_Liveness.tla",
+            "statement_sha256": "115f428063c886088b833e9b1cca0b965452c2c2b5c140a70aa3daf59a95b17d"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_ticket_nested/ivy_examples_ticket_nestedDefs.tla",
+        "ivy_examples_ticket_nested/ivy_examples_ticket_nestedModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "ivy_examples_tlb/ivy_examples_tlb.tla",
+        "source_sha256": "bf15bcb3756a12b68825f3003b11705bc88ce85d98d51a70eeef1313e9a83b48",
+        "proof_units": [
+          {
+            "task_id": "ivy_examples_tlb/ivy_examples_tlb_Safety.tla",
+            "statement_sha256": "c389096f255f7e365a424e76ac380e5de286f609e2398c39676fa35b02fd5740"
+          },
+          {
+            "task_id": "ivy_examples_tlb/ivy_examples_tlb_Liveness.tla",
+            "statement_sha256": "115f428063c886088b833e9b1cca0b965452c2c2b5c140a70aa3daf59a95b17d"
+          }
+        ]
+      },
+      "context": [
+        "ivy_examples_tlb/ivy_examples_tlbDefs.tla",
+        "ivy_examples_tlb/ivy_examples_tlbModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Bakery-Boulangerie/Bakery.tla",
+        "source_sha256": "3b2a3f370e5f0fde8660b3ef09932d579c9bd2ccd249a5ce2304007bf24da8d5",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Bakery-Boulangerie/Bakery_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_Bakery-Boulangerie/Bakery_MutualExclusion.tla",
+            "statement_sha256": "aa4ffbb0a65ae03d241fa4b71b9f39b19c04ccb7ec5218e4ebea4fd6380d8a44"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Bakery-Boulangerie/BakeryDefs.tla",
+        "tlaplus_examples_Bakery-Boulangerie/BakeryModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Bakery-Boulangerie/Boulanger.tla",
+        "source_sha256": "e0f76da20c999aa23ed494d319119575f678ccd77f3c1e105eead18d3fe66fa0",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Bakery-Boulangerie/Boulanger_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_Bakery-Boulangerie/Boulanger_MutualExclusion.tla",
+            "statement_sha256": "aa4ffbb0a65ae03d241fa4b71b9f39b19c04ccb7ec5218e4ebea4fd6380d8a44"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Bakery-Boulangerie/BoulangerDefs.tla",
+        "tlaplus_examples_Bakery-Boulangerie/BoulangerModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofs.tla",
+        "source_sha256": "9fb8abadff6dfc2de3953fb5aacae5a9faad89023ac58cb3b2aebc813684bd7e",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofs_BQS_Spec.tla",
+            "statement_sha256": "5d9b31d37ea808efc073be08e9a7f86c9f3dcaa43e0d58a809f27b4a671d5889"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofs/BlockingQueue.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofs/BlockingQueueFair.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofs/BlockingQueueSplit.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueueFair_proofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs.tla",
+        "source_sha256": "0f3ec2e11fd39b04d514c8e87ae70a7fabdcc73af11bddf4669e9623b763b55c",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs_Implements.tla",
+            "statement_sha256": "1d53bb81cf1a159b722cde25368b2e6207be66a62659d03928a58ee49ad0ac6b"
+          },
+          {
+            "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs_DeadlockFreedom.tla",
+            "statement_sha256": "d542c32a563fcad11bd0b44547414fd5612c138afd1509c6aff35bdf22cc1c81"
+          },
+          {
+            "task_id": "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs_IInvRefines.tla",
+            "statement_sha256": "077ddbecac7e0d51cfc4c8cad48d56326ba4ed35fbac56162d9915430354ae32"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs/BlockingQueue.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofs/BlockingQueueSplit.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueueSplit_proofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_BlockingQueue/BlockingQueue_proofs.tla",
+        "source_sha256": "257495e410ddd231d400ae7c418be6c9ee620537519e38d0bed39ca297f1b7e6",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_BlockingQueue/BlockingQueue_proofs_DeadlockFreedom.tla",
+            "statement_sha256": "67d370a43b03f2821a03cf9d7a981b859afc5b738cca44ab1cbbd54727220e56"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_BlockingQueue/BlockingQueue_proofs/BlockingQueue.tla",
+        "tlaplus_examples_BlockingQueue/BlockingQueue_proofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_CigaretteSmokers/CigaretteSmokers_proof.tla",
+        "source_sha256": "27e6f0f71b5a2f4702d35302c7d7609ec276586b20c2f87e7aad4af35bffa52f",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_CigaretteSmokers/CigaretteSmokers_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_CigaretteSmokers/CigaretteSmokers_proof_AtMostOneCorrect.tla",
+            "statement_sha256": "d0e38f1968d5874a547c80a08db7740ba939f95b6b7bc61c1c0d3c3a0fc856c0"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_CigaretteSmokers/CigaretteSmokers_proof/CigaretteSmokers.tla",
+        "tlaplus_examples_CigaretteSmokers/CigaretteSmokers_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_CoffeeCan/CoffeeCan_proof.tla",
+        "source_sha256": "afed664aed94d10e6cdde95895ee79b41d60a27116bdf40d08813dcc5f2b00ab",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_CoffeeCan/CoffeeCan_proof_TypeCorrect.tla",
+            "statement_sha256": "953659dcbf727179112befcfd62da23d32e7759fc049ac3bb2706c0add52aead"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_CoffeeCan/CoffeeCan_proof/CoffeeCan.tla",
+        "tlaplus_examples_CoffeeCan/CoffeeCan_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_DieHard/DieHard_proof.tla",
+        "source_sha256": "581a7773656302ec59ec3dc6eae78e4c9d39ee9e70894b6fba364f185b123033",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_DieHard/DieHard_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_DieHard/DieHard_proof/DieHard.tla",
+        "tlaplus_examples_DieHard/DieHard_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Disruptor/Disruptor_MPMC.tla",
+        "source_sha256": "be604537bb6d459cb26ea8274909e67eef31c407b0ea33f1e0688d3dae860ac1",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Disruptor/Disruptor_MPMC_TypeOkCorrect.tla",
+            "statement_sha256": "f46464b83ca2ebaabf13c289070ef86beee538600007ad0423aa5e23db791246"
+          },
+          {
+            "task_id": "tlaplus_examples_Disruptor/Disruptor_MPMC_NoDataRacesCorrect.tla",
+            "statement_sha256": "af003b77fe7cafc6c5777ecfdd08414103a9f86ef8ba8e42ec960c59ccd5623e"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Disruptor/Disruptor_MPMC/RingBuffer.tla",
+        "tlaplus_examples_Disruptor/Disruptor_MPMCDefs.tla",
+        "tlaplus_examples_Disruptor/Disruptor_MPMCModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Disruptor/Disruptor_SPMC.tla",
+        "source_sha256": "83b6d70889abb2ecf9b771bac5e99f00ec9db38d18e4bfd623f30fa3973c6fc9",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Disruptor/Disruptor_SPMC_TypeOkCorrect.tla",
+            "statement_sha256": "f46464b83ca2ebaabf13c289070ef86beee538600007ad0423aa5e23db791246"
+          },
+          {
+            "task_id": "tlaplus_examples_Disruptor/Disruptor_SPMC_NoDataRacesCorrect.tla",
+            "statement_sha256": "af003b77fe7cafc6c5777ecfdd08414103a9f86ef8ba8e42ec960c59ccd5623e"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Disruptor/Disruptor_SPMC/RingBuffer.tla",
+        "tlaplus_examples_Disruptor/Disruptor_SPMCDefs.tla",
+        "tlaplus_examples_Disruptor/Disruptor_SPMCModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_FiniteMonotonic/CRDT_proof.tla",
+        "source_sha256": "38741b029c2b97666eb493159edd1a7d51a45f74f8f73b9b786b9e3e8e246a8e",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_FiniteMonotonic/CRDT_proof_Monotonicity.tla",
+            "statement_sha256": "5a6e8d08a5c55b07d7eca021169285641e1a8839353b1d2fff49c022365ada82"
+          },
+          {
+            "task_id": "tlaplus_examples_FiniteMonotonic/CRDT_proof_OGLiveness.tla",
+            "statement_sha256": "a88a3412786bd50961db9545895a2be8397f2e1b760e6d80b31df2ac5d3bdcf9"
+          },
+          {
+            "task_id": "tlaplus_examples_FiniteMonotonic/CRDT_proof_Convergence.tla",
+            "statement_sha256": "b0e70e81aec80fd8b46226dd3b1559f005aaba14d6c9f11be648499f5bc34e4e"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_FiniteMonotonic/CRDT_proof/CRDT.tla",
+        "tlaplus_examples_FiniteMonotonic/CRDT_proofDefs.tla",
+        "tlaplus_examples_FiniteMonotonic/CRDT_proofModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex.tla",
+        "source_sha256": "961286f7645674f7da878ac2d2b7a2c91c694961f5001788025d05a23c8a1da5",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_ReqProgressCorrect.tla",
+            "statement_sha256": "0e6ffada5193afd4843e07d6e31cd1eba4c122a2189dd5abba64bd31ff8f2d6d"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_DirProgressCorrect.tla",
+            "statement_sha256": "4c139abfc4f799914b559da4ef6518b95cfdadf032dc40afe2b43afad65e420d"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_UniProgressCorrect.tla",
+            "statement_sha256": "47f0d28eee8f0278689b6619538eb958f1c1daed5271cb7cb72bcd5d74ca7ef6"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_InvProgressCorrect.tla",
+            "statement_sha256": "cb345e652c4bffec7df82c75b4ef45f56a121a32fc5425a2f7ec4c8232c07cbb"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_RpProgressCorrect.tla",
+            "statement_sha256": "2e8c2e14aeff94ec784befed270d7af9466f177158d40d099b5926f5699810ca"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_WbProgressCorrect.tla",
+            "statement_sha256": "54fb8d046cafffaa039c47b6b0aba20da7675d74332d3d5b4a3db00c7b66c7d8"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_ShWbProgressCorrect.tla",
+            "statement_sha256": "c0bba4a58fd1bbe5f04fb1ee814e33d2522c04856f009be129ab3e87debf5cb1"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_NakcProgressCorrect.tla",
+            "statement_sha256": "b72d688bc8b4f64c4d720db49227e32023f9038d2249c971cce91eea0455516a"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrect.tla",
+            "statement_sha256": "a74c0359d3a70e57923338db227d8aca73df337749cbeea2232f8a46b8d192b4"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheDataCorrect.tla",
+            "statement_sha256": "851a717ae62bb6542688025f51571275708ff951cff56593b207942968733e11"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_MemDataCorrect.tla",
+            "statement_sha256": "e77ca259373f7e7545f27c2d6ff47b1a8c4d3a1566e62abc538c7429dfe1074f"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_1_Correct.tla",
+            "statement_sha256": "5b75ed524f13fa49e8cf9c49be6705b2e90e4ec4f5b205df05c5c310cc69a0fa"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_2_Correct.tla",
+            "statement_sha256": "09f75450e87d93fca758048f0e1996b976493e443a703a0dcf0c3440c1579a03"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_3_Correct.tla",
+            "statement_sha256": "20c283bb86bbb40203de239e414d577343ffc1d7e4dac73eb4029677be6be9aa"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_4_Correct.tla",
+            "statement_sha256": "5495ecf82b9bd8a37260fed173aeb9863729ee3c95a5de376e394039a72f945e"
+          },
+          {
+            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_Correct.tla",
+            "statement_sha256": "793100faa58531bff635662349cbe4a86676d79e86cd1b91b471bc7fda1c2966"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_FlashProtocol/FlashWithMutexDefs.tla",
+        "tlaplus_examples_FlashProtocol/FlashWithMutexModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_GermanProtocol/GermanControlBenchmarks.tla",
+        "source_sha256": "ea3d5934872661423beb1cdbcda44c680b123068047cec54e1714a2d9fd8ffd6",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanControlBenchmarks_Coherence.tla",
+            "statement_sha256": "a73b9a8326060117825972cbd04ed9a3f765e2ec42c194d5cd903da1f795ff01"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_GermanProtocol/GermanControlBenchmarks/GermanControl.tla",
+        "tlaplus_examples_GermanProtocol/GermanControlBenchmarksDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_GermanProtocol/GermanData.tla",
+        "source_sha256": "f259f37b0e914e22aa58b362c732d24990cd074a2865b26f64a0c508edc04fc5",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_DataProp.tla",
+            "statement_sha256": "b7681381fbbddc20761da9030125908527426103bd8bcf77b0c46064e207838e"
+          },
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_TransactionConsistency.tla",
+            "statement_sha256": "44605b3e4cd7da0a32f8938cf11345e34ff09f4019549c20025fcbc29352495e"
+          },
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_DirectoryAccurate.tla",
+            "statement_sha256": "a4fcb12a62455defa2ea0e2e812e4b463d0dbaacc48a4b005da73cc046acfe9e"
+          },
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_ExclusiveIsolation.tla",
+            "statement_sha256": "8027a675762339e4ecea304c2f2601eaea415d2a50bebb13eb204bbb8b18ddf5"
+          },
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_WritebackCarriesLatest.tla",
+            "statement_sha256": "4b340b1d308a80c24f06a0ef7b60099224ebb973a9a372fe03e125ba7707931d"
+          },
+          {
+            "task_id": "tlaplus_examples_GermanProtocol/GermanData_Refinement.tla",
+            "statement_sha256": "2cc2e9e382c646f3876956ad0674ed9c22cc915ccecacb28f6b067334b792d3e"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_GermanProtocol/GermanData/GermanControl.tla",
+        "tlaplus_examples_GermanProtocol/GermanDataDefs.tla",
+        "tlaplus_examples_GermanProtocol/GermanDataModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_KeyValueStore/KeyValueStore_proof.tla",
+        "source_sha256": "ed287a9290e55a47e93cb7593ffec5e47169398e797ce7fc170da5758f852f7e",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_KeyValueStore/KeyValueStore_proof_TypeAndLifecycle.tla",
+            "statement_sha256": "24ce68a12d12d1cef4fb40661840e03e49b20f4f9044ebe3b03c5eb3d766ea16"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_KeyValueStore/KeyValueStore_proof/KeyValueStore.tla",
+        "tlaplus_examples_KeyValueStore/KeyValueStore_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_LearnProofs/AddTwo.tla",
+        "source_sha256": "b8f26df9d64dee325c05245956f170eaa7aa5b61dc54f1354a139c1f7578103a",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_LearnProofs/AddTwo_TypeInvariant.tla",
+            "statement_sha256": "57f648adf811688cb94c0f25a1664d588adb1ef869513afc40da0ff58fa39037"
+          },
+          {
+            "task_id": "tlaplus_examples_LearnProofs/AddTwo_Even.tla",
+            "statement_sha256": "7df08b4f4be48abba0d543db487b061520e3858542a33a2053edd6c684aa5bd8"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_LearnProofs/AddTwoDefs.tla",
+        "tlaplus_examples_LearnProofs/AddTwoModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_LearnProofs/FindHighest.tla",
+        "source_sha256": "2236ae6e1547246c7539c96368ed8b2707243e2c215cbc48b981bc6896eee1bc",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_LearnProofs/FindHighest_TypeInvariantHolds.tla",
+            "statement_sha256": "640951027f93e6baf73395ee39d802a50e96a418bee67544c8f56c53fe08f0fb"
+          },
+          {
+            "task_id": "tlaplus_examples_LearnProofs/FindHighest_InductiveInvariantHolds.tla",
+            "statement_sha256": "1c3c0b0e99e2a2689de6c833d57b0deb7a495f101e645a20970808648c9ef4e7"
+          },
+          {
+            "task_id": "tlaplus_examples_LearnProofs/FindHighest_DoneIndexValueThm.tla",
+            "statement_sha256": "463c96f3e0a4897b7e568b780a2ee1dc95c51cee83bcd87e2b8342c24ef622e7"
+          },
+          {
+            "task_id": "tlaplus_examples_LearnProofs/FindHighest_IsCorrect.tla",
+            "statement_sha256": "7a5332d72a110e345ab8105f681d8f4d1c394006b9f340ec00f3eab192e05b53"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_LearnProofs/FindHighestDefs.tla",
+        "tlaplus_examples_LearnProofs/FindHighestModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_LoopInvariance/BinarySearch.tla",
+        "source_sha256": "fa56deb7c8d1cce2e5b9c4559ab7a1ced1fea5098edc46eb8d99c257e8eaecec",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_LoopInvariance/BinarySearch_resultCorrect.tla",
+            "statement_sha256": "3d0f714fae69f3c920f216178b2de5238f13322dbf788ba71613172cc9766142"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_LoopInvariance/BinarySearchDefs.tla",
+        "tlaplus_examples_LoopInvariance/BinarySearchModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_LoopInvariance/Quicksort.tla",
+        "source_sha256": "65c70e42eb28bef01e7754cffe66d87ac1d00b4cd27b107ce389da3f31ad7672",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_LoopInvariance/Quicksort_PCorrect.tla",
+            "statement_sha256": "dac3703c52b0c1bbf78c316b3d575166c72d38efab9002f412fb04e86c497a38"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_LoopInvariance/QuicksortDefs.tla",
+        "tlaplus_examples_LoopInvariance/QuicksortModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_LoopInvariance/SumSequence.tla",
+        "source_sha256": "aad92f983376e998d9bb628b7d8804ef3aff27d598e0f0be098138a2c134d296",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_LoopInvariance/SumSequence_PCorrect.tla",
+            "statement_sha256": "dac3703c52b0c1bbf78c316b3d575166c72d38efab9002f412fb04e86c497a38"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_LoopInvariance/SumSequenceDefs.tla",
+        "tlaplus_examples_LoopInvariance/SumSequenceModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_MisraReachability/ParReachProofs.tla",
+        "source_sha256": "7dd3ff57b476de48d2239b333e5bdb7670a999e43f2b7561b8deebf8f16b7233",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_MisraReachability/ParReachProofs_line18.tla",
+            "statement_sha256": "2b15667dd8af562585152ce3669916dce06b7de1d631aa02944e6d3672f4eefc"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_MisraReachability/ParReachProofs/ParReach.tla",
+        "tlaplus_examples_MisraReachability/ParReachProofs/Reachability.tla",
+        "tlaplus_examples_MisraReachability/ParReachProofs/Reachable.tla",
+        "tlaplus_examples_MisraReachability/ParReachProofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_MisraReachability/ReachableProofs.tla",
+        "source_sha256": "be290ee350eb4e885702e538d8ddc43bb1ab9f16784b3d8763b6c86230a47197",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_MisraReachability/ReachableProofs_line197.tla",
+            "statement_sha256": "8bb782541a2db724df02c1c1be82f5a95a40414de0e15913fdf63f0ea38bda48"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_MisraReachability/ReachableProofs/Reachability.tla",
+        "tlaplus_examples_MisraReachability/ReachableProofs/ReachabilityProofs.tla",
+        "tlaplus_examples_MisraReachability/ReachableProofs/Reachable.tla",
+        "tlaplus_examples_MisraReachability/ReachableProofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_MissionariesAndCannibals/MissionariesAndCannibals_proof.tla",
+        "source_sha256": "c30018a0b3cb561578fbd797edb69986436fe2867833295f1982ba05b43e52c0",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_MissionariesAndCannibals/MissionariesAndCannibals_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_MissionariesAndCannibals/MissionariesAndCannibals_proof/MissionariesAndCannibals.tla",
+        "tlaplus_examples_MissionariesAndCannibals/MissionariesAndCannibals_proofDefs.tla",
+        "tlaplus_examples_MissionariesAndCannibals/MissionariesAndCannibals_proofModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof.tla",
+        "source_sha256": "8fe413184e0150167ddb7009563af31bdb151219d7156796bce4dd4551bfed21",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof_TypeCorrect.tla",
+            "statement_sha256": "953659dcbf727179112befcfd62da23d32e7759fc049ac3bb2706c0add52aead"
+          },
+          {
+            "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof_SafetyCorrect.tla",
+            "statement_sha256": "c2f4c3849ad5d3a76e30b39f9254f509486831464b924a3c3b8b497a151a74f5"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_MultiCarElevator/Elevator_proof/Elevator.tla",
+        "tlaplus_examples_MultiCarElevator/Elevator_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_NanoBlockchain/Nano.tla",
+        "source_sha256": "c06dffde67e712c97686aa5871689df0d62fbdc0b5f8fb08e5e936c03d3c751f",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_NanoBlockchain/Nano_Safety.tla",
+            "statement_sha256": "4b4f6c5ad12870baab4a4a2fd03c2d4458c92b1c7dd1fffa82a73b29bd941ade"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_NanoBlockchain/NanoDefs.tla",
+        "tlaplus_examples_NanoBlockchain/NanoModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Paxos/Consensus.tla",
+        "source_sha256": "c5c181338db9d7489da158daaead6e8ed47b91ca5802f64ecab02dfd379f8e21",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Paxos/Consensus_Invariance.tla",
+            "statement_sha256": "8bf85eb29029fd635f78e74f157e4d56ed11fd601eceab8af44f0eb979cffed5"
+          },
+          {
+            "task_id": "tlaplus_examples_Paxos/Consensus_LivenessTheorem.tla",
+            "statement_sha256": "605707667b65da4c8d99c79b83432d9f1193bba40ca91fa8f66bbee68e7d7948"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Paxos/ConsensusDefs.tla",
+        "tlaplus_examples_Paxos/ConsensusModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Paxos/Voting.tla",
+        "source_sha256": "636453a0291c87ba29d5fa768aef77e6bb58fdab22a088250224a93cdf1138d9",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Paxos/Voting_QuorumNonEmpty.tla",
+            "statement_sha256": "58d431a9892fdfd76072ac38ff9238d64603b1cc06c9d1b4b1d3abb50aa8e772"
+          },
+          {
+            "task_id": "tlaplus_examples_Paxos/Voting_C_Spec.tla",
+            "statement_sha256": "d9918336f3fb65284cbf70fe3bfafc891e1760dcb5ba99ebf038b7509339c70a"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Paxos/Voting/Consensus.tla",
+        "tlaplus_examples_Paxos/VotingDefs.tla",
+        "tlaplus_examples_Paxos/VotingModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Consensus.tla",
+        "source_sha256": "13b1270ded32c406c5a4c062d61bebb6e61197023f94aae52574474636b7198b",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Consensus_Invariance.tla",
+            "statement_sha256": "c51dff96e98b67d303f0993e8338fecb7baf9286690b3abd486a8ddf998c1cc5"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_PaxosHowToWinATuringAward/ConsensusDefs.tla",
+        "tlaplus_examples_PaxosHowToWinATuringAward/ConsensusModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting.tla",
+        "source_sha256": "d4bde738c5ad59042370210548eb3ff9ab3177fd03144fd0ab266cb1dcdeff11",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_Invariance.tla",
+            "statement_sha256": "b6c3b3a576c86e0fe3fb20413d5de578ff7a954591b3c14bfac04cb259162ba0"
+          },
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_Implementation.tla",
+            "statement_sha256": "7f4214e602eb99bc046e14a347cf6d0fee606e38abf238d72e92ef694e735291"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_PaxosHowToWinATuringAward/Voting/Consensus.tla",
+        "tlaplus_examples_PaxosHowToWinATuringAward/VotingDefs.tla",
+        "tlaplus_examples_PaxosHowToWinATuringAward/VotingModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof.tla",
+        "source_sha256": "d93b14c5b70e361e44c35c99eaa9e8f9284b010fdf5866b4ff7b0b501fbd1edf",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof_AllSafeAtZero_T.tla",
+            "statement_sha256": "3f336f809c099fa96fc8caf7f64ee7582927f0c9691dd54dd063a2f6a1abf395"
+          },
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof_ChoosableThm_T.tla",
+            "statement_sha256": "1c63cc8650ade9951ddba05e67184966f3245dd66ea33ff106afa9f2219cd225"
+          },
+          {
+            "task_id": "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof_ShowsSafety_T.tla",
+            "statement_sha256": "6695e7307746ebb428bd736f02c2452c2c99d651b8cd86bbfc2458ff06523abd"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof/Consensus.tla",
+        "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proof/Voting.tla",
+        "tlaplus_examples_PaxosHowToWinATuringAward/Voting_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ReadersWriters/ReadersWriters_proof.tla",
+        "source_sha256": "1568700c9038ebd0b950961bb110def01c6980223d182357ec895a8592a3d689",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ReadersWriters/ReadersWriters_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_ReadersWriters/ReadersWriters_proof_SafetyCorrect.tla",
+            "statement_sha256": "d8df5d97da498b9972eb790fef9f96673e18974575f8eecee3cfbe44a8fa5861"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ReadersWriters/ReadersWriters_proof/ReadersWriters.tla",
+        "tlaplus_examples_ReadersWriters/ReadersWriters_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpanningTree/SpanTree_proof.tla",
+        "source_sha256": "880d6a7f3b049e5a2b74bdf25394548088f988f7c6336443781160d3e1ae9d8c",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpanningTree/SpanTree_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpanningTree/SpanTree_proof/SpanTree.tla",
+        "tlaplus_examples_SpanningTree/SpanTree_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/AsynchInterface_proof.tla",
+        "source_sha256": "53aaf75ae7cb4ae3c6d58ffcaab6bc6136cb4b094bacb786eea5d62737a01ffc",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/AsynchInterface_proof_TypeCorrect.tla",
+            "statement_sha256": "953659dcbf727179112befcfd62da23d32e7759fc049ac3bb2706c0add52aead"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/AsynchInterface_proof/AsynchInterface.tla",
+        "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/AsynchInterface_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/Channel_proof.tla",
+        "source_sha256": "d0e75bc6ae5102b7e27178f6dd3210398ddb9905ce086f9ddb995846be7b7a2a",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/Channel_proof_TypeCorrect.tla",
+            "statement_sha256": "953659dcbf727179112befcfd62da23d32e7759fc049ac3bb2706c0add52aead"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/Channel_proof/Channel.tla",
+        "tlaplus_examples_SpecifyingSystems_AsynchronousInterface/Channel_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_CachingMemory/InternalMemory_proof.tla",
+        "source_sha256": "24170404352beae262fab14dafebc89b97f47cc70b40eaa5d61f05d5e58d8ded",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_CachingMemory/InternalMemory_proof_TypeCorrect.tla",
+            "statement_sha256": "b31cce7be7d09fe24cc855a2f8e6f8a94209ed5ae7059c26d3a5095fa5e504bd"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_CachingMemory/InternalMemory_proof/InternalMemory.tla",
+        "tlaplus_examples_SpecifyingSystems_CachingMemory/InternalMemory_proof/MemoryInterface.tla",
+        "tlaplus_examples_SpecifyingSystems_CachingMemory/InternalMemory_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_Composing/HourClock_proof.tla",
+        "source_sha256": "4c1a78c4af90e7f6b19cc669ae779da69e9a2cb86e940dd9060f5a3bca864c68",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_Composing/HourClock_proof_HCini_Invariant.tla",
+            "statement_sha256": "b1f622aaf61252f55a13ce35c02e89f9f9a9d4932c3e6bedec07d5d4a45a9683"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_Composing/HourClock_proof/HourClock.tla",
+        "tlaplus_examples_SpecifyingSystems_Composing/HourClock_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_FIFO/InnerFIFO_proof.tla",
+        "source_sha256": "26bec8a039d66568dec96fb71e86cedea7cd4bac377545ba5bc406cb06e00abf",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_FIFO/InnerFIFO_proof_TypeCorrect.tla",
+            "statement_sha256": "953659dcbf727179112befcfd62da23d32e7759fc049ac3bb2706c0add52aead"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_FIFO/InnerFIFO_proof/Channel.tla",
+        "tlaplus_examples_SpecifyingSystems_FIFO/InnerFIFO_proof/InnerFIFO.tla",
+        "tlaplus_examples_SpecifyingSystems_FIFO/InnerFIFO_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_SpecifyingSystems_TLC/AlternatingBit_proof.tla",
+        "source_sha256": "2dbe363eecaf6644fff69d37df89292b6d1b03e4b068ef9de48e9cc603c1aea9",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_SpecifyingSystems_TLC/AlternatingBit_proof_TypeCorrect.tla",
+            "statement_sha256": "422356c700223c1970b95d80c347b62563c8bc7ff23acacdd4c53f88a7af7845"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_SpecifyingSystems_TLC/AlternatingBit_proof/AlternatingBit.tla",
+        "tlaplus_examples_SpecifyingSystems_TLC/AlternatingBit_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TeachingConcurrency/Simple.tla",
+        "source_sha256": "dd859866e8be0ee36b0005b0393becd788fe51aae7ebcd7deaa14c259a3c0bab",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/Simple_Correctness.tla",
+            "statement_sha256": "c1532c6f6c7dcb63fb3fec2b4667c6115083901cc48b68e5290bd377e70715da"
+          },
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/Simple_Correctness2.tla",
+            "statement_sha256": "43c177ef405b8d08aa7a501b8fceea59ed95a491d020ee5be6ff436971be9a56"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TeachingConcurrency/SimpleDefs.tla",
+        "tlaplus_examples_TeachingConcurrency/SimpleModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular.tla",
+        "source_sha256": "bf3872f04d71f7b80fcb55cecd07bf1b38fac3861fbb3452eb179c593c1bcdb5",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular_Correctness.tla",
+            "statement_sha256": "c1532c6f6c7dcb63fb3fec2b4667c6115083901cc48b68e5290bd377e70715da"
+          },
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular_Correctness2.tla",
+            "statement_sha256": "43c177ef405b8d08aa7a501b8fceea59ed95a491d020ee5be6ff436971be9a56"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TeachingConcurrency/SimpleRegularDefs.tla",
+        "tlaplus_examples_TeachingConcurrency/SimpleRegularModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular_proof.tla",
+        "source_sha256": "0bebedcf4a56e72ee29bf71aa6bc97f7e48ccc3bac18aca3db39829b3b789386",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/SimpleRegular_proof_InvInvariant.tla",
+            "statement_sha256": "70143579439e92dcfa5e51e713c4351b4b31ab3e11905599934f8d6c5e98c7a1"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TeachingConcurrency/SimpleRegular_proof/SimpleRegular.tla",
+        "tlaplus_examples_TeachingConcurrency/SimpleRegular_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TeachingConcurrency/Simple_proof.tla",
+        "source_sha256": "f2e5348593cd1b4e4107c591442c1b625146f6907189013c822440d67c84d1af",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/Simple_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_TeachingConcurrency/Simple_proof_InvInvariant.tla",
+            "statement_sha256": "70143579439e92dcfa5e51e713c4351b4b31ab3e11905599934f8d6c5e98c7a1"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TeachingConcurrency/Simple_proof/Simple.tla",
+        "tlaplus_examples_TeachingConcurrency/Simple_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TencentPaxos/TPaxosWithProof.tla",
+        "source_sha256": "61d537a3623153eb955c9c9c7aa9ff1e79e03aad592384fd81dd81581c11aafd",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TencentPaxos/TPaxosWithProof_Invariant.tla",
+            "statement_sha256": "19c22d720b661967b252e1060442e153b742fb3b9a9b05704e89fc582c266b94"
+          },
+          {
+            "task_id": "tlaplus_examples_TencentPaxos/TPaxosWithProof_Consistent.tla",
+            "statement_sha256": "847c6d862035c1fe4a152179947422b435f3a59989b3d3ee564efe04481dd77c"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TencentPaxos/TPaxosWithProofDefs.tla",
+        "tlaplus_examples_TencentPaxos/TPaxosWithProofModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_Termination/Termination_proof.tla",
+        "source_sha256": "f9333b53d33b01e1df92f838c136fe9b87b125e02eac7e8b223b38a97a2924bd",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_Termination/Termination_proof_Safety.tla",
+            "statement_sha256": "ad04a08da06c1a9e3d20f0fdf94043fc069d3857291e7460ed298c8bf0711493"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_Termination/Termination_proof/Termination.tla",
+        "tlaplus_examples_Termination/Termination_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TwoPhase/TwoPhase.tla",
+        "source_sha256": "e33c65ab946b6bf45a94af2bf9bc790601099322b67dfd99bfb4f0d58d3915bf",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TwoPhase/TwoPhase_Implementation.tla",
+            "statement_sha256": "55db30d478d6d7a0f632506fd7456c0f3f23f12ad6cd1b2b110ee92f3cf571f6"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TwoPhase/TwoPhase/Alternate.tla",
+        "tlaplus_examples_TwoPhase/TwoPhaseDefs.tla",
+        "tlaplus_examples_TwoPhase/TwoPhaseModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_TwoPhase/TwoPhase_proof.tla",
+        "source_sha256": "8c2e6785ab9fc76ccade4f70a012d1cc62c9accec5fbdd8790c89e697b2169f1",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_TwoPhase/TwoPhase_proof_line17.tla",
+            "statement_sha256": "5a415bde1973742b5b8f2a6329b4311f9a88aa87e3532e1bd71907a826fa3469"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_TwoPhase/TwoPhase_proof/Alternate.tla",
+        "tlaplus_examples_TwoPhase/TwoPhase_proof/TwoPhase.tla",
+        "tlaplus_examples_TwoPhase/TwoPhase_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof.tla",
+        "source_sha256": "90e197d259730d495108449362d5a7efea47c6c80ab23b34d9712048c075b932",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof_TypeCorrect.tla",
+            "statement_sha256": "80e4f7c11b9a85b276eb9ee676aeb1898b1c2d32a3d14e6a737bae9225acf9fa"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_allocator/AllocatorImplementation_proof/AllocatorImplementation.tla",
+        "tlaplus_examples_allocator/AllocatorImplementation_proof/SchedulingAllocator.tla",
+        "tlaplus_examples_allocator/AllocatorImplementation_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof.tla",
+        "source_sha256": "11402242872c6bc07418a9fde6241b91bcb56c8f34d954188e5e25815edffae2",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof_TypeCorrect.tla",
+            "statement_sha256": "d434fb99b601d44f6c56aa70e84ae29f392f1b47445ff564c48c1c8404b80017"
+          },
+          {
+            "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof_Mutex.tla",
+            "statement_sha256": "1ba4a7fe0a640624d64ba33d32ec475107e6353f4449b1abfe8e008b02621283"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_allocator/SchedulingAllocator_proof/SchedulingAllocator.tla",
+        "tlaplus_examples_allocator/SchedulingAllocator_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_allocator/SimpleAllocator_proof.tla",
+        "source_sha256": "7debe796f6ab469d08930cc81b5ce0e62697c48c517f17cacb191bbc6f62ff18",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_allocator/SimpleAllocator_proof_TypeCorrect.tla",
+            "statement_sha256": "5a2a744839f5c926f556d599576683f8ff35eac9f206be779cb7166b2925b7ea"
+          },
+          {
+            "task_id": "tlaplus_examples_allocator/SimpleAllocator_proof_Mutex.tla",
+            "statement_sha256": "af3af9b23ce9b5c060fd31c267229f84875ced0c3d40e89f80ce4281749649b2"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_allocator/SimpleAllocator_proof/SimpleAllocator.tla",
+        "tlaplus_examples_allocator/SimpleAllocator_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_barriers/Barriers.tla",
+        "source_sha256": "34883b1e21d7b3c3fb02e5343844fa29f8663f9e602da0b3fc3f50653abc68ee",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_barriers/Barriers_Invariant.tla",
+            "statement_sha256": "19c22d720b661967b252e1060442e153b742fb3b9a9b05704e89fc582c266b94"
+          },
+          {
+            "task_id": "tlaplus_examples_barriers/Barriers_BarrierExclusion.tla",
+            "statement_sha256": "bf3eabbcb1cfc81f34b1afc742bd5a143b32e3b63138107d6cbd6d253fa4c551"
+          },
+          {
+            "task_id": "tlaplus_examples_barriers/Barriers_BarrierExclusion2.tla",
+            "statement_sha256": "ba7b31773eec4072a5f9035fb78f3464f195a81ad05fcc4abb067814f223ab31"
+          },
+          {
+            "task_id": "tlaplus_examples_barriers/Barriers_FlushInvariant.tla",
+            "statement_sha256": "3e55a2ecdd304524db933128dbdbe3058c64a1125c337ce6db51ab9ac8d02af0"
+          },
+          {
+            "task_id": "tlaplus_examples_barriers/Barriers_B_Spec.tla",
+            "statement_sha256": "8115a331b4c96010b49508c1af8e6cffc329630e35867801cc703ffe68b8f168"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_barriers/Barriers/Barrier.tla",
+        "tlaplus_examples_barriers/BarriersDefs.tla",
+        "tlaplus_examples_barriers/BarriersModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_bcastByz/bcastByz.tla",
+        "source_sha256": "c0238947351cce5debb0543f11cde2b0ed7e84fb7b3339651cd0750e639e6a7d",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_bcastByz/bcastByz_FCConstraints_TypeOK_Init.tla",
+            "statement_sha256": "1c6dba2e369baec4650ceb9862942dfcf1251e6839d32ed5a527fb82e3a2f09f"
+          },
+          {
+            "task_id": "tlaplus_examples_bcastByz/bcastByz_FCConstraints_TypeOK_IndInv_Unforg_NoBcast.tla",
+            "statement_sha256": "f57c093cda9e1f843bd1f66fe3820fe1937289211e6595051d0aaa23f1443a47"
+          },
+          {
+            "task_id": "tlaplus_examples_bcastByz/bcastByz_FCConstraints_TypeOK_IndInv_Unforg_NoBcast_TLC.tla",
+            "statement_sha256": "0090c865d1012c405a91c00c7244591969c6666e2d951032dd43f8a39c9b3ab4"
+          },
+          {
+            "task_id": "tlaplus_examples_bcastByz/bcastByz_FCConstraints_TypeOK_SpecNoBcast.tla",
+            "statement_sha256": "9b33eab7b1efda36701f757241f29d4cd1d4851536aae4005908fd0de321a091"
+          },
+          {
+            "task_id": "tlaplus_examples_bcastByz/bcastByz_Unforg_Step4.tla",
+            "statement_sha256": "417be9ac4b69b8eea9f80ccbe5c992de9476d7f028f84b2427b2f94456e914d0"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_bcastByz/bcastByzDefs.tla",
+        "tlaplus_examples_bcastByz/bcastByzModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_bosco/bosco.tla",
+        "source_sha256": "a8294e4bf83db524c62dc3f5781285fc7499a0b937eb31ca07f9d6f958181627",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_bosco/bosco_TypeOKCorrect.tla",
+            "statement_sha256": "625f427f142fbc83464935fb5470de069d660feaaac7a1bd36b0a87ee498a4fc"
+          },
+          {
+            "task_id": "tlaplus_examples_bosco/bosco_Lemma3_0Correct.tla",
+            "statement_sha256": "0067e653e36661b591130dfe253edf5ae0deb1dde179b0183fc1dbd116703917"
+          },
+          {
+            "task_id": "tlaplus_examples_bosco/bosco_Lemma3_1Correct.tla",
+            "statement_sha256": "37c22a5a77e209a9590dc0e200eeb52eb804fdd1567f388c6cba2c5cb26c9622"
+          },
+          {
+            "task_id": "tlaplus_examples_bosco/bosco_Lemma4_0Correct.tla",
+            "statement_sha256": "b83913401a58d2136947c6c791acd107e77a5d1134440a99a24ac469c9f328b1"
+          },
+          {
+            "task_id": "tlaplus_examples_bosco/bosco_Lemma4_1Correct.tla",
+            "statement_sha256": "cb0c9c62771fa6754eecbe88155dd2971baa69db30eaf68bf5c6d909736159a6"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_bosco/boscoDefs.tla",
+        "tlaplus_examples_bosco/boscoModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+        "source_sha256": "c3b9c18bb72cac6b79a3583cfd1e4997a0d2082808c2e1b1789d9367b175a26d",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_TypeOK.tla",
+            "statement_sha256": "972255775e56593a7ec4dd8f803e6ce2d3b41d2dc028ffb436bed20d2db97214"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv1.tla",
+            "statement_sha256": "d43e6b9576c20ee0c6a013f54631f4390c5e1cb1fff4e8630cb8e41e98d6b24b"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv3.tla",
+            "statement_sha256": "ade505a20512bd4f5ab65c53cdf6f11e59070b615d9d4825a139f3c77064127f"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv4.tla",
+            "statement_sha256": "022db53874a72a33bb228e4cea2a1ed85769f435e175cd98cae53a2504fde14b"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv5.tla",
+            "statement_sha256": "38e993b9ec8f3bee5181fb4cc7d4b734a956557e5ab4bcff30ffa64fb7498cbf"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Safety.tla",
+            "statement_sha256": "0411ebbcefe68dee7b385a734d3aeae29121b0464aac92682af0b048451fe269"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_FlushBufferCorrect.tla",
+            "statement_sha256": "8edb1f7802d67ed8dbe36b8ada7d6e94667c1124c754ab6f3a713e72fca21260"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekCorrect.tla",
+            "statement_sha256": "dae7e26c15ba5a400e37d7dc24664a8372873cc7a699399ebe477c1573358d41"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekEstablishesInv2.tla",
+            "statement_sha256": "8e73c77cac5bf3bd41c1bf77b20d267a9fa43b3da57f14bff3dde73ebd30c5ee"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Write1Correct.tla",
+            "statement_sha256": "7d57688a2e1a861f484abe5692b89b58ccc3be8caf6b32727e1d6db9b08e0655"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Read1Correct.tla",
+            "statement_sha256": "87f2c636b8030f26a41895e0b7738d8ae9995e9ef08faef5c886cfdc230f1db2"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_WriteAtMostCorrect.tla",
+            "statement_sha256": "1512b240ef395c72938b268388382e6d89e523412630331666baf3998331e520"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_ReadCorrect.tla",
+            "statement_sha256": "d50e216afcc0e65247b487568db53f7ce264de565422863c8dc538fa1694a069"
+          },
+          {
+            "task_id": "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv2CanAlwaysBeRestored.tla",
+            "statement_sha256": "92a4796f2ff57a0d11ca50273d57c91ce7b7e151bcc98841570c32743ff4fcf0"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_braf/BufferedRandomAccessFile/Common.tla",
+        "tlaplus_examples_braf/BufferedRandomAccessFile/RandomAccessFile.tla",
+        "tlaplus_examples_braf/BufferedRandomAccessFileDefs.tla",
+        "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_btree/btree.tla",
+        "source_sha256": "ad3d9b2f2d4c762858caaf150e546f7c822a29f18d0e538d46646e8525b92d03",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_btree/btree_TypeOkCorrect.tla",
+            "statement_sha256": "f46464b83ca2ebaabf13c289070ef86beee538600007ad0423aa5e23db791246"
+          },
+          {
+            "task_id": "tlaplus_examples_btree/btree_InnersMustHaveLastCorrect.tla",
+            "statement_sha256": "6e9ee9cbd6264f0e688a43805b6fa13f5756a0b5b960051d21675f6be9e25001"
+          },
+          {
+            "task_id": "tlaplus_examples_btree/btree_LeavesCantHaveLastCorrect.tla",
+            "statement_sha256": "7594cf6ac1dcf4a3625717139088fc193e19fd0ea754405147354571c7726e53"
+          },
+          {
+            "task_id": "tlaplus_examples_btree/btree_KeyOrderPreservedCorrect.tla",
+            "statement_sha256": "2406843a876caf9edfce7b4ba487c2e8aad8572de593e2570223be4d2b3c6b52"
+          },
+          {
+            "task_id": "tlaplus_examples_btree/btree_KeysInLeavesAreUniqueCorrect.tla",
+            "statement_sha256": "0bb40e1175b3c2a59dcb1c358f00fe1621aa8060c41ea8f381f9153dd680c9ca"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_btree/btreeDefs.tla",
+        "tlaplus_examples_btree/btreeModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_byihive/VoucherLifeCycle_proof.tla",
+        "source_sha256": "10ec05b68d1b4c8641ab151e00835bd596bcf87cb536b9b75d9fcea1da9b1319",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_byihive/VoucherLifeCycle_proof_Spec_TypeOK_Consistent.tla",
+            "statement_sha256": "1ad7a76d796d06ea1bfb8c4f96626fa3a6bbdc68fc0922ea2db78ff9c4db9a48"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_byihive/VoucherLifeCycle_proof/VoucherLifeCycle.tla",
+        "tlaplus_examples_byihive/VoucherLifeCycle_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_byzpaxos/BPConProof.tla",
+        "source_sha256": "daa731dcadf12a892415131881d82d5b23e56c53097e90b986a24b1408a2e3c6",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_byzpaxos/BPConProof_Invariance.tla",
+            "statement_sha256": "8bf85eb29029fd635f78e74f157e4d56ed11fd601eceab8af44f0eb979cffed5"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/BPConProof_P_Spec.tla",
+            "statement_sha256": "13a569f986316b7c3ee6d1ece9c951b92a98f0f44f660e1b85478e4507506676"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/BPConProof_line2170.tla",
+            "statement_sha256": "8614bee3bd785df57a80a2bdc8336aed10fcde6a29559af913695175e3afc647"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_byzpaxos/BPConProof/Consensus.tla",
+        "tlaplus_examples_byzpaxos/BPConProof/PConProof.tla",
+        "tlaplus_examples_byzpaxos/BPConProof/VoteProof.tla",
+        "tlaplus_examples_byzpaxos/BPConProofDefs.tla",
+        "tlaplus_examples_byzpaxos/BPConProofModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_byzpaxos/Consensus.tla",
+        "source_sha256": "5b877e93b31c982e80b1443127bc2c50c090d7f8d729d468f3b42849315205bf",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_byzpaxos/Consensus_Invariance.tla",
+            "statement_sha256": "8bf85eb29029fd635f78e74f157e4d56ed11fd601eceab8af44f0eb979cffed5"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/Consensus_Liveness.tla",
+            "statement_sha256": "7e6b0f992c09509a9382f3ded1ba892d58d18c88a6b867c388c8dd42c3070d88"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/Consensus_LiveSpecEquals.tla",
+            "statement_sha256": "0eff47baefadca886fd1e6ffaaae628dec74393a7c1b4a53756b3f9b18ed83aa"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_byzpaxos/ConsensusDefs.tla",
+        "tlaplus_examples_byzpaxos/ConsensusModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_byzpaxos/PConProof.tla",
+        "source_sha256": "c11d4cf9af31424f4642cf8d31bc5c9cb0342404e143e8af4d821e9e155bb4a7",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_byzpaxos/PConProof_NextDef.tla",
+            "statement_sha256": "de091a1e3728ce680d64ad7d097ccccb83b80d1e15135b4cf6041eaa84db6fe6"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_byzpaxos/PConProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_byzpaxos/VoteProof.tla",
+        "source_sha256": "89f9ca0345801ed0834542c1332bc2b6bb3feb9a95da40d750793e8948d696da",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_byzpaxos/VoteProof_VInv1.tla",
+            "statement_sha256": "95da75f4c8f2cc0d3526ff7e2f90c3c9be32bc588e6644a0fbe786eaf7b5da33"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/VoteProof_VT2.tla",
+            "statement_sha256": "9e6ca0a74c4ea7ed7bd323961b6db041921db402041130757d0c5bf6d5b20c8f"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/VoteProof_VT3.tla",
+            "statement_sha256": "146a0cc0b51aad6b6e55dee5bba3cd5568e5ef5477fdf2349540173ed232dc3f"
+          },
+          {
+            "task_id": "tlaplus_examples_byzpaxos/VoteProof_Liveness.tla",
+            "statement_sha256": "042d3105edb59c4b18add230edec61c88bd158e5233ba05cb1405b4bee240fec"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_byzpaxos/VoteProof/Consensus.tla",
+        "tlaplus_examples_byzpaxos/VoteProofDefs.tla",
+        "tlaplus_examples_byzpaxos/VoteProofModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_dag-consensus/Sailfish.tla",
+        "source_sha256": "c3c5ec58934c307a6839510ab2be425c6ab0498a2ba862ff42f3123582a0bc92",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect.tla",
+            "statement_sha256": "625f427f142fbc83464935fb5470de069d660feaaac7a1bd36b0a87ee498a4fc"
+          },
+          {
+            "task_id": "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrect.tla",
+            "statement_sha256": "bc37deb973213025ee984eac955d1ea7f71e007e12ddb62b2c1bdebacf3e002b"
+          },
+          {
+            "task_id": "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrect.tla",
+            "statement_sha256": "b61af835b851597fd7eab2ff98ff5b09263b733261fb5874743de3245a19cc29"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_dag-consensus/Sailfish/BlockDag.tla",
+        "tlaplus_examples_dag-consensus/Sailfish/Digraph.tla",
+        "tlaplus_examples_dag-consensus/Sailfish/Utils.tla",
+        "tlaplus_examples_dag-consensus/SailfishDefs.tla",
+        "tlaplus_examples_dag-consensus/SailfishModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd687a/EWD687a_proof.tla",
+        "source_sha256": "e19314f2cb6d3874e15eaa235c9f87a9f5c912e84db35259d39b684eb049c0a9",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd687a/EWD687a_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd687a/EWD687a_proof_Thm_CountersConsistent.tla",
+            "statement_sha256": "7b4f9ec929347815b42e59680c954577791036fff9d12385e92bcee589cc8ed1"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd687a/EWD687a_proof_Safety.tla",
+            "statement_sha256": "9f35fbc6c24037ba6b56d5515c4ec73f4415b09698bc2f6a22c13cc035c91dc3"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd687a/EWD687a_proof/EWD687a.tla",
+        "tlaplus_examples_ewd687a/EWD687a_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd840/EWD840_proof.tla",
+        "source_sha256": "2b00ab2de84711226037c464f6d39213169d695a1f049f57058c55e115c0586e",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd840/EWD840_proof_Safety.tla",
+            "statement_sha256": "690bef20f1633f95291a4cb91bc6be82c7d6581f57510df3db86ee57132bd336"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd840/EWD840_proof_TD_Spec.tla",
+            "statement_sha256": "8ea9e07b99370e6afa0a66ee831b5a56d94a1dd3b3db45201fdb264fb5c3cf2f"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd840/EWD840_proof/EWD840.tla",
+        "tlaplus_examples_ewd840/EWD840_proof/SyncTerminationDetection.tla",
+        "tlaplus_examples_ewd840/EWD840_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd840/SyncTerminationDetection_proof.tla",
+        "source_sha256": "77cb25e68e54084a4ac07327bb60f0ad171d3aa969cdf278cb4836a504d4983b",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd840/SyncTerminationDetection_proof_CorrectDetection.tla",
+            "statement_sha256": "a9d1933d053c4e1df2faeeaa85ba8877c0959c1bb6787805de89f1183dc4aa71"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd840/SyncTerminationDetection_proof_Quiescent.tla",
+            "statement_sha256": "7d88bd1e76447ad079259516a64caf5502f7c2aa6726162ca5288e0ba844e4b0"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd840/SyncTerminationDetection_proof_Live.tla",
+            "statement_sha256": "4113cb1ea020ff60ac023c2fd92acf84e89fe95a314c91be09fc7f1ee021f7a0"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd840/SyncTerminationDetection_proof/SyncTerminationDetection.tla",
+        "tlaplus_examples_ewd840/SyncTerminationDetection_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd998/AsyncTerminationDetection_proof.tla",
+        "source_sha256": "87cc4e25be553691b1819b1be20b0addec2f724cec9ffe081014b23f99722ec7",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd998/AsyncTerminationDetection_proof_Safety.tla",
+            "statement_sha256": "c42bc1c2b82f7e36d33ec200c10bb28e0ce7c68f591b8cc4c18033e9f9c571cf"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd998/AsyncTerminationDetection_proof_Stability.tla",
+            "statement_sha256": "69dd9e52a87095dbfe1b40111e3bcff1c9765c0b25c5afe6ba84efb5ecc6e5ec"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd998/AsyncTerminationDetection_proof_Liveness.tla",
+            "statement_sha256": "2548b04a51f73f4cced1daf35dd7e52ad264a602bc0c6da002e2c7b0f86f8208"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd998/AsyncTerminationDetection_proof/AsyncTerminationDetection.tla",
+        "tlaplus_examples_ewd998/AsyncTerminationDetection_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd998/EWD998PCal_proof.tla",
+        "source_sha256": "fdf1114b7c47216f4b4a3c81db0cc34dd92c0712bad6c31eef09751835d906fd",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd998/EWD998PCal_proof_InitRefinement.tla",
+            "statement_sha256": "c7fbafc6b4ba3847cd10630ea1b937afef48226ad9b88e484db3bb852bb416a8"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd998/EWD998PCal_proof_TypeCorrect.tla",
+            "statement_sha256": "257eb4446ee1a5bb3c1dd5b2155620816943d25b866bebc4dd522c89c52512ed"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd998/EWD998PCal_proof/AsyncTerminationDetection.tla",
+        "tlaplus_examples_ewd998/EWD998PCal_proof/EWD998.tla",
+        "tlaplus_examples_ewd998/EWD998PCal_proof/EWD998PCal.tla",
+        "tlaplus_examples_ewd998/EWD998PCal_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_ewd998/EWD998_proof.tla",
+        "source_sha256": "0126fcb6d16df43a33384fd47425bca69296236856c34bee2410f41fa0c98091",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_ewd998/EWD998_proof_Refinement.tla",
+            "statement_sha256": "cf8e0e9f7149338b9749889a922eef218df8efe472ed19c6b5d296bed04506b6"
+          },
+          {
+            "task_id": "tlaplus_examples_ewd998/EWD998_proof_TerminationDetectionInv.tla",
+            "statement_sha256": "fba068be4f8b876277c2fea3f9f0f92572fe69fc7c7bc5799429e69f7b637b46"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_ewd998/EWD998_proof/AsyncTerminationDetection.tla",
+        "tlaplus_examples_ewd998/EWD998_proof/EWD998.tla",
+        "tlaplus_examples_ewd998/EWD998_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_glowingRaccoon/clean_proof.tla",
+        "source_sha256": "f653d9241d938ead6ee72c509b6e46fdd46eab05678f576d0c8878155863f0f4",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_glowingRaccoon/clean_proof_PrimerPositive.tla",
+            "statement_sha256": "dbbce42d39e84867f4def71f6c4ebed0a7e893f13d69049ceb438ac367247bc3"
+          },
+          {
+            "task_id": "tlaplus_examples_glowingRaccoon/clean_proof_Preservation.tla",
+            "statement_sha256": "913f6f9c4356905b82afd99eb3a3872dccac7fb28ece21a990e6b841da4ab294"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_glowingRaccoon/clean_proof/clean.tla",
+        "tlaplus_examples_glowingRaccoon/clean_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_glowingRaccoon/stages_proof.tla",
+        "source_sha256": "73946eb71b7070ac84537be95cba254ec767dce4afb95b47e346b49fbb2792cc",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_glowingRaccoon/stages_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_glowingRaccoon/stages_proof/clean.tla",
+        "tlaplus_examples_glowingRaccoon/stages_proof/stages.tla",
+        "tlaplus_examples_glowingRaccoon/stages_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_lamport_mutex/LamportMutex_proofs.tla",
+        "source_sha256": "9cbecb6501595b2222e663e09145f48d3cd73df2c817f07acc4d76acb9ca9f61",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_lamport_mutex/LamportMutex_proofs_Safety.tla",
+            "statement_sha256": "0e2af75f6113f61d6f7df6f08b14ecc4a486c3e277b226c099c93aec5bfcae86"
+          },
+          {
+            "task_id": "tlaplus_examples_lamport_mutex/LamportMutex_proofs_BoundedNetworkInv.tla",
+            "statement_sha256": "dd1e333ca6657b84d4ca313a8c80f0df64634fc69949ac573057bfe6fb2a3a73"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_lamport_mutex/LamportMutex_proofs/LamportMutex.tla",
+        "tlaplus_examples_lamport_mutex/LamportMutex_proofsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_locks_auxiliary_vars/Lock.tla",
+        "source_sha256": "f10562642cb5d9cb6a3d3912d93917fa692a97ab9a879fa3b3f2c7989098765f",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_locks_auxiliary_vars/Lock_MutualExclusion.tla",
+            "statement_sha256": "11b71018f3e5868decb1c2fa2de68fab812d7f6a12b81d37bdb5c087569677db"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_locks_auxiliary_vars/LockDefs.tla",
+        "tlaplus_examples_locks_auxiliary_vars/LockModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_locks_auxiliary_vars/LockHS.tla",
+        "source_sha256": "a34543670fc7fb46332624aa46ab6f350b67de5f0ffb59ec0b1c50cfe3500d10",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_locks_auxiliary_vars/LockHS_line31.tla",
+            "statement_sha256": "8b3653fe7bf06cfe0156cbb8dae2d6315c077ec9967e44f89f158680755918d0"
+          },
+          {
+            "task_id": "tlaplus_examples_locks_auxiliary_vars/LockHS_P_Spec.tla",
+            "statement_sha256": "008a1d2c4d5518f3ccd9ec4a29dfb08ab9865e7cf8533acf5d8908426d2da4f6"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_locks_auxiliary_vars/LockHS/Lock.tla",
+        "tlaplus_examples_locks_auxiliary_vars/LockHS/Peterson.tla",
+        "tlaplus_examples_locks_auxiliary_vars/LockHS/Stuttering.tla",
+        "tlaplus_examples_locks_auxiliary_vars/LockHSDefs.tla",
+        "tlaplus_examples_locks_auxiliary_vars/LockHSModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_locks_auxiliary_vars/Peterson.tla",
+        "source_sha256": "0cad3a0a34bdf495606aa0b3a27d58d2a6568b4d1a4fe4bdc4b45d723a90cba7",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_locks_auxiliary_vars/Peterson_IndInvariant.tla",
+            "statement_sha256": "3ae8ea815e694255fd8a688a360907d15ca0dc609c92248b76127de7c6155c7e"
+          },
+          {
+            "task_id": "tlaplus_examples_locks_auxiliary_vars/Peterson_Refinement.tla",
+            "statement_sha256": "79443ad1798188dc6544317ada0856caa4c48225908812ed992550c115f52edc"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_locks_auxiliary_vars/Peterson/Lock.tla",
+        "tlaplus_examples_locks_auxiliary_vars/PetersonDefs.tla",
+        "tlaplus_examples_locks_auxiliary_vars/PetersonModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_spanning/spanning_proof.tla",
+        "source_sha256": "2c96247c40d77a391d56f0cc744d0c0fa7818ffbb0d99d10e411bf82afedf59a",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_spanning/spanning_proof_SntMsgInv.tla",
+            "statement_sha256": "a996107e03a088c0d35c319dd022c993f420b94e3182a6508fe8d3e494e438e9"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_spanning/spanning_proof/spanning.tla",
+        "tlaplus_examples_spanning/spanning_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_sums_even/sums_even.tla",
+        "source_sha256": "44f0b85145ad3de36b12904a18c408de3134cea7c80343b2e1a52940b5f07e19",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_sums_even/sums_even_line10.tla",
+            "statement_sha256": "4863335714eeddd622aa5707a04663673aa14bffe8b3f044d9e5f18511790bdc"
+          },
+          {
+            "task_id": "tlaplus_examples_sums_even/sums_even_T1.tla",
+            "statement_sha256": "4bb40a1bec195ae83f7227259503dc0af731bcc78d9446a269178ccb179d0654"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_sums_even/sums_evenDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_tcp/tcp_proof.tla",
+        "source_sha256": "23e7180bc27ce366579f604dfda04887e0b32e5642531c5efaf768ebea1e8cd7",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_tcp/tcp_proof_TypeCorrect.tla",
+            "statement_sha256": "9bdb7a24c08af5c852c1e652e37dd8bbfd43096acb081917c901d679c3dd4e13"
+          },
+          {
+            "task_id": "tlaplus_examples_tcp/tcp_proof_InvInit.tla",
+            "statement_sha256": "e1048cc051552985ab41f9b43fb63ebfb0efe5b0b5e0006e6bc1834e9ea0a7eb"
+          },
+          {
+            "task_id": "tlaplus_examples_tcp/tcp_proof_SpecImpliesInv.tla",
+            "statement_sha256": "a569ad36cef5b7fb77a1ca45243871211ad9fe5a78de980ec82a65d703fcdd63"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_tcp/tcp_proof/tcp.tla",
+        "tlaplus_examples_tcp/tcp_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_transaction_commit/PaxosCommit_proof.tla",
+        "source_sha256": "f0c634c7fdda167b3ffacf5b0631545e09e9e1a3b37f0506ba68c17cefbae843",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_transaction_commit/PaxosCommit_proof_TypeOK_Init.tla",
+            "statement_sha256": "857692cbf5c9ab108d2e445d20d5bfbf7ef4517b12a9684e2f104c3c5039f6e4"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_transaction_commit/PaxosCommit_proof/PaxosCommit.tla",
+        "tlaplus_examples_transaction_commit/PaxosCommit_proof/TCommit.tla",
+        "tlaplus_examples_transaction_commit/PaxosCommit_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_transaction_commit/TCommit_proof.tla",
+        "source_sha256": "a6e1f248ce225bbf9e61c45006cbed84b63381c5f6ea99194ad4ee9477fc22ff",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_transaction_commit/TCommit_proof_TCorrect.tla",
+            "statement_sha256": "e0520d8c6e5c8e40b68e4d2b922f8876dfb15451b665da6aed1e0a1aa8b5e3fc"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_transaction_commit/TCommit_proof/TCommit.tla",
+        "tlaplus_examples_transaction_commit/TCommit_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "tlaplus_examples_transaction_commit/TwoPhase_proof.tla",
+        "source_sha256": "01a016d40ffdea5f0350dfe75c853d9b0766d3c7a62b41373a0c33af1f66df0b",
+        "proof_units": [
+          {
+            "task_id": "tlaplus_examples_transaction_commit/TwoPhase_proof_TypeCorrect.tla",
+            "statement_sha256": "d2829b8c7fc8aa1e3cda53630628765ad22535bd4ee1e2b0ae704a8323a0dbda"
+          },
+          {
+            "task_id": "tlaplus_examples_transaction_commit/TwoPhase_proof_Consistency.tla",
+            "statement_sha256": "40558c6865019658649ea8017e5f6bc11c3abdbb3935789ffd19991b21976758"
+          }
+        ]
+      },
+      "context": [
+        "tlaplus_examples_transaction_commit/TwoPhase_proof/TCommit.tla",
+        "tlaplus_examples_transaction_commit/TwoPhase_proof/TwoPhase.tla",
+        "tlaplus_examples_transaction_commit/TwoPhase_proofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "two_thread_mutex/two_thread_mutex.tla",
+        "source_sha256": "891fc719a0605d3d8fae449568749cae17b01fd7a64c3dc628b30dcd9140ceee",
+        "proof_units": [
+          {
+            "task_id": "two_thread_mutex/two_thread_mutex_Liveness.tla",
+            "statement_sha256": "35351d5f717ce80a0c15a29b6e54edb3cd593783d37167626a85058d30e15603"
+          }
+        ]
+      },
+      "context": [
+        "two_thread_mutex/two_thread_mutexDefs.tla",
+        "two_thread_mutex/two_thread_mutexModel.tla"
+      ],
+      "renamed_bindings": {}
+    }
+  ]
+}

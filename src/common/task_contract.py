@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any
@@ -52,6 +53,14 @@ class ManifestError(TaskContractError):
 
 class EditableRegionError(TaskContractError):
     """A task does not contain the exact editable-region marker structure."""
+
+
+class FixedSegmentStatus(StrEnum):
+    """How submitted immutable task segments differ from the canonical task."""
+
+    MATCH = "match"
+    FORMAT_MODIFIED = "format-modified"
+    MODIFIED = "modified"
 
 
 @dataclass(frozen=True)
@@ -121,6 +130,36 @@ class ProofRegion:
         """Rebuild the source, optionally replacing the editable proof."""
 
         return "".join((self.fixed_prefix, self.proof if proof is None else proof, self.fixed_suffix))
+
+
+def compare_fixed_segments(canonical: Sequence[str], submitted: Sequence[str]) -> FixedSegmentStatus:
+    """Compare immutable task bytes under the documented newline policy.
+
+    Extra CR/LF newlines at EOF are harmless and count as a match. Differences
+    consisting only of line-ending style or a missing final newline are format
+    failures, while every other difference changes the canonical scaffold.
+    """
+
+    canonical_segments = tuple(canonical)
+    submitted_segments = tuple(submitted)
+    if submitted_segments == canonical_segments:
+        return FixedSegmentStatus.MATCH
+    if len(submitted_segments) != len(canonical_segments):
+        return FixedSegmentStatus.MODIFIED
+
+    canonical_suffix = canonical_segments[-1]
+    submitted_suffix = submitted_segments[-1]
+    extra_suffix = submitted_suffix[len(canonical_suffix) :] if submitted_suffix.startswith(canonical_suffix) else None
+    if submitted_segments[:-1] == canonical_segments[:-1] and extra_suffix and not extra_suffix.strip("\r\n"):
+        return FixedSegmentStatus.MATCH
+
+    def normalize_format(segments: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(_SOURCE_NEWLINE.sub("\n", segment) for segment in segments)
+        return (*normalized[:-1], normalized[-1].rstrip("\n"))
+
+    if normalize_format(submitted_segments) == normalize_format(canonical_segments):
+        return FixedSegmentStatus.FORMAT_MODIFIED
+    return FixedSegmentStatus.MODIFIED
 
 
 def _json_object_without_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:

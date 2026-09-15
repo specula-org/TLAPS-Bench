@@ -63,12 +63,6 @@
       "BubbleSort/BubbleSort_line202Defs.tla"
     ]
   },
-  "Cantor/Cantor10_NoSetContainsAllValues.tla": {
-    "spec_id": "Cantor/Cantor10.tla",
-    "context": [
-      "Cantor/Cantor10_NoSetContainsAllValuesDefs.tla"
-    ]
-  },
   "Cantor/Cantor1_cantor.tla": {
     "spec_id": "Cantor/Cantor1.tla",
     "context": [
@@ -265,6 +259,16 @@
     "spec_id": "Euclid/Euclid-Hyperbook/GCD.tla",
     "context": [
       "Euclid/GCD_GCD3Defs.tla"
+    ]
+  },
+  "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla": {
+    "spec_id": "MongoDB/MultiShardTxnSnapshot.tla",
+    "context": [
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/ClientCentric.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/MultiShardTxn.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Storage.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Util.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrectDefs.tla"
     ]
   },
   "OpenAddressing/OpenAddressing_CompleteAsSafety.tla": {

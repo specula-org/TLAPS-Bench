@@ -95,12 +95,15 @@ def test_select_exact_tasks_uses_mode_relative_ids_and_list_order(tmp_path):
 
 @pytest.mark.parametrize("mode_name", ["proof-completion", "proof-from-scratch"])
 def test_current_manifest_modes_support_exact_task_ids(mode_name):
-    manifest = json.loads((REPO_ROOT / "benchmark" / mode_name / "manifest.json").read_text(encoding="utf-8"))
-    task_id = sorted(manifest)[0]
+    suite_name = "proof-from-scratch-module" if mode_name == "proof-from-scratch" else mode_name
+    manifest = json.loads((REPO_ROOT / "benchmark" / suite_name / "manifest.json").read_text(encoding="utf-8"))
+    task_id = (
+        manifest["module_tasks"][0]["spec"]["task_id"] if mode_name == "proof-from-scratch" else sorted(manifest)[0]
+    )
     mode = get_mode(mode_name, str(REPO_ROOT / "benchmark"), "/checker")
 
     assert runner._select_exact_tasks(mode, [task_id]) == [
-        str((REPO_ROOT / "benchmark" / mode_name / task_id).resolve())
+        str((REPO_ROOT / "benchmark" / suite_name / task_id).resolve())
     ]
 
 

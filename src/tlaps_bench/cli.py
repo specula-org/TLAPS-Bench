@@ -83,6 +83,41 @@ def _extract_mode(args: list[str]) -> tuple[str, list[str]]:
     return mode, rest
 
 
+_PROOF_FROM_SCRATCH_GENERATE_DIR_ALIASES = {
+    "--output-dir": "--output-root",
+    "--source-dir": "--source-root",
+}
+
+
+def _proof_from_scratch_generate_args(args: list[str]) -> list[str]:
+    """Map the shared generate directory flags onto the module-task CLI.
+
+    ``tlaps-bench generate`` documents ``--output-dir`` / ``--source-dir``.
+    Module-task generation uses ``--output-root`` / ``--source-root`` so it
+    cannot be aimed at the frozen 244-task corpus by accident.
+    """
+
+    rewritten: list[str] = []
+    index = 0
+    while index < len(args):
+        token = args[index]
+        if token in _PROOF_FROM_SCRATCH_GENERATE_DIR_ALIASES:
+            rewritten.append(_PROOF_FROM_SCRATCH_GENERATE_DIR_ALIASES[token])
+            index += 1
+            continue
+        mapped = False
+        for old, new in _PROOF_FROM_SCRATCH_GENERATE_DIR_ALIASES.items():
+            prefix = f"{old}="
+            if token.startswith(prefix):
+                rewritten.append(f"{new}={token[len(prefix) :]}")
+                mapped = True
+                break
+        if not mapped:
+            rewritten.append(token)
+        index += 1
+    return rewritten
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:]) if argv is None else list(argv)
 
@@ -113,10 +148,19 @@ def main(argv: list[str] | None = None) -> int:
         # --help before --mode: show which modes exist plus the proof-completion flags
         # (the default) — the mode-specific flags then come from that module.
         mode, gen_args = _extract_mode(rest)
-        module = (
-            "dataset.proof_completion.generate" if mode == "proof-completion" else "dataset.proof_from_scratch.generate"
+        if mode == "proof-completion":
+            return _dispatch(
+                f"{PROG} generate --mode {mode}",
+                "dataset.proof_completion.generate",
+                "main",
+                gen_args,
+            )
+        return _dispatch(
+            f"{PROG} generate --mode {mode}",
+            "dataset.proof_from_scratch.module_tasks",
+            "main",
+            _proof_from_scratch_generate_args(gen_args),
         )
-        return _dispatch(f"{PROG} generate --mode {mode}", module, "main", gen_args)
     if sub == "score":
         return _dispatch(f"{PROG} score", "evaluator.score", "main", rest)
 

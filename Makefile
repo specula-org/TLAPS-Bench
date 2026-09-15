@@ -2,6 +2,8 @@ CHECKER_SOURCES := \
 	src/common/__init__.py \
 	src/common/check_proof.py \
 	src/common/cheating_detection.py \
+	src/common/proof_from_scratch_grading.py \
+	src/common/proof_from_scratch_module.py \
 	src/common/proof_libraries.py \
 	src/common/task_contract.py \
 	src/common/tla_modules.py \

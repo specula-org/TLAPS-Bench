@@ -241,7 +241,83 @@ scratch. (Exception: when the target property *is* an invariant, as in
 
 - **Input**: `source/<Module>/<File>.tla`
 - **Output**: `benchmark/proof-from-scratch/<Module>/<File>_<TheoremName>.tla` (one file per top-level theorem, plus copied INSTANCE dependency `.tla` files)
-- **CLI**: `python3 src/dataset/proof_from_scratch/generate.py [--filter <pattern>] [--source-dir source/] [--output-dir benchmark/proof-from-scratch/]`
+- **CLI**: `uv run python -m dataset.proof_from_scratch.generate --layered [--filter <pattern>] [--source-dir source/] [--output-dir benchmark/proof-from-scratch/]` rebuilds the frozen 244-task selection corpus. `tlaps-bench generate --mode proof-from-scratch` emits the module suite under `benchmark/proof-from-scratch-module/` and does not write the 244-task tree.
+
+## Module tasks (Issue #132)
+
+One task per theorem deletes every sibling result, so a task cannot cite what
+the author cited and work shared between siblings is reproved once per task.
+`src/dataset/proof_from_scratch/module_tasks.py` groups the checked-in manifest
+targets by `spec_id` and emits one task per source module, retaining the current
+task IDs as the scored proof-unit IDs. A module scores k/n.
+
+The 244-task corpus stays the only target-selection source and is never written
+to: the generator refuses an output root inside it, and no theorem the corpus
+left out becomes a proof unit. The module suite lives beside it under
+`benchmark/proof-from-scratch-module/`.
+
+Each module task keeps only the definitions in the union of its target
+statements' dependency closures. A copied dependency module is pruned the same
+way the per-theorem corpus prunes it -- to the closure of what the emitted
+layers and statements reference, seeded from every statement rather than one --
+because anything a dependency defines is handed to the agent for free.
+The closure keeps module identity: a name is kept in a dependency only when
+that module is actually referenced (EXTENDS, unnamed INSTANCE, or `C!Spec`),
+not because the task happens to define the same bare identifier.
+A qualified use `P!Spec` seeds `Spec` only in the instantiated module, not as
+a bare name in an EXTENDS'd sibling that also happens to define `Spec`.
+Original lemmas, non-target theorems, proof bodies, and proof-only definitions
+remain absent. The layered ownership model also remains: a read-only Model
+layer, a read-only Defs layer, and one editable task module containing a single
+helper region plus one identified proof region per target theorem.
+Unfinished canonical proof regions contain `PROOF OMITTED`.
+
+An unchanged canonical omission is an unresolved target, not a trusted fact.
+The checker will derive local dependencies from the submitted proofs, without
+using reference-proof order. A raw checker pass counts only when all of its
+local theorem and helper dependencies are themselves trusted. This
+dependency-closed rule permits independent partial progress without allowing an
+unproved sibling or a circular group of proofs to manufacture a PASS.
+
+`common.proof_from_scratch_module` defines the strict metadata, editable-region,
+and trusted-set contracts. Generation produces the deterministic, versioned
+`manifest.json` those contracts read; checker, scoring, and runtime integration
+live outside this generator.
+
+### Binders a shared module would capture
+
+TLA+ scoping is order-sensitive and the layered Model puts every declaration
+above every statement, so one module can create a name clash the source never
+had. `BubbleSort` binds `\A A \in [1..N -> Int], i, j \in 1..N` at line 69 and
+only declares `VARIABLES A, A0, i, j, pc` at line 131; in source order the two
+never meet, but in one module the declaration captures the binder and SANY
+rejects the task. It is a property of the module, not of any one theorem, which
+is why the per-theorem corpus never saw it — there `_unneeded_decl_edits` simply
+dropped the declarations no kept definition referenced, and a module task needs
+them for its spec-goal unit.
+
+The generator renames such a binder, and only such a binder: a name is rewritten
+in a statement solely when the source declares it *after* that statement. SANY
+accepted the source, so a name not yet in scope there cannot be free in the
+statement — every occurrence is bound by the statement itself, and rewriting
+them together is alpha-equivalence, not a change of goal. Names already in scope
+are never touched, so a genuine reference cannot be rewritten. Each rename is
+recorded under `renamed_bindings` in the manifest and emitted to the audit log.
+Across the whole corpus this fires on two statements, both in `BubbleSort`.
+
+### Validating a suite
+
+Generation fails loudly rather than shipping a task SANY rejects. Every emitted
+task must parse under SANY with its context copied flat, carry exactly the
+recorded statements, hold an empty helper region and a canonical `PROOF OMITTED`
+per unit, rebuild byte for byte from the parsed regions, and show no proof
+artifact outside an identified region or anywhere in read-only context.
+
+`--verify` checks a shipped suite without trusting it. The expected grouping
+comes from the corpus, not the shipped manifest; the expected bytes come from a
+regeneration into a scratch tree; and the tree is compared in both directions.
+An edited task, a stale digest, a dropped proof unit, a changed source, or a
+file no manifest entry names is an error.
 
 ## Implementation milestones
 

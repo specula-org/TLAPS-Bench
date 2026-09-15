@@ -576,20 +576,117 @@ def copy_deps_layered(dump, source_path, out_dir, reachable):
 _IDENTIFIER = re.compile(r"(?<!\\)\b[A-Za-z_]\w*\b")
 
 
+def _text_without_strings(text):
+    """Copy of ``text`` with string literals blanked so ``C!Spec`` is not read from quotes."""
+
+    out = []
+    index = 0
+    length = len(text)
+    in_string = False
+    while index < length:
+        char = text[index]
+        if in_string:
+            out.append(" ")
+            if char == "\\" and index + 1 < length:
+                out.append(" ")
+                index += 2
+                continue
+            if char == '"':
+                in_string = False
+            index += 1
+        elif char == '"':
+            in_string = True
+            out.append(" ")
+            index += 1
+        else:
+            out.append(char)
+            index += 1
+    return "".join(out)
+
+
 def _scan_identifiers(text):
-    """Identifiers mentioned in `text`, including TLA+ subscript forms.
+    """Bare identifiers mentioned in `text`, including TLA+ subscript forms.
 
     A stuttering subscript binds the name with a leading underscore —
     `[][Next]_vars` and `WF_vars(p)` both use `vars` — so the raw token is
     `_vars`. Yield the bare name too, or `vars` looks unused and gets pruned
     out of a dependency that still needs it.
+
+    Skip the right-hand name of ``P!Spec``; ``instance_qualified_uses`` seeds it.
     """
     names = set()
-    for tok in _IDENTIFIER.findall(text):
+    cleaned = _text_without_strings(strip_comments(text))
+    for match in _IDENTIFIER.finditer(cleaned):
+        previous = match.start() - 1
+        while previous >= 0 and cleaned[previous].isspace():
+            previous -= 1
+        if previous >= 0 and cleaned[previous] == "!":
+            continue
+        tok = match.group(0)
         names.add(tok)
         if tok.startswith("_") and len(tok) > 1:
             names.add(tok.lstrip("_"))
     return names
+
+
+def instance_qualified_uses(*texts):
+    """``C!Spec`` and ``C(args)!Spec`` uses as ``(instance, name)`` pairs."""
+
+    uses = set()
+    for text in texts:
+        cleaned = _text_without_strings(strip_comments(text))
+        for instance in _IDENTIFIER.finditer(cleaned):
+            cursor = instance.end()
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            if cursor < len(cleaned) and cleaned[cursor] == "(":
+                depth = 1
+                cursor += 1
+                while cursor < len(cleaned) and depth:
+                    if cleaned[cursor] == "(":
+                        depth += 1
+                    elif cleaned[cursor] == ")":
+                        depth -= 1
+                    cursor += 1
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            if cursor >= len(cleaned) or cleaned[cursor] != "!":
+                continue
+            cursor += 1
+            while cursor < len(cleaned) and cleaned[cursor].isspace():
+                cursor += 1
+            member = _IDENTIFIER.match(cleaned, cursor)
+            if member:
+                uses.add((instance.group(), member.group()))
+    return uses
+
+
+def source_defined_names(dump):
+    """Operator and named-INSTANCE identifiers that bind in the source module."""
+
+    names = {entry["name"] for entry in dump.get("operators", []) if entry.get("name")}
+    names.update(entry["name"] for entry in dump.get("instances", []) if entry.get("name"))
+    return names
+
+
+def source_instance_modules(dump):
+    """Named INSTANCE bindings in ``dump``: ``C`` → ``Consensus``."""
+
+    return {
+        entry["name"]: entry["module"]
+        for entry in dump.get("instances", [])
+        if entry.get("name") and entry.get("module")
+    }
+
+
+def source_imported_modules(dump):
+    """Local modules whose names are imported unqualified (EXTENDS / unnamed INSTANCE)."""
+
+    imported = [entry for entry in dump.get("extends", []) if entry not in STDLIB_MODULES]
+    imported.extend(
+        entry["module"] for entry in dump.get("instances", []) if not entry.get("name") and entry.get("module")
+    )
+    return imported
 
 
 def prune_dep_module(dep_path, keep_names, audit_writer=None):
@@ -626,67 +723,181 @@ def prune_dep_module(dep_path, keep_names, audit_writer=None):
     return re.sub(r"\n[ \t]*\n(?:[ \t]*\n)+", "\n\n", text)
 
 
-def dep_keep_names(dep_entries, seeds, audit_writer=None):
-    """Definitions to keep across a group of dependencies that share a directory.
+def _module_name(dump, path):
+    return dump.get("module") or os.path.splitext(os.path.basename(path))[0]
 
-    The closure must span the whole group, not each file: dependencies reference
-    each other (`PaxosProof` uses `chosen` from a sibling), so closing per file
-    prunes a definition another dependency still needs and the module stops
-    parsing. Returns `None` to mean "keep everything" only when a module cannot
-    be dumped at all, since then nothing can be shown unused.
+
+def _slice(lines, loc):
+    if not loc:
+        return ""
+    start = loc.get("line_start", 0)
+    end = loc.get("line_end", start)
+    if start < 1:
+        return ""
+    return strip_comments("\n".join(lines[start - 1 : end]))
+
+
+def dep_keep_names(
+    dep_entries,
+    seeds,
+    audit_writer=None,
+    *,
+    source_defined=(),
+    instance_modules=None,
+    qualified_uses=(),
+    imported_modules=(),
+):
+    """Definitions to keep in each dependency, keyed by path.
+
+    The closure is over ``(module, name)`` pairs, not bare names: a local
+    ``Inv`` in the task must not keep an unrelated ``Inv`` in ``Consensus.tla``
+    just because the identifier matches. Cross-module edges come from EXTENDS,
+    unnamed INSTANCE, and ``C!Spec`` / ``C(args)!Spec`` uses.
+
+    The closure still spans the whole group, not each file: dependencies
+    reference each other (``PaxosProof`` uses ``chosen`` from a sibling), so
+    closing per file prunes a definition another dependency still needs and the
+    module stops parsing. Returns ``None`` to mean "keep everything" only when
+    a module cannot be dumped at all, since then nothing can be shown unused.
     """
-    adj = {}
-    stack = list(seeds)
+    dumps = []
     for path in dep_entries:
         try:
-            d = dump_sany(path)
+            dump = dump_sany(path)
         except Exception as e:
             if audit_writer:
                 audit_writer.write(f"[audit] {os.path.basename(path)}: not dumpable, group kept whole — {e}\n")
             return None
         with open(path, encoding="utf-8") as f:
             lines = f.read().split("\n")
-        for o in d["operators"]:
-            refs = set(o.get("references", []))
-            # SANY omits an operator passed as an argument, so `SelectSeq(waiting,
-            # read)` looks independent of `read`. Scan the body too: over-keeping
-            # is harmless, under-keeping stops the module parsing.
-            body = strip_comments("\n".join(lines[o["loc"]["line_start"] - 1 : o["loc"]["line_end"]]))
-            refs |= _scan_identifiers(body)
-            adj.setdefault(o["name"], set()).update(refs)
-        for i in d.get("instances", []):
-            # An INSTANCE line is never deleted, so every name it mentions stays
-            # live — `WITH chosen <- chosen` keeps `chosen`. True of an unnamed or
-            # LOCAL INSTANCE too, which must not disable pruning of the rest.
-            if i.get("name"):
-                adj.setdefault(i["name"], set()).update(i.get("references", []))
-            else:
-                stack.extend(i.get("references", []))
-            loc = i.get("loc")
-            if loc:
-                stack.extend(
-                    _scan_identifiers(strip_comments("\n".join(lines[loc["line_start"] - 1 : loc["line_end"]])))
-                )
-        for a in d.get("assumes", []):
-            stack.extend(a.get("references", []))
-            loc = a.get("loc")
-            if loc:
-                stack.extend(
-                    _scan_identifiers(strip_comments("\n".join(lines[loc["line_start"] - 1 : loc["line_end"]])))
-                )
+        dumps.append((path, dump, lines))
 
-    keep = set()
-    while stack:
-        n = stack.pop()
-        if n in keep:
+    ops_of = {}
+    extends_of = {}
+    inst_of = {}
+    unnamed_of = {}
+    path_of = {}
+    for path, dump, _lines in dumps:
+        mod = _module_name(dump, path)
+        path_of[mod] = path
+        ops_of[mod] = {entry["name"] for entry in dump.get("operators", []) if entry.get("name")}
+        extends_of[mod] = list(dump.get("extends", []) or [])
+        inst_of[mod] = source_instance_modules(dump)
+        unnamed_of[mod] = [
+            entry["module"] for entry in dump.get("instances", []) if not entry.get("name") and entry.get("module")
+        ]
+
+    def resolve(mod, name):
+        if name in ops_of.get(mod, ()):
+            return (mod, name)
+        for ext in extends_of.get(mod, ()):
+            if name in ops_of.get(ext, ()):
+                return (ext, name)
+        for target in unnamed_of.get(mod, ()):
+            if name in ops_of.get(target, ()):
+                return (target, name)
+        return None
+
+    adj = {}
+    stack = []
+    seen_stack = set()
+
+    def seed_pair(mod, name):
+        pair = (mod, name)
+        if name in ops_of.get(mod, ()) and pair not in seen_stack:
+            seen_stack.add(pair)
+            stack.append(pair)
+
+    def seed_resolved(mod, names):
+        for name in names:
+            pair = resolve(mod, name)
+            if pair:
+                seed_pair(*pair)
+
+    def seed_qualified(uses, bindings):
+        for inst, name in uses:
+            target = bindings.get(inst)
+            if target:
+                seed_pair(target, name)
+
+    source_defined = set(source_defined)
+    task_bindings = dict(instance_modules or {})
+    imported = [mod for mod in imported_modules if mod in ops_of]
+    # INSTANCE names used as C!Spec often live in an EXTENDS'd dependency
+    # (PaxosProof's V is declared in PaxosTuple), not in the source module.
+    group_bindings = {}
+    for inst_map in inst_of.values():
+        group_bindings.update(inst_map)
+    group_bindings.update(task_bindings)
+
+    seed_qualified(qualified_uses, group_bindings)
+    for name in seeds:
+        if name in source_defined:
             continue
-        keep.add(n)
-        stack.extend(r for r in adj.get(n, ()) if r not in keep)
-    return keep
+        preferred = [mod for mod in imported if name in ops_of[mod]]
+        candidates = preferred or [mod for mod, ops in ops_of.items() if name in ops]
+        for mod in candidates:
+            seed_pair(mod, name)
+
+    for path, dump, lines in dumps:
+        mod = _module_name(dump, path)
+        bindings = inst_of[mod]
+        for operator in dump.get("operators", []):
+            op_name = operator.get("name")
+            if not op_name:
+                continue
+            body = _slice(lines, operator.get("loc"))
+            refs = set(operator.get("references", [])) | _scan_identifiers(body)
+            neighbors = adj.setdefault((mod, op_name), set())
+            for ref in refs:
+                pair = resolve(mod, ref)
+                if pair:
+                    neighbors.add(pair)
+            for inst, name in instance_qualified_uses(body):
+                target = bindings.get(inst)
+                if target and name in ops_of.get(target, ()):
+                    neighbors.add((target, name))
+        for inst in dump.get("instances", []):
+            # An INSTANCE line is never deleted. SANY's references are the local
+            # WITH / implicit substitutions (`chosen` in `C == INSTANCE Consensus`),
+            # not the instantiated module's unused operators.
+            live = set(inst.get("references", []))
+            live |= _scan_identifiers(_slice(lines, inst.get("loc")))
+            seed_resolved(mod, live)
+            seed_qualified(instance_qualified_uses(_slice(lines, inst.get("loc"))), bindings)
+        for assume in dump.get("assumes", []):
+            live = set(assume.get("references", []))
+            live |= _scan_identifiers(_slice(lines, assume.get("loc")))
+            seed_resolved(mod, live)
+            seed_qualified(instance_qualified_uses(_slice(lines, assume.get("loc"))), bindings)
+
+    kept_pairs = set()
+    while stack:
+        pair = stack.pop()
+        if pair in kept_pairs:
+            continue
+        kept_pairs.add(pair)
+        for neighbor in adj.get(pair, ()):
+            if neighbor not in kept_pairs:
+                stack.append(neighbor)
+
+    keep_by_path = {path: set() for path, _dump, _lines in dumps}
+    for mod, name in kept_pairs:
+        path = path_of.get(mod)
+        if path is not None:
+            keep_by_path[path].add(name)
+    return keep_by_path
+
+
+def prune_dep_text(dep_path, keep_by_path, audit_writer=None):
+    """Prune one dependency using a per-path keep set, or keep all definitions."""
+
+    keep_names = None if keep_by_path is None else keep_by_path.get(dep_path, set())
+    return prune_dep_module(dep_path, keep_names, audit_writer)
 
 
 def referenced_identifiers(*texts):
-    """Every identifier mentioned across `texts` — the seeds for dep pruning."""
+    """Bare identifiers mentioned across `texts` — the seeds for dep pruning."""
     names = set()
     for t in texts:
         names.update(_scan_identifiers(t))
@@ -1365,6 +1576,10 @@ def _emit_layered(
             audit_state.setdefault("deps", {})[f"{subdir}/{bench_module_name}"] = {
                 "paths": dep_paths,
                 "seeds": seeds,
+                "source_defined": source_defined_names(dump),
+                "instance_modules": source_instance_modules(dump),
+                "qualified_uses": instance_qualified_uses(defs_text, statement_text, model_text or ""),
+                "imported_modules": source_imported_modules(dump),
             }
         context = sorted(set(context))
 
@@ -2042,11 +2257,19 @@ def write_pruned_deps(output_root, audit_state, audit_writer):
     for task_dir, entry in sorted(deps.items()):
         # One closure over the task's dependencies together: they reference each
         # other, so closing per file prunes what a sibling still needs.
-        keep = dep_keep_names(entry["paths"], entry["seeds"], audit_writer)
+        keep = dep_keep_names(
+            entry["paths"],
+            entry["seeds"],
+            audit_writer,
+            source_defined=entry.get("source_defined", ()),
+            instance_modules=entry.get("instance_modules"),
+            qualified_uses=entry.get("qualified_uses", ()),
+            imported_modules=entry.get("imported_modules", ()),
+        )
         dest_dir = os.path.join(output_root, *task_dir.split("/"))
         os.makedirs(dest_dir, exist_ok=True)
         for dep_path in entry["paths"]:
-            text = prune_dep_module(dep_path, keep, audit_writer)
+            text = prune_dep_text(dep_path, keep, audit_writer)
             dest = os.path.join(dest_dir, os.path.basename(dep_path))
             with open(dest, "w", encoding="utf-8") as f:
                 f.write(text if text.endswith("\n") else text + "\n")

@@ -21,6 +21,7 @@ ROOTS = [
     os.path.join(REPO, "source"),  # the origin — a malformed source leaks into every derived task
     os.path.join(REPO, "benchmark", "proof-completion"),
     os.path.join(REPO, "benchmark", "proof-from-scratch"),
+    os.path.join(REPO, "benchmark", "proof-from-scratch-module"),
     os.path.join(REPO, "unvalidated-proof-exercises"),
 ]
 

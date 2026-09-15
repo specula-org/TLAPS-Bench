@@ -6,8 +6,9 @@ offline — no network, no API keys — so metrics can be (re)computed cheaply
 without re-running the (expensive) agents.
 
 PASS/FAIL: a task counts as passed iff its ``check_verdict`` is exactly
-``"PASS"``. Every other verdict — FAIL, CHEATING, TIMEOUT, ERROR — counts as
-not passed. CHEATING is not a separate category here: a cheat is just a failure.
+``"PASS"``. FAIL, CHEATING, and TIMEOUT count as not passed. ERROR means the
+grader or its infrastructure did not produce a capability result, so it is
+excluded and must be retried.
 
 SKIP is one exception: an operator marks a benchmark ``SKIP`` to exclude it from
 scoring (e.g. a theorem known to time out for reasons outside the agent's
@@ -15,12 +16,11 @@ control). A skipped task is in neither the numerator nor the denominator — it 
 dropped from the pass rate entirely, not counted as a failure — and the count is
 reported separately so nothing is hidden.
 
-Non-genuine runs are the other exception: a result whose ``termination_reason``
-is ``INFRA_ERROR`` or ``QUOTA_EXHAUSTED`` was cut short by infrastructure or a
-provider cap, so the verdict is not a capability signal. These are excluded from
-the numerator and denominator — like SKIP — and reported separately as needing a
-re-run. TIMEOUT is a limit, not infrastructure: the agent worked and is graded on
-what it left in the workspace, so it stays scored.
+Non-genuine runs are the other exception: ERROR and an unresolved result whose
+``termination_reason`` is ``INFRA_ERROR`` or ``QUOTA_EXHAUSTED`` are not
+capability signals. These are excluded from the numerator and denominator and
+reported as needing a re-run. A verified PASS after an interruption still
+counts. Declared agent/checker TIMEOUT is a benchmark limit, so it stays scored.
 
 Continuations (``tlaps-bench run --max-continuations``) are a separate metric,
 never a replacement: ``check_verdict`` always holds the FIRST attempt's verdict,
@@ -29,14 +29,15 @@ so the pass rate above stays pass@1. When a run recorded continuation rounds
 rate is reported (with the run's ≤N budget), counting a task as passed if any
 round reached PASS — the gap between the two is how often a first-attempt
 failure was an early stop rather than an inability. A chain cut short by
-infra/quota before resolving is interrupted, not failed: like a non-genuine
+infrastructure/provider interruption before resolving is not failed: like a non-genuine
 first attempt it is excluded from the continuation rate and reported separately
 (see ``continuation_interrupted``).
 
-The primary score is the strict specification pass rate. A represented source
-specification passes only when all of its applicable selected tasks pass. The
-task-level pass rate and specification-macro partial-credit average remain
-visible as secondary diagnostics.
+For module-level proof-from-scratch results, the primary score is dependency-
+closed proof-unit coverage: a module with k trusted original theorems out of n
+scores k/n, preserving theorem-level partial credit. Strict whole-module
+completion remains visible as a diagnostic. Other modes retain the strict
+specification pass rate as their primary score.
 
 The legacy pluggable task scorer assigns a non-negative weight to each task;
 the score of a group of tasks is
@@ -59,7 +60,10 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from common.proof_from_scratch_manifest import load_module_task_manifest
 from common.task_contract import load_manifest_specification_ids
+from evaluator.proof_module_result import ModuleResultError, validate_module_result
+from evaluator.usage import TokenUsage, aggregate_token_usage, format_token_usage
 
 PASS_VERDICT = "PASS"
 SKIP_VERDICT = "SKIP"
@@ -89,8 +93,29 @@ class SpecificationScore:
     tasks_passed: int
     applicable_tasks: int
     complete_specifications: int
+    failed_specifications: int
+    unresolved_specifications: int
+    error_affected_specifications: int
     represented_specifications: int
     non_applicable_results: int
+
+    @property
+    def resolved_specifications(self) -> int:
+        return self.complete_specifications + self.failed_specifications
+
+
+@dataclass(frozen=True)
+class ProofUnitScore:
+    """Dependency-closed target coverage across module-level tasks."""
+
+    trusted_units: int
+    total_units: int
+    represented_modules: int
+    excluded_modules: int
+
+    @property
+    def trusted_pct(self) -> float:
+        return 100.0 * self.trusted_units / self.total_units if self.total_units else 0.0
 
 
 def is_pass(result: dict) -> bool:
@@ -104,9 +129,12 @@ def is_skipped(result: dict) -> bool:
 
 
 def is_non_genuine(result: dict) -> bool:
-    """A run cut short by infra/quota. Missing termination_reason means legacy
-    result files stay scored."""
-    return result.get("termination_reason") in NON_GENUINE_TERMINATIONS
+    """Whether a result lacks a benchmark capability verdict and needs retry."""
+
+    verdict = result.get("check_verdict")
+    if verdict == "ERROR":
+        return True
+    return result.get("termination_reason") in NON_GENUINE_TERMINATIONS and verdict != PASS_VERDICT
 
 
 def continuation_passed(result: dict) -> bool:
@@ -159,7 +187,77 @@ def continuation_rate_line(results: list[dict], weight: Callable[[dict], float],
     )
     n_cut = sum(1 for r in results if continuation_interrupted(r))
     if n_cut:
-        line += f" · {n_cut} chain(s) infra/quota-cut (excluded — re-run)"
+        line += f" · {n_cut} chain(s) interrupted (excluded — re-run)"
+    return line
+
+
+def _module_proof_unit_ids(result: Mapping[str, object]) -> tuple[str, ...] | None:
+    value = result.get("proof_unit_ids")
+    if type(value) is not list or not value or any(type(unit_id) is not str or not unit_id for unit_id in value):
+        return None
+    if len(value) != len(set(value)):
+        return None
+    return tuple(value)
+
+
+def _effective_module_attempt(result: dict, *, with_continuations: bool) -> Mapping[str, object]:
+    if not with_continuations:
+        return result
+    attempts = [result, *(attempt for attempt in (result.get("continuations") or []) if isinstance(attempt, Mapping))]
+    passing = [
+        attempt
+        for attempt in attempts
+        if attempt.get("check_verdict") == PASS_VERDICT and isinstance(attempt.get("module_result"), dict)
+    ]
+    if passing:
+        return passing[0]
+    graded = [attempt for attempt in attempts if isinstance(attempt.get("module_result"), dict)]
+    return graded[-1] if graded else result
+
+
+def proof_unit_score(results: list[dict], *, with_continuations: bool = False) -> ProofUnitScore:
+    """Return proof-unit micro coverage without trusting persisted derived counts."""
+
+    trusted = 0
+    total = 0
+    represented = 0
+    excluded = 0
+    for result in results:
+        unit_ids = _module_proof_unit_ids(result)
+        if unit_ids is None:
+            continue
+        represented += 1
+        if is_skipped(result) or is_non_genuine(result) or (with_continuations and continuation_interrupted(result)):
+            excluded += 1
+            continue
+        total += len(unit_ids)
+        attempt = _effective_module_attempt(result, with_continuations=with_continuations)
+        raw_report = attempt.get("module_result")
+        if not isinstance(raw_report, dict):
+            continue
+        try:
+            report = validate_module_result(raw_report, unit_ids)
+        except ModuleResultError:
+            continue
+        trusted += len(report["trusted_proof_unit_ids"])
+    return ProofUnitScore(
+        trusted_units=trusted,
+        total_units=total,
+        represented_modules=represented,
+        excluded_modules=excluded,
+    )
+
+
+def proof_unit_rate_line(results: list[dict], *, with_continuations: bool = False) -> str | None:
+    score = proof_unit_score(results, with_continuations=with_continuations)
+    if not score.represented_modules:
+        return None
+    qualifier = "with continuations" if with_continuations else "pass@1"
+    line = (
+        f"**Proof-unit score (k/n, {qualifier})**: {score.trusted_units}/{score.total_units} ({score.trusted_pct:.1f}%)"
+    )
+    if score.excluded_modules:
+        line += f" · {score.excluded_modules} module(s) skipped or interrupted (excluded — re-run)"
     return line
 
 
@@ -206,7 +304,7 @@ def specification_equal_score(
     active versioned manifest. Results for tasks removed from a later manifest
     are excluded and counted as non-applicable. Active manifest entries without
     a specification identity are invalid and fail before any score is returned.
-    SKIP and infra/quota-cut results are excluded by the existing score policy.
+    SKIP and non-genuine results are excluded by the existing score policy.
     """
 
     _validate_specification_ids(specification_ids)
@@ -218,27 +316,39 @@ def specification_equal_score(
         if key is None or key not in specification_ids:
             non_applicable += 1
             continue
-        if is_skipped(result) or is_non_genuine(result):
+        if is_skipped(result):
             continue
         by_specification[(key[0], specification_ids[key])].append(result)
 
-    applicable = [result for grouped in by_specification.values() for result in grouped]
+    applicable = [result for grouped in by_specification.values() for result in grouped if not is_non_genuine(result)]
     tasks_passed = sum(1 for result in applicable if passed(result))
     applicable_tasks = len(applicable)
     task_micro_pct = 100.0 * tasks_passed / applicable_tasks if applicable_tasks else 0.0
 
-    spec_fractions = [
-        sum(1 for result in grouped if passed(result)) / len(grouped) for grouped in by_specification.values()
-    ]
-    represented_specifications = len(spec_fractions)
-    specification_macro_pct = (
-        100.0 * sum(spec_fractions) / represented_specifications if represented_specifications else 0.0
-    )
-    complete_specifications = sum(
-        1 for grouped in by_specification.values() if all(passed(result) for result in grouped)
-    )
+    complete_specifications = 0
+    failed_specifications = 0
+    unresolved_specifications = 0
+    error_affected_specifications = 0
+    spec_fractions: list[float] = []
+    for grouped in by_specification.values():
+        resolved = [result for result in grouped if not is_non_genuine(result)]
+        affected = len(resolved) != len(grouped)
+        if affected:
+            error_affected_specifications += 1
+        if any(not passed(result) for result in resolved):
+            failed_specifications += 1
+            spec_fractions.append(sum(1 for result in resolved if passed(result)) / len(resolved))
+        elif affected:
+            unresolved_specifications += 1
+        else:
+            complete_specifications += 1
+            spec_fractions.append(1.0)
+
+    represented_specifications = len(by_specification)
+    resolved_specifications = complete_specifications + failed_specifications
+    specification_macro_pct = 100.0 * sum(spec_fractions) / resolved_specifications if resolved_specifications else 0.0
     specification_pass_pct = (
-        100.0 * complete_specifications / represented_specifications if represented_specifications else 0.0
+        100.0 * complete_specifications / resolved_specifications if resolved_specifications else 0.0
     )
     return SpecificationScore(
         specification_pass_pct=specification_pass_pct,
@@ -247,6 +357,9 @@ def specification_equal_score(
         tasks_passed=tasks_passed,
         applicable_tasks=applicable_tasks,
         complete_specifications=complete_specifications,
+        failed_specifications=failed_specifications,
+        unresolved_specifications=unresolved_specifications,
+        error_affected_specifications=error_affected_specifications,
         represented_specifications=represented_specifications,
         non_applicable_results=non_applicable,
     )
@@ -273,17 +386,26 @@ def specification_score_lines(
     if skipped:
         task_line += f" · {skipped} skipped"
     if non_genuine:
-        task_line += f" · {non_genuine} infra/quota-cut (excluded — re-run)"
+        task_line += f" · {non_genuine} error/interrupted (excluded — re-run)"
 
-    specification_word = "specification" if score.represented_specifications == 1 else "specifications"
+    resolved_word = "specification" if score.resolved_specifications == 1 else "specifications"
     lines = [
         f"**Specification pass rate (all leaves complete)**: "
-        f"{score.complete_specifications}/{score.represented_specifications} "
-        f"{specification_word} ({score.specification_pass_pct:.1f}%)",
+        f"{score.complete_specifications}/{score.resolved_specifications} resolved "
+        f"{resolved_word} ({score.specification_pass_pct:.1f}%)",
         task_line,
         f"**Specification-macro pass rate**: {score.specification_macro_pct:.1f}% "
-        f"across {score.represented_specifications} {specification_word}",
+        f"across {score.resolved_specifications} resolved {resolved_word}",
     ]
+    if score.unresolved_specifications:
+        lines.append(
+            f"**Unresolved specifications**: {score.unresolved_specifications} excluded until their errors are retried"
+        )
+    if score.error_affected_specifications:
+        lines.append(
+            f"**Specifications affected by errors**: {score.error_affected_specifications} contain excluded "
+            "ERROR/interrupted leaves"
+        )
     if score.non_applicable_results:
         lines.append(
             f"**Non-applicable results**: {score.non_applicable_results} not present in the active manifest (excluded)"
@@ -302,7 +424,14 @@ def load_current_specification_ids(
     for mode in sorted(set(modes)):
         if mode not in supported_modes:
             raise ValueError(f"cannot load specification identities for unknown mode {mode!r}")
-        task_specification_ids = load_manifest_specification_ids(root / mode, suite_name=mode)
+        if mode == "proof-from-scratch":
+            manifest = load_module_task_manifest(
+                root / "proof-from-scratch-module",
+                corpus_manifest_path=root / "proof-from-scratch" / "manifest.json",
+            )
+            task_specification_ids = {entry.spec.task_id: entry.spec.task_id for entry in manifest.entries}
+        else:
+            task_specification_ids = load_manifest_specification_ids(root / mode, suite_name=mode)
         specification_ids.update(scope_specification_ids(mode, task_specification_ids))
     return specification_ids
 
@@ -381,15 +510,16 @@ def _has_equivalent_cost(results: list[dict]) -> bool:
     return any("equivalent_cost_usd" in result for result in results)
 
 
-def _totals(results: list[dict]) -> tuple[int, int, float | None, float | None]:
-    in_tok = sum(r.get("input_tokens", 0) for r in results)
-    out_tok = sum(r.get("output_tokens", 0) for r in results)
-    if not _has_equivalent_cost(results):
-        return in_tok, out_tok, sum(r.get("time_secs", 0) for r in results), None
+def _totals(
+    results: list[dict],
+) -> tuple[TokenUsage, float | None, float | None, float | None, float | None]:
+    tokens = aggregate_token_usage(results)
     formal = [result for result in results if not is_skipped(result) and not is_non_genuine(result)]
-    secs = _sum_metric(formal, "time_secs")
-    equivalent_cost_usd = _sum_metric(formal, "equivalent_cost_usd")
-    return in_tok, out_tok, secs, equivalent_cost_usd
+    agent_secs = _sum_metric(formal, "agent_time_secs")
+    grading_secs = _sum_metric(formal, "grading_time_secs")
+    total_secs = _sum_metric(formal, "time_secs")
+    equivalent_cost_usd = _sum_metric(formal, "equivalent_cost_usd") if _has_equivalent_cost(results) else None
+    return tokens, agent_secs, grading_secs, total_secs, equivalent_cost_usd
 
 
 def _cost_warnings(results: list[dict]) -> list[tuple[str, str]]:
@@ -432,7 +562,7 @@ def scorecard_md(
     results = run["results"]
     scoring_results = results if specification_ids is None else applicable_manifest_results(results, specification_ids)
     pct, n_pass, n_total = weighted_score(scoring_results, weight)
-    in_tok, out_tok, secs, equivalent_cost_usd = _totals(results)
+    tokens, agent_secs, grading_secs, secs, equivalent_cost_usd = _totals(results)
     has_equivalent_cost = _has_equivalent_cost(results)
 
     lines = [
@@ -440,6 +570,11 @@ def scorecard_md(
         "",
         f"**Source**: {run['path']}",
     ]
+    unit_line = proof_unit_rate_line(scoring_results)
+    if unit_line:
+        # Issue #132 defines one module's score as k/n trusted theorems. Keep
+        # this ahead of strict whole-module completion diagnostics.
+        lines.append(unit_line)
     if specification_ids is None:
         skipped = n_skipped(results)
         non_genuine = n_non_genuine(results)
@@ -447,7 +582,7 @@ def scorecard_md(
         if skipped:
             pass_line += f" · {skipped} skipped"
         if non_genuine:
-            pass_line += f" · {non_genuine} infra/quota-cut (excluded — re-run)"
+            pass_line += f" · {non_genuine} error/interrupted (excluded — re-run)"
         lines.append(pass_line)
     else:
         score_lines, specification_score = specification_score_lines(results, specification_ids)
@@ -458,12 +593,15 @@ def scorecard_md(
     cont_line = continuation_rate_line(scoring_results, weight, n_pass)
     if cont_line:
         lines.append(cont_line)
+    continuation_unit_line = proof_unit_rate_line(scoring_results, with_continuations=True)
+    if continuation_unit_line and any(result.get("continuations") for result in scoring_results):
+        lines.append(continuation_unit_line)
+    lines.append(f"**Tokens**: {format_token_usage(tokens, verbose=True)}")
+    lines.append(f"**Total agent time**: {_format_time(agent_secs)}")
+    lines.append(f"**Total grading time**: {_format_time(grading_secs)}")
+    lines.append(f"**Total task time**: {_format_time(secs)}")
     if has_equivalent_cost:
-        lines.append(f"**Tokens**: {in_tok:,} in / {out_tok:,} out")
-        lines.append(f"**Total task time**: {_format_time(secs)}")
         lines.append(f"**Equivalent cost**: {_format_cost(equivalent_cost_usd)}")
-    else:
-        lines.append(f"**Cost**: {in_tok:,} in / {out_tok:,} out tokens · {secs:,.0f}s total")
     if scoring_name not in {"equal", SPECIFICATION_EQUAL}:
         lines.append(f"**Scoring**: {scoring_name} (weighted)")
 
@@ -519,6 +657,14 @@ def comparison_md(
     if scoring_name not in {"equal", SPECIFICATION_EQUAL}:
         lines += [f"**Scoring**: {scoring_name} (weighted)", ""]
     show_equivalent_cost = any(_has_equivalent_cost(run["results"]) for run in runs)
+    show_proof_units = any(
+        proof_unit_score(
+            run["results"]
+            if specification_ids is None
+            else applicable_manifest_results(run["results"], specification_ids)
+        ).represented_modules
+        for run in runs
+    )
     score_columns = (
         "Specification pass rate | Task pass rate | Specification macro"
         if specification_ids is not None
@@ -529,6 +675,9 @@ def comparison_md(
         if specification_ids is not None
         else "-------:|-------------:"
     )
+    if show_proof_units:
+        score_columns = "Proof-unit score (k/n) | " + score_columns
+        score_alignment = "----------------------:|" + score_alignment
     if show_equivalent_cost:
         lines += [
             f"| Run | Backend | Mode | {score_columns} | Tokens (in/out) | Time | Equivalent cost |",
@@ -547,7 +696,7 @@ def comparison_md(
         pct, n_pass, n_total = weighted_score(scoring_results, weight)
         if specification_ids is not None:
             specification_score = specification_equal_score(results, specification_ids)
-        in_tok, out_tok, secs, equivalent_cost_usd = _totals(run["results"])
+        tokens, _agent_secs, _grading_secs, secs, equivalent_cost_usd = _totals(run["results"])
         run_has_equivalent_cost = _has_equivalent_cost(run["results"])
         if show_equivalent_cost and not run_has_equivalent_cost and run["backend"] in COST_TIME_BACKENDS:
             formal = [result for result in run["results"] if not is_skipped(result) and not is_non_genuine(result)]
@@ -558,7 +707,7 @@ def comparison_md(
             score_notes += f" (+{skipped} skipped)"
         non_genuine = n_non_genuine(scoring_results)
         if non_genuine:
-            score_notes += f" (+{non_genuine} infra-cut)"
+            score_notes += f" (+{non_genuine} error/interrupted)"
         if any(r.get("continuations") for r in scoring_results):
             _, cn_pass, _ = weighted_score(scoring_results, weight, passed=is_pass_with_continuations)
             # Name the budget: +1 recovery out of ≤1 round and out of ≤10 are
@@ -579,21 +728,29 @@ def comparison_md(
                 score_notes += f" (+{specification_score.non_applicable_results} non-applicable)"
             score_cells = (
                 f"{specification_score.complete_specifications}/"
-                f"{specification_score.represented_specifications} "
+                f"{specification_score.resolved_specifications} "
                 f"({specification_score.specification_pass_pct:.1f}%) | "
                 f"{n_pass}/{n_total} ({specification_score.task_micro_pct:.1f}%){score_notes} | "
                 f"{specification_score.specification_macro_pct:.1f}%"
             )
-        row = f"| {run['id']} | {run['backend']} | {run['mode']} | {score_cells} | {in_tok:,}/{out_tok:,} | "
-        if show_equivalent_cost:
-            time_text = (
-                _format_time(secs)
-                if run_has_equivalent_cost or run["backend"] in COST_TIME_BACKENDS
-                else f"{secs:,.0f}s"
+            if specification_score.unresolved_specifications:
+                score_cells += f" (+{specification_score.unresolved_specifications} unresolved specification(s))"
+        if show_proof_units:
+            unit_score = proof_unit_score(scoring_results)
+            unit_cell = (
+                f"{unit_score.trusted_units}/{unit_score.total_units} ({unit_score.trusted_pct:.1f}%)"
+                if unit_score.represented_modules
+                else "—"
             )
+            if unit_score.excluded_modules:
+                unit_cell += f" (+{unit_score.excluded_modules} excluded)"
+            score_cells = f"{unit_cell} | {score_cells}"
+        row = f"| {run['id']} | {run['backend']} | {run['mode']} | {score_cells} | {format_token_usage(tokens)} | "
+        if show_equivalent_cost:
+            time_text = _format_time(secs)
             row += f"{time_text} | {_format_cost(equivalent_cost_usd)} |"
         else:
-            row += f"{secs:,.0f}s |"
+            row += f"{_format_time(secs)} |"
         lines.append(row)
     lines.append("")
     warnings = [
@@ -609,7 +766,10 @@ def comparison_md(
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="tlaps-bench score",
-        description="Score benchmark results (strict specification pass rate plus diagnostics) from results.json.",
+        description=(
+            "Score benchmark results (proof-unit k/n for module tasks; strict specification completion otherwise) "
+            "from results.json."
+        ),
     )
     parser.add_argument("paths", nargs="+", help="One or more results.json files or run directories")
     parser.add_argument(
@@ -617,7 +777,7 @@ def main() -> int:
         default=SPECIFICATION_EQUAL,
         choices=[SPECIFICATION_EQUAL, *sorted(SCORERS)],
         help=(
-            "Scoring scheme (default: specification-equal with strict specification pass rate primary; "
+            "Scoring scheme (default: proof-unit k/n for module tasks and specification-equal otherwise; "
             "'equal' retains legacy task-level scoring)"
         ),
     )

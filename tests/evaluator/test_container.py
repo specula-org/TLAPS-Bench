@@ -740,18 +740,22 @@ class TestRunAgentContainerSessionWiring:
         session_dir="",
         read_only_files=None,
         canonical_replay_required=False,
+        benchmark_relative="My-Bench.tla",
     ):
         from evaluator import runner as runner_mod
 
         backend = CopilotBackend()
         item = MagicMock(
-            benchmark_path=str(tmp_path / "My-Bench.tla"),
+            benchmark_path=str(tmp_path / benchmark_relative),
             timeout=0,
             check_timeout=600,
             keep_container=keep_container,
             session_dir=session_dir,
             container_image="tlaps-bench-base:immutable",
-            mode=MagicMock(canonical_replay_required=canonical_replay_required),
+            mode=SimpleNamespace(
+                canonical_replay_required=canonical_replay_required,
+                benchmark_dir=lambda: str(tmp_path),
+            ),
         )
         captured = {}
 
@@ -781,18 +785,43 @@ class TestRunAgentContainerSessionWiring:
         return captured["config"]
 
     def test_session_dir_keyed_by_benchmark_without_keep_container(self, tmp_path):
+        from evaluator import runner as runner_mod
+
         session_root = tmp_path / "sessions"
         config = self._capture_config(tmp_path, session_dir=str(session_root))
-        # <root>/<backend>/<sanitized-benchmark>; build_docker_args creates it
-        assert config.session_dir == str(session_root / "copilot" / "My-Bench")
+        key = runner_mod._work_item_session_key(
+            SimpleNamespace(
+                benchmark_path=str(tmp_path / "My-Bench.tla"),
+                mode=SimpleNamespace(benchmark_dir=lambda: str(tmp_path)),
+            )
+        )
+        assert config.session_dir == str(session_root / "copilot" / key)
         assert config.session_container_path == "/root/.copilot"
 
-    def test_session_dir_keyed_by_container_name_with_keep_container(self, tmp_path):
+    def test_keep_container_reuses_the_task_session_key(self, tmp_path):
         session_root = tmp_path / "sessions"
-        config = self._capture_config(tmp_path, session_dir=str(session_root), keep_container=True)
-        # Each retained container gets its own session dir, keyed by its name.
-        assert config.session_dir == str(session_root / "copilot" / config.container_name)
-        assert config.container_name.startswith("tlaps-bench-My-Bench-")
+        ordinary = self._capture_config(tmp_path, session_dir=str(session_root))
+        retained = self._capture_config(tmp_path, session_dir=str(session_root), keep_container=True)
+
+        assert retained.session_dir == ordinary.session_dir
+        assert retained.container_name.startswith("tlaps-bench-My-Bench-")
+
+    def test_same_basename_in_different_modules_gets_distinct_sessions(self, tmp_path):
+        session_root = tmp_path / "sessions"
+        first = self._capture_config(
+            tmp_path,
+            session_dir=str(session_root),
+            benchmark_relative="SuiteA/Consensus.tla",
+        )
+        second = self._capture_config(
+            tmp_path,
+            session_dir=str(session_root),
+            benchmark_relative="SuiteB/Consensus.tla",
+        )
+
+        assert first.session_dir != second.session_dir
+        assert os.path.basename(first.session_dir).startswith("SuiteA__Consensus-")
+        assert os.path.basename(second.session_dir).startswith("SuiteB__Consensus-")
 
     def test_no_session_dir_leaves_config_empty(self, tmp_path):
         config = self._capture_config(tmp_path, session_dir="")
@@ -828,6 +857,25 @@ class TestResolveSessionDir:
 
         got = _resolve_session_dir(str(tmp_path / "s"), keep_container=False, use_container=True)
         assert got == str(tmp_path / "s")
+
+    def test_session_dir_is_bound_to_its_physical_tree_before_resume(self, tmp_path):
+        from evaluator.runner import _resolve_session_dir
+
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+        first.mkdir()
+        second.mkdir()
+        link = tmp_path / "sessions"
+        link.symlink_to(first, target_is_directory=True)
+
+        recorded = _resolve_session_dir(str(link), keep_container=False, use_container=True)
+        link.unlink()
+        link.symlink_to(second, target_is_directory=True)
+        resumed = _resolve_session_dir(str(link), keep_container=False, use_container=True)
+
+        assert recorded == str(first)
+        assert resumed == str(second)
+        assert recorded != resumed
 
     def test_keep_container_defaults_to_home_dir(self):
         from evaluator.runner import _resolve_session_dir

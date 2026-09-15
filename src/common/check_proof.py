@@ -55,6 +55,8 @@ import argparse
 import bisect
 import contextlib
 import glob
+import json
+import math
 import os
 import re
 import shutil
@@ -62,6 +64,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 from common.cheating_detection import (
@@ -76,6 +79,12 @@ from common.cheating_detection import (
     strip_comments,
 )
 from common.container import ContainerConfig, ContainerRunner, DockerUnavailableError, ensure_image
+from common.proof_from_scratch_grading import (
+    ModuleSubmissionError,
+    analyze_module_submission,
+    proof_unit_ids_from_markers,
+)
+from common.proof_from_scratch_module import compute_trusted_units
 from common.proof_libraries import (
     ProofLibraryError,
     load_frozen_catalog,
@@ -86,10 +95,13 @@ from common.proof_libraries import (
 )
 from common.task_contract import (
     EditableRegionError,
+    FixedSegmentStatus,
+    compare_fixed_segments,
     contains_marker_text,
     parse_editable_regions,
     parse_proof_region,
 )
+from tlacore.model import Module
 from tlacore.sany.dump import SanyRun, SanyStatus, run_normalized
 
 try:
@@ -670,29 +682,16 @@ def check_editable_region_integrity(filepath, benchmark_dir, *, proof_only=False
     except EditableRegionError as exc:
         return [(0, f"editable-region markers were modified: {exc}", "SCAFFOLD_MODIFIED")]
 
-    if submitted_regions.fixed_segments != canonical_regions.fixed_segments:
-        canonical_fixed = canonical_regions.fixed_segments
-        submitted_fixed = submitted_regions.fixed_segments
-        canonical_suffix = canonical_fixed[-1]
-        submitted_suffix = submitted_fixed[-1]
-        extra_suffix = (
-            submitted_suffix[len(canonical_suffix) :] if submitted_suffix.startswith(canonical_suffix) else None
-        )
-        if submitted_fixed[:-1] == canonical_fixed[:-1] and extra_suffix and not extra_suffix.strip("\r\n"):
-            return []
-
-        def normalize_format(regions):
-            normalized = tuple(re.sub(r"\r\n|\r|\n", "\n", segment) for segment in regions.fixed_segments)
-            return (*normalized[:-1], normalized[-1].rstrip("\n"))
-
-        if normalize_format(submitted_regions) == normalize_format(canonical_regions):
-            return [
-                (
-                    0,
-                    "fixed task scaffold differs only in line endings or the final newline",
-                    "SCAFFOLD_FORMAT_MODIFIED",
-                )
-            ]
+    fixed_segment_status = compare_fixed_segments(canonical_regions.fixed_segments, submitted_regions.fixed_segments)
+    if fixed_segment_status is FixedSegmentStatus.FORMAT_MODIFIED:
+        return [
+            (
+                0,
+                "fixed task scaffold differs only in line endings or the final newline",
+                "SCAFFOLD_FORMAT_MODIFIED",
+            )
+        ]
+    if fixed_segment_status is FixedSegmentStatus.MODIFIED:
         return [(0, "fixed task scaffold outside editable regions was modified", "SCAFFOLD_MODIFIED")]
     return []
 
@@ -1074,6 +1073,391 @@ def parse_strict_status(tlapm_exit, tlapm_output):
     return complete, n_missing, obligation_failed
 
 
+MODULE_RESULT_PREFIX = "MODULE-RESULT: "
+MODULE_RESULT_SCHEMA_VERSION = 2
+_NON_CHEAT_MODULE_INTEGRITY_CODES = frozenset({"SCAFFOLD_FORMAT_MODIFIED"})
+
+
+def _module_obligation_count(output: str) -> int | None:
+    """Read the obligation total from one proof-unit TLAPM invocation."""
+
+    machine_counts = re.findall(
+        r"@!!type:obligationsnumber\s*\n@!!count:(\d+)",
+        output,
+    )
+    if machine_counts:
+        return int(machine_counts[-1])
+    proved = re.findall(r"All (\d+) obligations? proved\.", output)
+    if proved:
+        return int(proved[-1])
+    failed = re.findall(r"\d+/(\d+) obligations? failed\.", output)
+    return int(failed[-1]) if failed else None
+
+
+def authoritative_module_unit_ids(filepath: str, benchmark_dir: str | None) -> tuple[str, ...] | None:
+    """Return identified proof units when the canonical target is a module task."""
+
+    authoritative = os.path.join(benchmark_dir, os.path.basename(filepath)) if benchmark_dir is not None else filepath
+    try:
+        with open(authoritative, encoding="utf-8", newline="") as stream:
+            source = stream.read()
+    except (OSError, UnicodeError):
+        return () if benchmark_dir is not None else None
+    if "\\* BEGIN AGENT PROOF " not in source:
+        return None
+    try:
+        return proof_unit_ids_from_markers(source)
+    except ModuleSubmissionError:
+        return ()
+
+
+def _module_context_issues(filepath: str, benchmark_dir: str) -> list[tuple[str, str]]:
+    """Compare supplied TLA+ dependencies with the frozen canonical copy.
+
+    Extra workspace modules are development artifacts, not submitted context.
+    Canonical replay never stages them, and the module contract independently
+    rejects a final task that imports an unapproved module.
+    """
+
+    target_name = os.path.basename(filepath)
+    workspace = os.path.dirname(filepath)
+    canonical_paths = {
+        os.path.basename(path): path for path in glob.glob(os.path.join(benchmark_dir, "*.tla")) if os.path.isfile(path)
+    }
+    workspace_paths = {
+        os.path.basename(path): path
+        for path in glob.glob(os.path.join(workspace, "*.tla"))
+        if os.path.isfile(path) or os.path.islink(path)
+    }
+    issues: list[tuple[str, str]] = []
+    expected_context = set(canonical_paths) - {target_name}
+    actual_context = set(workspace_paths) - {target_name}
+    for missing in sorted(expected_context - actual_context):
+        issues.append(("CONTEXT_MISSING", f"canonical context file {missing!r} is missing from the submission"))
+    for name in sorted(expected_context & actual_context):
+        submitted = workspace_paths[name]
+        if os.path.islink(submitted):
+            issues.append(("CONTEXT_MODIFIED", f"context file {name!r} was replaced by a symlink"))
+            continue
+        try:
+            if os.path.samefile(submitted, canonical_paths[name]):
+                issues.append(("CONTEXT_MODIFIED", f"context file {name!r} aliases the canonical input"))
+                continue
+        except OSError as exc:
+            issues.append(("CONTEXT_MODIFIED", f"cannot compare context file {name!r}: {exc}"))
+            continue
+        try:
+            with open(canonical_paths[name], "rb") as expected_stream:
+                expected = expected_stream.read()
+            with open(submitted, "rb") as submitted_stream:
+                actual = submitted_stream.read()
+        except OSError as exc:
+            issues.append(("CONTEXT_MODIFIED", f"cannot compare context file {name!r}: {exc}"))
+            continue
+        if actual != expected:
+            issues.append(("CONTEXT_MODIFIED", f"context file {name!r} differs from the canonical input"))
+    return issues
+
+
+def _module_unit_result(
+    *,
+    unit,
+    tlapm_path: str,
+    tlapm_lib: str,
+    community_lib: str | None,
+    staged_file: str,
+    tmp_dir: str,
+    deadline: float | None,
+    index: int,
+) -> tuple[dict[str, object], str]:
+    base = {
+        "unit_id": unit.unit_id,
+        "kind": unit.kind,
+        "theorem_name": unit.theorem_name,
+        "line_start": unit.line_start,
+        "line_end": unit.line_end,
+        "dependencies": list(unit.dependencies),
+    }
+    if unit.admitted:
+        return (
+            {
+                **base,
+                "raw_verdict": "UNRESOLVED",
+                "tlapm_exit": None,
+                "missing_proofs": 1,
+                "obligation_failed": False,
+                "obligations": 0,
+            },
+            "proof is omitted or missing",
+        )
+    if unit.line_start <= 0 or unit.line_end < unit.line_start:
+        return (
+            {
+                **base,
+                "raw_verdict": "ERROR",
+                "tlapm_exit": None,
+                "missing_proofs": None,
+                "obligation_failed": None,
+                "obligations": None,
+            },
+            "SANY did not provide a valid theorem location",
+        )
+
+    remaining = None if deadline is None else deadline - time.monotonic()
+    if remaining is not None and remaining <= 0:
+        return (
+            {
+                **base,
+                "raw_verdict": "TIMEOUT",
+                "tlapm_exit": None,
+                "missing_proofs": None,
+                "obligation_failed": None,
+                "obligations": None,
+            },
+            "module checker timeout exhausted before this proof unit",
+        )
+
+    command = [
+        tlapm_path,
+        "--strict",
+        "--toolbox",
+        str(unit.line_start),
+        str(unit.line_end),
+        "--threads",
+        "1",
+        "-I",
+        tlapm_lib,
+    ]
+    if community_lib:
+        command += ["-I", community_lib]
+    cache_dir = os.path.join(tmp_dir, "unit-cache", str(index))
+    os.makedirs(cache_dir, exist_ok=True)
+    command += ["--cache-dir", cache_dir, "--safefp", staged_file]
+    try:
+        stdout, stderr, returncode = run_killgroup(command, remaining, tmp_dir)
+    except subprocess.TimeoutExpired:
+        return (
+            {
+                **base,
+                "raw_verdict": "TIMEOUT",
+                "tlapm_exit": None,
+                "missing_proofs": None,
+                "obligation_failed": None,
+                "obligations": None,
+            },
+            "TLAPM timed out",
+        )
+    except Exception as exc:
+        return (
+            {
+                **base,
+                "raw_verdict": "ERROR",
+                "tlapm_exit": None,
+                "missing_proofs": None,
+                "obligation_failed": None,
+                "obligations": None,
+            },
+            f"TLAPM could not run: {exc}",
+        )
+
+    output = stdout + stderr
+    complete, missing, obligation_failed = parse_strict_status(returncode, output)
+    # This TLAPM invocation is scoped to exactly one submitted target/helper.
+    # Exit 11 therefore means that unit still contains an omitted or missing
+    # proof; admitted siblings outside the toolbox range do not affect it.
+    complete = complete and returncode == 0
+    return (
+        {
+            **base,
+            "raw_verdict": "PASS" if complete else "FAIL",
+            "tlapm_exit": returncode,
+            "missing_proofs": missing,
+            "obligation_failed": obligation_failed,
+            "obligations": _module_obligation_count(output),
+        },
+        output,
+    )
+
+
+def run_module_task_check(
+    *,
+    filepath: str,
+    benchmark_dir: str,
+    expected_unit_ids: tuple[str, ...],
+    tlapm_path: str,
+    tlapm_lib: str,
+    timeout: int,
+    output_path: str,
+    import_violations: list,
+    emit,
+) -> int:
+    """Grade one complete submitted module and emit per-unit trust evidence."""
+
+    deadline = None if timeout <= 0 else time.monotonic() + timeout
+    canonical_path = os.path.join(benchmark_dir, os.path.basename(filepath))
+    try:
+        with open(canonical_path, encoding="utf-8", newline="") as stream:
+            canonical_source = stream.read()
+        with open(filepath, encoding="utf-8", newline="") as stream:
+            submitted_source = stream.read()
+    except (OSError, UnicodeError) as exc:
+        emit("SANY-STATUS: unavailable")
+        emit(f"ERROR: cannot read module task inputs: {exc}")
+        return 3
+
+    integrity_issues = _module_context_issues(filepath, benchmark_dir)
+    integrity_issues.extend((violation.code, violation.message) for violation in import_violations)
+    tmp_dir = tempfile.mkdtemp(prefix="tlaps_module_check_")
+    try:
+        try:
+            staged_file = stage_verification_files(
+                filepath,
+                tmp_dir,
+                benchmark_dir=benchmark_dir,
+                require_canonical=True,
+            )
+        except (OSError, ValueError) as exc:
+            emit("SANY-STATUS: unavailable")
+            emit(f"ERROR: cannot stage module task inputs: {exc}")
+            return 3
+
+        remaining = None if deadline is None else deadline - time.monotonic()
+        if remaining is not None and remaining <= 0:
+            emit("SANY-STATUS: unavailable")
+            emit("CHECK-TIMEOUT: module checker budget exhausted before SANY validation")
+            emit("ERROR: module checker timeout exhausted before SANY validation")
+            return 3
+        sany_timeout = 180 if remaining is None else max(1, min(180, math.ceil(remaining)))
+        sany_run = run_normalized(staged_file, dep_dir=tmp_dir, timeout=sany_timeout)
+        try:
+            write_sany_log(sany_run, output_path)
+        except OSError as exc:
+            emit("SANY-STATUS: unavailable")
+            emit(f"ERROR: cannot write SANY log: {exc}")
+            return 3
+        emit(f"SANY-STATUS: {sany_run.status.value}")
+        if sany_run.status is SanyStatus.UNAVAILABLE:
+            if sany_run.returncode is None and "timed out" in sany_run.detail:
+                emit(f"CHECK-TIMEOUT: {sany_run.detail[:300]}")
+            emit(f"ERROR: SANY validation unavailable: {sany_run.detail[:300]}")
+            return 3
+        if sany_run.status is SanyStatus.INVALID:
+            report = {
+                "schema_version": MODULE_RESULT_SCHEMA_VERSION,
+                "sany_status": "invalid",
+                "proof_unit_ids": list(expected_unit_ids),
+                "units": [],
+                "trusted_unit_ids": [],
+                "trusted_proof_unit_ids": [],
+                "complete": False,
+            }
+            emit(MODULE_RESULT_PREFIX + json.dumps(report, sort_keys=True, separators=(",", ":")))
+            emit(f"FAIL {SANY_INVALID_MARKER} — {sany_run.detail[:300]}")
+            return 1
+
+        assert sany_run.raw is not None
+        remaining = None if deadline is None else deadline - time.monotonic()
+        if remaining is not None and remaining <= 0:
+            emit("CHECK-TIMEOUT: module checker budget exhausted before canonical SANY validation")
+            emit("ERROR: module checker timeout exhausted before canonical SANY validation")
+            return 3
+        canonical_sany_timeout = 180 if remaining is None else max(1, min(180, math.ceil(remaining)))
+        canonical_sany_run = run_normalized(
+            canonical_path,
+            dep_dir=benchmark_dir,
+            timeout=canonical_sany_timeout,
+        )
+        if canonical_sany_run.status is not SanyStatus.VALID or canonical_sany_run.raw is None:
+            if canonical_sany_run.returncode is None and "timed out" in canonical_sany_run.detail:
+                emit(f"CHECK-TIMEOUT: {canonical_sany_run.detail[:300]}")
+            emit(f"ERROR: canonical module SANY validation unavailable: {canonical_sany_run.detail[:300]}")
+            return 3
+        canonical_module = Module.parse(canonical_sany_run.raw)
+        try:
+            analysis = analyze_module_submission(
+                canonical_source=canonical_source,
+                submitted_source=submitted_source,
+                expected_unit_ids=expected_unit_ids,
+                module=Module.parse(sany_run.raw),
+                expected_extends=canonical_module.extends,
+            )
+        except ModuleSubmissionError as exc:
+            integrity_issues.append((exc.code, str(exc)))
+
+        if integrity_issues:
+            report = {
+                "schema_version": MODULE_RESULT_SCHEMA_VERSION,
+                "sany_status": "valid",
+                "proof_unit_ids": list(expected_unit_ids),
+                "units": [],
+                "trusted_unit_ids": [],
+                "trusted_proof_unit_ids": [],
+                "complete": False,
+                "integrity_issues": [{"code": code, "message": message} for code, message in integrity_issues],
+            }
+            emit(MODULE_RESULT_PREFIX + json.dumps(report, sort_keys=True, separators=(",", ":")))
+            for code, message in integrity_issues:
+                emit(f"FAIL {code}: {message}")
+            emit("GATES-FAILED: module_integrity")
+            cheat_codes = sorted(
+                {code for code, _message in integrity_issues if code not in _NON_CHEAT_MODULE_INTEGRITY_CODES}
+            )
+            if cheat_codes:
+                emit("CHEAT-DETECTED: " + ",".join(cheat_codes))
+            return 1
+
+        unit_results: list[dict[str, object]] = []
+        community_lib = find_community_lib(filepath)
+        for index, unit in enumerate(analysis.checked_units):
+            unit_result, raw_output = _module_unit_result(
+                unit=unit,
+                tlapm_path=tlapm_path,
+                tlapm_lib=tlapm_lib,
+                community_lib=community_lib,
+                staged_file=staged_file,
+                tmp_dir=tmp_dir,
+                deadline=deadline,
+                index=index,
+            )
+            unit_results.append(unit_result)
+            emit("-" * 60)
+            emit(f"PROOF UNIT {unit.unit_id}: {unit_result['raw_verdict']}")
+            for line in raw_output.splitlines():
+                emit(line)
+
+        raw_pass = {result["unit_id"] for result in unit_results if result["raw_verdict"] == "PASS"}
+        trusted = compute_trusted_units(raw_pass, analysis.local_dependencies)
+        trusted_targets = [unit.unit_id for unit in analysis.target_units if unit.unit_id in trusted]
+        for result in unit_results:
+            result["trusted"] = result["unit_id"] in trusted
+        complete = len(trusted_targets) == len(expected_unit_ids)
+        report = {
+            "schema_version": MODULE_RESULT_SCHEMA_VERSION,
+            "sany_status": "valid",
+            "proof_unit_ids": list(expected_unit_ids),
+            "units": unit_results,
+            "trusted_unit_ids": sorted(trusted),
+            "trusted_proof_unit_ids": trusted_targets,
+            "unused_helper_names": list(analysis.unused_helper_names),
+            "complete": complete,
+        }
+        emit(MODULE_RESULT_PREFIX + json.dumps(report, sort_keys=True, separators=(",", ":")))
+
+        unavailable = any(result["raw_verdict"] in {"ERROR", "TIMEOUT"} for result in unit_results)
+        if unavailable:
+            emit("ERROR: one or more proof-unit checks were unavailable")
+            return 3
+        if complete:
+            emit(
+                f"PASS — {len(trusted_targets)}/{len(expected_unit_ids)} proof units are dependency-closed and trusted"
+            )
+            return 0
+        emit(f"FAIL — {len(trusted_targets)}/{len(expected_unit_ids)} proof units are dependency-closed and trusted")
+        return 1
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 def _run_in_container(filepath, args):
     """Run check_proof_bin inside Docker container."""
     require_canonical = getattr(args, "canonical_replay_required", False) and not args.sany_only
@@ -1275,6 +1659,7 @@ def main(*, require_canonical_for_proof_from_scratch: bool = False):
 
     target_name = os.path.splitext(os.path.basename(filepath))[0]
     benchmark_dir = resolve_benchmark_dir(args.benchmark_dir, filepath, target_name)
+    module_unit_ids = authoritative_module_unit_ids(filepath, benchmark_dir)
     marked_task = task_has_proof_region_markers(filepath, benchmark_dir)
     marked_proof_completion = args.mode == "proof-completion" and marked_task
     strict_contract = marked_task or (args.mode == "proof-from-scratch" and args.canonical_replay_required)
@@ -1388,6 +1773,24 @@ def main(*, require_canonical_for_proof_from_scratch: bool = False):
     if git_track_warning:
         emit(f"WARNING: {git_track_warning}")
     emit()
+
+    if args.mode == "proof-from-scratch" and module_unit_ids is not None:
+        if not module_unit_ids:
+            emit("SANY-STATUS: unavailable")
+            emit("ERROR: canonical module task has malformed or missing identified proof markers")
+            write_result_and_exit(3)
+        exit_code = run_module_task_check(
+            filepath=filepath,
+            benchmark_dir=benchmark_dir,
+            expected_unit_ids=module_unit_ids,
+            tlapm_path=tlapm_path,
+            tlapm_lib=tlapm_lib,
+            timeout=args.timeout,
+            output_path=output_path,
+            import_violations=import_violations,
+            emit=emit,
+        )
+        write_result_and_exit(exit_code)
 
     # --- Step 1: Run tlapm ---
     emit("=" * 60)

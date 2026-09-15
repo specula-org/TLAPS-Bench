@@ -2,15 +2,20 @@
 
 -------------------------------- MODULE Common --------------------------------
 
-EXTENDS Naturals, Sequences
+EXTENDS Naturals, Sequences, FiniteSets
 
 CONSTANTS
     Symbols, 
     ArbitrarySymbol, 
     MaxOffset 
 
-ASSUME MaxOffsetInNat == MaxOffset \in Nat
-ASSUME ArbitraryIsFresh == ArbitrarySymbol \notin Symbols
+ASSUME ArbitrarySymbolIsDistinct == ArbitrarySymbol \notin Symbols
+
+ASSUME SymbolsIsFinite == IsFiniteSet(Symbols)
+
+ASSUME SymbolsIsNonEmpty == Symbols # {}
+
+ASSUME MaxOffsetIsNat == MaxOffset \in Nat
 
 Offset == 0..MaxOffset
 

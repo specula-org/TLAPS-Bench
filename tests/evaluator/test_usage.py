@@ -1,6 +1,13 @@
 """Provider-neutral structured usage schema."""
 
-from evaluator.usage import RequestUsage, UsageCost, UsageSummary
+from evaluator.usage import (
+    RequestUsage,
+    UsageCost,
+    UsageSummary,
+    aggregate_token_usage,
+    format_token_usage,
+    result_token_usage,
+)
 
 
 def test_legacy_adapter_preserves_old_totals_and_marks_unknown_buckets():
@@ -26,6 +33,25 @@ def test_legacy_adapter_preserves_old_totals_and_marks_unknown_buckets():
         "requests": [],
         "warnings": [],
     }
+
+
+def test_unavailable_structured_usage_is_not_rendered_as_legacy_zero() -> None:
+    result = {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "usage": UsageSummary(available=False).to_dict(),
+    }
+
+    assert format_token_usage(result_token_usage(result)) == "unavailable"
+    assert format_token_usage(aggregate_token_usage([result]), verbose=True) == "unavailable"
+
+
+def test_lower_bound_token_usage_is_labeled() -> None:
+    usage = UsageSummary(input_tokens=12, output_tokens=3, available=True, is_lower_bound=True)
+    result = {"usage": usage.to_dict()}
+
+    assert format_token_usage(result_token_usage(result)) == "≥12/3"
+    assert format_token_usage(aggregate_token_usage([result]), verbose=True) == "at least 12 input / 3 output"
 
 
 def test_request_totals_do_not_double_count_cache_or_reasoning():

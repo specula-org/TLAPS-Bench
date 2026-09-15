@@ -286,7 +286,13 @@ def validate_official_imports(source: str, allowed_modules: frozenset[str]) -> l
     try:
         regions = parse_editable_regions(source)
     except EditableRegionError:
-        return []
+        try:
+            from common.proof_from_scratch_grading import proof_unit_ids_from_markers
+            from common.proof_from_scratch_module import parse_module_task_regions
+
+            regions = parse_module_task_regions(source, proof_unit_ids_from_markers(source))
+        except (ValueError, EditableRegionError):
+            return []
     code = mask_comments_and_strings(regions.helpers)
     violations: list[ImportViolation] = []
     first_line = regions.helper_line_bounds[0]

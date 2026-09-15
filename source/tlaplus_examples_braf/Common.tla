@@ -4,18 +4,25 @@
 \* This module contains constants and definitions common to both
 \* RandomAccessFile and BufferedRandomAccessFile.
 
-EXTENDS Naturals, Sequences
+EXTENDS Naturals, Sequences, FiniteSets
 
 CONSTANTS
     Symbols, \* data stored in the file (in reality there are 256 symbols: bytes 0x00 to 0xFF)
     ArbitrarySymbol, \* special token for an arbitrary symbol (to reduce the need for nondeterministic choice)
     MaxOffset \* the highest possible offset (in reality this is 2^63 - 1)
 
-\* Added for tlaps-bench: the upstream modules state no assumptions, and the
-\* comments above describe these constants' intended values. Named because
-\* tlapm only admits an assumption a proof can cite by name.
-ASSUME MaxOffsetInNat == MaxOffset \in Nat
-ASSUME ArbitraryIsFresh == ArbitrarySymbol \notin Symbols
+\* DiskF and TruncateOrExtendFile mention ArbitrarySymbol explicitly, so
+\* Permutations(Symbols) is an unsound SYMMETRY set unless it is not a symbol.
+ASSUME ArbitrarySymbolIsDistinct == ArbitrarySymbol \notin Symbols
+
+\* Permutations requires a finite set, as does enumerating SymbolOrArbitrary.
+ASSUME SymbolsIsFinite == IsFiniteSet(Symbols)
+
+\* Not needed for soundness; without it every offset holds ArbitrarySymbol.
+ASSUME SymbolsIsNonEmpty == Symbols # {}
+
+\* Offset == 0..MaxOffset types curr, lo, diskPos, length, and file_pointer.
+ASSUME MaxOffsetIsNat == MaxOffset \in Nat
 
 \* The set of legal offsets
 Offset == 0..MaxOffset

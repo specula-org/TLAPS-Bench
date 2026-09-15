@@ -18,6 +18,8 @@ from evaluator import runner
 from evaluator.backends.agentic import AgenticBackend
 from evaluator.backends.base import SubmissionPlan
 from evaluator.backends.codex import CodexBackend
+from evaluator.backends.copilot import CopilotBackend
+from evaluator.backends.cursor import CursorBackend
 from evaluator.backends.pi import PiBackend
 from evaluator.termination import TerminationReason
 from evaluator.usage import RequestUsage, UsageCost, UsageSummary
@@ -185,12 +187,16 @@ def _result(benchmark, verdict, termination_reason="OK", **kw):
     out = {
         "benchmark": benchmark,
         "check_verdict": verdict,
+        "agent_time_secs": 0,
+        "grading_time_secs": 0,
         "time_secs": 0,
         "input_tokens": 0,
         "output_tokens": 0,
         "termination_reason": termination_reason,
     }
     out.update(kw)
+    if "time_secs" in kw and "agent_time_secs" not in kw and "grading_time_secs" not in kw:
+        out["agent_time_secs"] = kw["time_secs"]
     return out
 
 
@@ -206,9 +212,9 @@ def test_summary_excludes_non_genuine_results_from_pass_rate(tmp_path):
         results, str(tmp_path), total_benchmarks=5, backend_name="copilot", mode_name="proof-completion"
     )
     summary = (tmp_path / "summary.md").read_text()
-    assert "**Pass rate**: 1/2 (50.0%) · 1 skipped · 2 infra/quota-cut (excluded — re-run)" in summary
+    assert "**Pass rate**: 2/3 (66.7%) · 1 skipped · 1 error/interrupted (excluded — re-run)" in summary
     assert "`infra-pass.tla` | ✅ PASS" in summary
-    assert "INFRA_ERROR (excluded — re-run)" in summary
+    assert "`quota-error.tla`" in summary and "QUOTA_EXHAUSTED (excluded — re-run)" in summary
 
 
 def test_summary_uses_strict_specification_pass_rate_as_primary_for_manifest_suites(tmp_path):
@@ -234,9 +240,9 @@ def test_summary_uses_strict_specification_pass_rate_as_primary_for_manifest_sui
     )
 
     summary = (tmp_path / "summary.md").read_text()
-    primary = "**Specification pass rate (all leaves complete)**: 1/2 specifications (50.0%)"
+    primary = "**Specification pass rate (all leaves complete)**: 1/2 resolved specifications (50.0%)"
     task_level = "**Task-micro pass rate**: 2/3 (66.7%)"
-    specification_macro = "**Specification-macro pass rate**: 75.0% across 2 specifications"
+    specification_macro = "**Specification-macro pass rate**: 75.0% across 2 resolved specifications"
     assert primary in summary
     assert task_level in summary
     assert specification_macro in summary
@@ -283,8 +289,8 @@ def test_summary_reports_time_and_equivalent_cost_without_zero_filling(tmp_path)
     summary = (tmp_path / "summary.md").read_text()
     assert "**Total task time**: 4.0s" in summary
     assert "**Equivalent cost**: unavailable" in summary
-    assert "`priced.tla` | ✅ PASS | 1.2s | $0.125000" in summary
-    assert "`legacy.tla` | ❌ FAIL | 2.8s | unavailable" in summary
+    assert "`priced.tla` | ✅ PASS | 1.2s | 0.0s | 1.2s | $0.125000" in summary
+    assert "`legacy.tla` | ❌ FAIL | 2.8s | 0.0s | 2.8s | unavailable" in summary
 
 
 def test_cursor_summary_uses_cost_time_format(tmp_path):
@@ -301,8 +307,8 @@ def test_cursor_summary_uses_cost_time_format(tmp_path):
     summary = (tmp_path / "summary.md").read_text()
     assert "**Equivalent cost**: unavailable" in summary
     assert "**Total task time**: 1.2s" in summary
-    assert "| Benchmark | Verdict | Time | Equivalent cost | Obligations |" in summary
-    assert "`cursor.tla` | ✅ PASS | 1.2s | unavailable |" in summary
+    assert "| Benchmark | Verdict | Agent | Grading | Total | Equivalent cost | Obligations |" in summary
+    assert "`cursor.tla` | ✅ PASS | 1.2s | 0.0s | 1.2s | unavailable |" in summary
 
 
 def test_summary_reports_cost_warning_and_excludes_infra_accounting(tmp_path):
@@ -400,7 +406,7 @@ def test_codex_container_pricing_ignores_unmounted_host_service_tier(tmp_path, m
     )
 
 
-def test_resume_does_not_skip_non_genuine_pass_results():
+def test_resume_skips_verified_pass_results_even_after_interruption():
     results = [
         _result("genuine-pass.tla", "PASS"),
         _result("legacy-pass.tla", "PASS", termination_reason=None),
@@ -409,7 +415,13 @@ def test_resume_does_not_skip_non_genuine_pass_results():
         _result("skipped.tla", "SKIP"),
         _result("failed.tla", "FAIL"),
     ]
-    assert runner._resume_done_benchmarks(results) == {"genuine-pass.tla", "legacy-pass.tla", "skipped.tla"}
+    assert runner._resume_done_benchmarks(results) == {
+        "genuine-pass.tla",
+        "legacy-pass.tla",
+        "infra-pass.tla",
+        "quota-pass.tla",
+        "skipped.tla",
+    }
 
 
 def test_resumed_result_replaces_non_genuine_attempt(tmp_path):
@@ -555,12 +567,14 @@ def test_retry_time_keeps_only_formal_attempt_and_separates_infra_time(tmp_path,
     _install_agent(monkeypatch, backend, [STARTUP, GENUINE_FAIL])
     _install_grader(monkeypatch, verdict="FAIL")
     _no_sleep(monkeypatch)
-    clock = iter((10.0, 12.0, 20.0, 25.0))
+    clock = iter((10.0, 12.0, 20.0, 25.0, 30.0, 31.0))
     monkeypatch.setattr(runner.time, "monotonic", lambda: next(clock))
 
     result = runner.run_single_benchmark(_work_item(tmp_path, backend, infra_retries=1))
 
-    assert result["time_secs"] == 5.0
+    assert result["agent_time_secs"] == 5.0
+    assert result["grading_time_secs"] == 1.0
+    assert result["time_secs"] == 6.0
     diagnostic = json.loads(
         (tmp_path / "out" / "Foo" / "Bar" / "agent" / "attempts" / "attempt-0" / "accounting.json").read_text()
     )
@@ -699,6 +713,105 @@ def test_codex_item_activity_prevents_retry_when_failed_turn_has_no_usage(tmp_pa
     assert grader["n"] == 1
     assert result["termination_reason"] == TerminationReason.INFRA_ERROR
     assert result["usage"]["status"] == "unavailable"
+    assert "infra_retries" not in result
+    assert sleeps == []
+
+
+def test_cursor_partial_edit_activity_prevents_retry_without_terminal_usage(tmp_path, monkeypatch):
+    backend = CursorBackend(model="test-model")
+    failed_after_edit = {
+        "exit": 1,
+        "events": [
+            {"type": "system", "subtype": "init"},
+            {
+                "type": "assistant",
+                "message": {"content": [{"type": "text", "text": "I will update the proof."}]},
+            },
+            {
+                "type": "tool_call",
+                "subtype": "started",
+                "call_id": "edit-1",
+                "tool_call": {"editToolCall": {"args": {"path": "Bar.tla"}}},
+            },
+            {
+                "type": "tool_call",
+                "subtype": "completed",
+                "call_id": "edit-1",
+                "tool_call": {
+                    "editToolCall": {
+                        "args": {"path": "Bar.tla"},
+                        "result": {"success": True},
+                    }
+                },
+            },
+        ],
+    }
+    agent = _install_agent(monkeypatch, backend, [failed_after_edit])
+    grader = _install_grader(monkeypatch, verdict="FAIL")
+    sleeps = _no_sleep(monkeypatch)
+
+    result = runner.run_single_benchmark(_work_item(tmp_path, backend, infra_retries=3))
+
+    assert agent["n"] == 1
+    assert grader["n"] == 1
+    assert result["termination_reason"] == TerminationReason.INFRA_ERROR
+    assert result["tool_calls"]["total"] == 1
+    assert result["tool_calls"]["is_lower_bound"] is True
+    assert "infra_retries" not in result
+    assert sleeps == []
+
+
+def test_copilot_partial_edit_activity_prevents_retry_without_terminal_otel(tmp_path, monkeypatch):
+    backend = CopilotBackend(model="test-model")
+    failed_after_edit = {
+        "exit": 1,
+        "events": [
+            {
+                "type": "assistant.message",
+                "data": {
+                    "content": "I will update the proof.",
+                    "toolRequests": [
+                        {
+                            "toolCallId": "edit-1",
+                            "name": "edit",
+                            "arguments": {"path": "Bar.tla"},
+                        }
+                    ],
+                },
+            },
+            {
+                "type": "tool.execution_start",
+                "data": {
+                    "toolCallId": "edit-1",
+                    "toolName": "edit",
+                    "arguments": {"path": "Bar.tla"},
+                },
+            },
+            {
+                "type": "tool.execution_complete",
+                "data": {
+                    "toolCallId": "edit-1",
+                    "success": True,
+                    "result": {"content": "updated Bar.tla"},
+                },
+            },
+            {
+                "type": "session.error",
+                "data": {"errorType": "query", "message": "stream closed"},
+            },
+        ],
+    }
+    agent = _install_agent(monkeypatch, backend, [failed_after_edit])
+    grader = _install_grader(monkeypatch, verdict="FAIL")
+    sleeps = _no_sleep(monkeypatch)
+
+    result = runner.run_single_benchmark(_work_item(tmp_path, backend, infra_retries=3))
+
+    assert agent["n"] == 1
+    assert grader["n"] == 1
+    assert result["termination_reason"] == TerminationReason.INFRA_ERROR
+    assert result["tool_calls"]["total"] == 1
+    assert result["tool_calls"]["is_lower_bound"] is True
     assert "infra_retries" not in result
     assert sleeps == []
 

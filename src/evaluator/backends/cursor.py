@@ -172,6 +172,36 @@ def _tool_call_summary(jsonl_path: str) -> toolcalls.ToolCallSummary:
     )
 
 
+def _stream_proves_model_activity(jsonl_path: str) -> bool:
+    """Detect native response/tool activity when Cursor omits terminal usage."""
+
+    try:
+        with open(jsonl_path, encoding="utf-8") as stream:
+            for raw in stream:
+                try:
+                    event = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(event, dict):
+                    continue
+                if event.get("type") == "tool_call" and _cursor_call(event) is not None:
+                    return True
+                if event.get("type") != "assistant":
+                    continue
+                message = event.get("message")
+                content = message.get("content") if isinstance(message, dict) else None
+                if isinstance(content, str) and content:
+                    return True
+                if isinstance(content, list) and any(
+                    isinstance(block, dict) and isinstance(block.get("text"), str) and bool(block["text"])
+                    for block in content
+                ):
+                    return True
+    except (OSError, UnicodeError):
+        return False
+    return False
+
+
 class CursorBackend(AgenticBackend):
     name = "cursor"
     requires_public_pricing = True
@@ -384,6 +414,12 @@ class CursorBackend(AgenticBackend):
 
     def parse_run_metadata(self, jsonl_path: str) -> dict[str, object]:
         return {"tool_calls": _tool_call_summary(jsonl_path).to_dict()}
+
+    def retry_may_duplicate_model_work(self, jsonl_path: str) -> bool:
+        # Cursor reports token usage only in its terminal result. A truncated
+        # stream can still contain assistant text and completed edits, which
+        # must be preserved instead of replayed as a zero-work launch.
+        return _stream_proves_model_activity(jsonl_path)
 
     @staticmethod
     def _summarize_args(kind: str, args: dict) -> str:

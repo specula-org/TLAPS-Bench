@@ -1,52 +1,46 @@
 # Task
 
-Prove the target theorem in `{benchmark_basename}`. This is the only editable file. Every other TLA+ file in the workspace is read-only context supplied for this task.
+Prove every target theorem in {benchmark_basename}. This is the only submitted file and represents one complete module task. Every supplied TLA+ context file in the workspace is read-only.
 
-Only edit inside these two marked regions:
+You may create temporary wrappers, configs, traces, and other scratch files for local TLC or Apalache exploration. They are not submitted. Grading reconstructs a clean workspace from {benchmark_basename} and the canonical read-only context, so the final task must not import or depend on scratch files.
 
-```tla
-\* BEGIN AGENT HELPERS
-...
-\* END AGENT HELPERS
+Only edit inside the `\* BEGIN AGENT HELPERS` ... `\* END AGENT HELPERS` region and each identified AGENT PROOF region (`\* BEGIN AGENT PROOF <proof-unit-id>` ... `\* END AGENT PROOF <proof-unit-id>`). Do not change the proof-unit IDs on the marker lines. You may choose the proof strategy and reuse any earlier sibling theorem once it is proved.
 
-\* BEGIN AGENT PROOF
-...
-\* END AGENT PROOF
-```
-
-Put fresh same-module operator definitions, module-level `USE DEF` / `HIDE DEF` directives, and fully proved named helper lemmas in the helper region. Put the target theorem's complete proof in the proof region.
+Put fresh same-module operator definitions, module-level USE DEF or HIDE DEF directives, and fully proved named helper lemmas in AGENT HELPERS. Put each target theorem's proof only in its matching identified proof region.
 
 # Proving and iterating
 
-Audited official proof libraries are available at `{tlapm_lib}` and `$COMMUNITY_LIB` (allowed modules are listed in `$TLAPS_PROOF_LIBRARY_CATALOG`); inside `AGENT HELPERS` you may add `LOCAL <alias> == INSTANCE <module>` from that catalog, but you must not modify library files or use `WITH`.
+Audited official proof libraries are available at {tlapm_lib} and $COMMUNITY_LIB. Allowed modules are listed in $TLAPS_PROOF_LIBRARY_CATALOG. Inside AGENT HELPERS you may add LOCAL <alias> == INSTANCE <module> from that catalog, but you must not modify library files or use `WITH`.
 
 You may run:
 
-```sh
+~~~sh
 {tlapm_path}/bin/tlapm -I {tlapm_lib} -I "$COMMUNITY_LIB" {benchmark_basename}
-```
+~~~
 
-Keep refining the proof until this authoritative check reports PASS:
+Keep refining the module until this authoritative check reports PASS:
 
-```sh
+~~~sh
 check_proof_bin {benchmark_basename} --mode proof-from-scratch
-```
+~~~
+
+The checker reports a raw result for every target and every helper theorem used by a target. A raw PASS counts only when all local theorem dependencies are also trusted, so a proof cannot rely on an omitted or circular sibling.
 
 For a quick syntax check, run:
 
-```sh
+~~~sh
 check_proof_bin {benchmark_basename} --mode proof-from-scratch --sany-only
-```
+~~~
 
-If you must stop early, leave your best partial proof in the target file.
+If you must stop early, leave your best partial proofs in the module. Independently trusted proof units still receive credit.
 
 # Constraints
 
-- Do not change the module header, imports, marker lines, target theorem statement, or any text outside the two editable regions.
-- Do not modify, replace, or add dependency modules.
-- Do not add `EXTENDS`, nested modules, `CONSTANT`, `VARIABLE`, `ASSUME`, `ASSUMPTION`, or `AXIOM` declarations; `INSTANCE` is allowed only in the official-library form described above.
+- Do not change the module header, imports, marker lines, theorem statements, theorem order, or any text outside the editable regions.
+- Do not modify or replace supplied dependency modules, and do not make the final task depend on scratch modules.
+- Do not add EXTENDS, nested modules, CONSTANT, VARIABLE, ASSUME, ASSUMPTION, or AXIOM declarations. INSTANCE is allowed only in the official-library form described above.
 - Every helper `LEMMA` or `THEOREM` must be named and fully proved.
-- Never use `PROOF OMITTED` or bare `OMITTED`, and never restate the target as an unproved or circular helper.
-- Bound the SMT/Z3 backend with a deterministic budget `SMTT("rN")` (for example `SMTT("r5")`), capped at `SMTT("r30")`; do not use the wall-clock forms `SMT` or `SMTT(n)`, and if a step needs more than the cap, decompose it rather than raising the budget.
-- New operator and lemma names must be fresh; do not shadow names from the task or its context.
+- Never use PROOF OMITTED or bare OMITTED, and never create a circular helper.
+- Bound the SMT/Z3 backend with a deterministic budget SMTT("rN"), capped at SMTT("r30"). Do not use the wall-clock forms SMT or SMTT(n).
+- New operator and lemma names must be fresh. Do not shadow names from the task or its context.
 - Do not browse or fetch external material. Work only from the files in this workspace and your knowledge of TLA+/TLAPS.

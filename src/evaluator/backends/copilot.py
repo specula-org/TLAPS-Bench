@@ -330,6 +330,46 @@ _COPILOT_ACTIVITY_EVENTS = frozenset(
 )
 
 
+def _stream_proves_model_activity(jsonl_path: str) -> bool:
+    """Detect native response/tool activity when Copilot OTel is incomplete."""
+
+    try:
+        with open(jsonl_path, encoding="utf-8") as stream:
+            for raw in stream:
+                try:
+                    event = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(event, dict):
+                    continue
+                event_type = event.get("type")
+                if event_type in {
+                    "tool.execution_start",
+                    "tool.execution_complete",
+                    "tool.execution_partial_result",
+                }:
+                    return True
+                if event_type != "assistant.message":
+                    continue
+                data = event.get("data")
+                if not isinstance(data, dict):
+                    continue
+                content = data.get("content")
+                if isinstance(content, str) and content:
+                    return True
+                if isinstance(content, list) and content:
+                    return True
+                requests = data.get("toolRequests")
+                if isinstance(requests, list) and requests:
+                    return True
+                output_tokens = nonnegative_int(data.get("outputTokens"))
+                if output_tokens:
+                    return True
+    except (OSError, UnicodeError):
+        return False
+    return False
+
+
 def _copilot_data(event: dict[str, Any]) -> dict[str, Any]:
     data = event.get("data")
     return data if isinstance(data, dict) else {}
@@ -663,6 +703,12 @@ class CopilotBackend(AgenticBackend):
 
     def parse_run_metadata(self, jsonl_path: str) -> dict[str, object]:
         return {"tool_calls": _tool_call_summary(jsonl_path).to_dict()}
+
+    def retry_may_duplicate_model_work(self, jsonl_path: str) -> bool:
+        # Copilot may lose its terminal OTel/token totals when the native event
+        # stream is cut off after a response or edit. Those events still prove
+        # that replaying the launch could duplicate real model work.
+        return _stream_proves_model_activity(jsonl_path)
 
     def parse_output(self, jsonl_path: str) -> tuple[str, int, int]:
         lines: list[str] = []

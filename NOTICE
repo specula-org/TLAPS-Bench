@@ -21,6 +21,24 @@ LICENSES/Apache-2.0.txt and LICENSES/BSD-2-Clause.txt, respectively.
 
 == Benchmark specifications ==
 
+MongoDB distributed transactions — benchmark group MongoDB
+    MultiShardTxn.tla, Storage.tla, ClientCentric.tla, and Util.tla are copied
+    unchanged from mongodb-labs/vldb25-dist-txns at commit
+    74526c1201109405172eb845413154f547a815ee:
+    https://github.com/mongodb-labs/vldb25-dist-txns/tree/74526c1201109405172eb845413154f547a815ee
+    Artifact for William Schultz and Murat Demirbas, "Design and Modular
+    Verification of Distributed Transactions in MongoDB" (PVLDB 2025).
+    No repository-wide license file is present at this revision; these
+    materials are not relicensed under this repository's MIT license.
+    ClientCentric.tla credits Tim Soethout and identifies its BSD-2-Clause
+    source as https://github.com/cwi-swat/tla-ci. Its license is preserved in
+    LICENSES/tla-ci-BSD-2-Clause.txt (Copyright 2020, ING Bank / CWI), copied
+    from tla-ci at da10d932270879f5e9d21eb3ed192b2d57d99109.
+    Util.tla credits Stephan Merz for PermSeqs, from "TLA+ Case Study:
+    A Resource Allocator" (2004).
+    MultiShardTxnSnapshot.tla is a local theorem wrapper that selects the
+    upstream snapshot settings. No reference proof is supplied.
+
 tlaplus/Examples  —  MIT, except where noted below  —  https://github.com/tlaplus/Examples
     Every benchmark group whose name is prefixed `tlaplus_examples_` (including
     tlaplus_examples_GermanProtocol, the German cache-coherence protocol).
@@ -111,24 +129,23 @@ tlaplus/Examples  —  MIT, except where noted below  —  https://github.com/tl
         bounds the model, which is not sound evidence for a liveness property.
       - tlaplus_examples_braf — MIT: the benchmark models correspond to
         BufferedRandomAccessFile.tla at commit
-        0e018bcffe93c775c5c8ec30989065d9d4eabfc1:
-        https://github.com/tlaplus/Examples/tree/0e018bcffe93c775c5c8ec30989065d9d4eabfc1/specifications/braf
+        c2ef32ad796245edc706de9dabe21391ff343296 (tlaplus/Examples#230):
+        https://github.com/tlaplus/Examples/tree/c2ef32ad796245edc706de9dabe21391ff343296/specifications/braf
         Copyright (c) 2024, Oracle and/or its affiliates; by Calvin Loncaric. A
         specification of tlc2.util.BufferedRandomAccessFile, the caching layer
         TLC uses for filesystem access, copied from
         https://github.com/tlaplus/tlaplus. Upstream holds all three modules
         (BufferedRandomAccessFile, RandomAccessFile, Common) in one file, which
         tlapm cannot load, so the benchmark copies split them into one file per
-        module -- a mechanical split with no change to the text. The upstream
-        modules state no theorems and no assumptions, so the benchmark copies
-        add fourteen theorems -- one per invariant and property that the
-        upstream TLC configuration checks, including the refinement of
-        RandomAccessFile -- and the three assumptions that the constants'
-        upstream comments describe (MaxOffset \in Nat, BuffSz \in Nat \ {0},
-        ArbitrarySymbol \notin Symbols), without which the theorems do not hold
-        for arbitrary constant values. Inv2 is not a benchmark target: upstream
-        excludes it from the invariants deliberately, treating it as an action
-        precondition, and states Inv2CanAlwaysBeRestored instead.
+        module -- a mechanical split with no change to the definitions. The
+        upstream proposal states five assumptions: BuffSz is a positive natural,
+        MaxOffset is a natural, Symbols is finite and non-empty, and
+        ArbitrarySymbol is not a Symbol. The benchmark copy adds fourteen
+        theorems -- one per invariant and property that the upstream TLC
+        configuration checks, including the refinement of RandomAccessFile.
+        Inv2 is not a benchmark target: upstream excludes it from the invariants
+        deliberately, treating it as an action precondition, and states
+        Inv2CanAlwaysBeRestored instead.
       - tlaplus_examples_btree — MIT: the benchmark models correspond to
         btree.tla and kvstore.tla at commit
         f2f1f982a5c8c17dfbbd44c5b84032aeb021bb10:
@@ -162,24 +179,21 @@ tlaplus/Examples  —  MIT, except where noted below  —  https://github.com/tl
         The upstream Safety theorem is kept as the benchmark target.
       - tlaplus_examples_dag-consensus — MIT: the benchmark models correspond to
         Sailfish.tla, BlockDag.tla, Digraph.tla and Utils.tla at commit
-        47b0e2cc0268836b89f5ce451f38e5df5f1cf773:
-        https://github.com/tlaplus/Examples/tree/47b0e2cc0268836b89f5ce451f38e5df5f1cf773/specifications/dag-consensus
+        ed3cc4c35f7001d7cec08a22dcd698dae7570dc3:
+        https://github.com/tlaplus/Examples/tree/ed3cc4c35f7001d7cec08a22dcd698dae7570dc3/specifications/dag-consensus
         By Giuliano Losa, from https://github.com/nano-o/dag-consensus; a
         specification of the Sailfish and Sailfish++ DAG-based consensus
         algorithms. The benchmark copies rewrite the recursive operators
         OrderSet, Linearize and Descendants as recursive functions, which TLAPS
         supports and recursive operators are not; TLC explores the same 314,144
         states (109,604 distinct) under TLCSailfish1 before and after the
-        rewrite. The upstream module states no theorems, so the copy adds three
-        -- one per invariant the upstream TLC configurations check (TypeOK,
-        Agreement, Liveness) -- together with the quorum-system assumptions that
-        TLCSailfish1 and TLCSailfish2 describe for their concrete choices (two
-        quorums share a correct node; a blocking set contains a correct node and
-        meets every quorum), which upstream leaves to the instantiating module.
-        Both harnesses instantiate Sailfish rather than extending it, and TLC
-        checks the assumptions of a module it extends but not of one it
-        instantiates, so the four assumptions were checked by evaluating them
-        against each harness's constants in a module of their own.
+        rewrite. Upstream now states the constant and quorum-system assumptions
+        the algorithm relies on, including that the correct nodes form a quorum;
+        the TLC harnesses repeat them because TLC does not check assumptions from
+        an instantiated module. The benchmark copy adds three theorems -- one per
+        invariant the upstream TLC configurations check (TypeOK, Agreement, and
+        Liveness). The correct-nodes-quorum assumption excludes a model that
+        otherwise violates Liveness in eight states.
 
 OpenAddressing  —  MIT  —  benchmark group OpenAddressing
     By Markus A. Kuppe, from the mku-OA branch of https://github.com/lemmy/Examples

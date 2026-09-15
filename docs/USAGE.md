@@ -227,7 +227,7 @@ uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-completion
 uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-from-scratch
 ```
 
-Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch/` respectively.
+Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch-module/` respectively. The 277-task tree under `benchmark/proof-from-scratch/` is the module generator's read-only target-selection source, not the suite `run` loads.
 
 ### Layered-task trust boundary
 
@@ -351,7 +351,10 @@ Regenerate benchmark files from annotated source specs.
 ```bash
 uv run tlaps-bench generate
 uv run tlaps-bench generate --mode proof-from-scratch
+uv run tlaps-bench generate --mode proof-from-scratch --verify
 ```
+
+Proof-from-scratch generation emits the module suite under `benchmark/proof-from-scratch-module/`: one task per source `spec_id`, with the existing 277 theorem IDs as proof units. It reads `benchmark/proof-from-scratch/` and will not write into that tree. `--verify` regenerates into a scratch directory and compares the shipped suite. To rebuild the frozen 277-task selection corpus itself, invoke `uv run python -m dataset.proof_from_scratch.generate --layered` directly.
 
 Proof-completion generation emits the layered suite described in [Layered-task trust boundary](#layered-task-trust-boundary): one read-only `<base>Model.tla` per source, one read-only `<task>Scaffold.tla` per target, an editable `<task>.tla` holding the fixed theorem statement and the marked proof region, and a `manifest.json` naming every task's source specification and exact context. Use `--legacy` only for the old generators.
 
@@ -421,7 +424,7 @@ uv run tlaps-bench run --backend codex --model gpt-5.5 --output-dir results/proo
 
 The runner skips benchmarks already recorded as `SKIP` or as a genuine `PASS` in that directory (first-attempt or via a continuation round), and reruns the rest.
 
-When resuming a task-list run, pass the same `--task-list` again. The runner rejects a different list, a different mode, or an output directory whose prior results were not recorded with a task list. Proof-from-scratch runs also record `run-manifest.json` and reject resume when the canonical corpus, execution sources, pinned official proof-library digest, or content-locked verification toolchain changed.
+When resuming a task-list run, pass the same `--task-list` again. The runner rejects a different list, a different mode, or an output directory whose prior results were not recorded with a task list. Proof-from-scratch runs also record `run-manifest.json` and reject resume when the canonical corpus, execution sources, pinned official proof-library digest, content-locked verification toolchain, execution limits, or persistent-session policy changed. If the original run used `--session-dir` or the implicit session directory from `--keep-container`, resume with the same resolved session path.
 
 Inline infra retries are intentionally short: the default `--infra-retries 3` gives the original attempt plus three retries with brief backoff. If a longer provider or network outage leaves `INFRA_ERROR` / `QUOTA_EXHAUSTED` results, rerun later with the same `--output-dir --resume`; those non-genuine results are not skipped.
 
@@ -501,14 +504,14 @@ With `--keep-container` this happens automatically under `~/.tlaps-bench/session
 uv run tlaps-bench run --backend copilot --session-dir ./sessions --filter my_benchmark
 ```
 
-Each run writes its state to `<session-dir>/<backend>/<benchmark>/` (or `<...>/<container-name>/` under `--keep-container`, one dir per retained container). For `codex`/`codex_single_turn`/`claude_code`/`pi` the credential files are stored there too, so a single mount holds both auth and session. Because it is a real host path — not `/tmp` and not tied to the container's lifetime — the state survives container removal *and* reboot, and can be moved to another machine. A `.gitignore` (`*`) is written at the session root so this credential-bearing data can't be accidentally committed. `--session-dir` is ignored with `--no-container`.
+Each physical module writes its state to `<session-dir>/<backend>/<module-key>/`. The key includes the complete mode-relative module path, so modules with the same filename never share state. Retries, continuation rounds, `--keep-container`, and `--resume` all reuse that module's directory. For `codex`/`codex_single_turn`/`claude_code`/`pi` the credential files are stored there too, so a single mount holds both auth and session. Because it is a real host path — not `/tmp` and not tied to the container's lifetime — the state survives container removal and reboot. A `.gitignore` (`*`) is written at the session root so this credential-bearing data can't be accidentally committed. `--session-dir` is ignored with `--no-container`.
 
 ### Restoring a session into a container
 
 To resume or inspect a persisted session, mount it back into a fresh container:
 
 ```bash
-scripts/restore-session.sh --backend copilot ~/.tlaps-bench/sessions/copilot/<container-name>
+scripts/restore-session.sh --backend copilot ~/.tlaps-bench/sessions/copilot/<module-key>
 ```
 
 This starts an interactive `tlaps-bench-base` shell with the session mounted at the backend's session path (e.g. `/root/.copilot`), so you can read the transcript or run the agent CLI's own resume command (e.g. `copilot --resume`). The container is removed on exit; the host session directory is not. (Network egress is not firewalled in this debug shell, and no benchmark files are mounted — it is for inspecting/continuing the agent session, not for grading.)

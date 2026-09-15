@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -513,3 +514,57 @@ class UsageSummary:
             "requests": [request.to_dict() for request in self.requests],
             "warnings": list(self.warnings),
         }
+
+
+@dataclass(frozen=True)
+class TokenUsage:
+    """Display-safe core token totals without converting unknown data to zero."""
+
+    input_tokens: int | None
+    output_tokens: int | None
+    is_lower_bound: bool = False
+
+    @property
+    def available(self) -> bool:
+        return self.input_tokens is not None and self.output_tokens is not None
+
+
+def result_token_usage(result: Mapping[str, object]) -> TokenUsage:
+    """Read structured usage when present, falling back to legacy result fields."""
+
+    raw_usage = result.get("usage")
+    if isinstance(raw_usage, dict) and any(
+        field in raw_usage for field in ("status", "available", "input_tokens", "output_tokens")
+    ):
+        usage = UsageSummary.from_dict(raw_usage)
+        if not usage.available or usage.input_tokens is None or usage.output_tokens is None:
+            return TokenUsage(None, None)
+        return TokenUsage(usage.input_tokens, usage.output_tokens, usage.is_lower_bound)
+
+    input_tokens = nonnegative_int(result.get("input_tokens"))
+    output_tokens = nonnegative_int(result.get("output_tokens"))
+    return TokenUsage(input_tokens, output_tokens)
+
+
+def aggregate_token_usage(results: list[Mapping[str, object]]) -> TokenUsage:
+    """Sum token usage only when every result has usable core-token evidence."""
+
+    usages = [result_token_usage(result) for result in results]
+    if any(not usage.available for usage in usages):
+        return TokenUsage(None, None)
+    return TokenUsage(
+        sum(usage.input_tokens for usage in usages if usage.input_tokens is not None),
+        sum(usage.output_tokens for usage in usages if usage.output_tokens is not None),
+        any(usage.is_lower_bound for usage in usages),
+    )
+
+
+def format_token_usage(usage: TokenUsage, *, verbose: bool = False) -> str:
+    """Format exact, lower-bound, and unavailable usage without ambiguity."""
+
+    if not usage.available:
+        return "unavailable"
+    prefix = "at least " if verbose and usage.is_lower_bound else "≥" if usage.is_lower_bound else ""
+    if verbose:
+        return f"{prefix}{usage.input_tokens:,} input / {usage.output_tokens:,} output"
+    return f"{prefix}{usage.input_tokens:,}/{usage.output_tokens:,}"

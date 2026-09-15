@@ -107,7 +107,9 @@ def test_proof_from_scratch_agentic_prompt_enforces_same_boundary(tmp_path):
 
     prompt = mode.build_prompt("Target_Goal.tla", "/opt/tlapm", "/opt/tlapm/lib")
 
-    assert "This is the only editable file" in prompt
+    assert "This is the only submitted file" in prompt
+    assert "temporary wrappers, configs, traces, and other scratch files" in prompt
+    assert "the final task must not import or depend on scratch files" in prompt
     assert r"\* BEGIN AGENT HELPERS" in prompt
     assert r"\* BEGIN AGENT PROOF" in prompt
     assert "Do not change the module header, imports, marker lines" in prompt

@@ -491,6 +491,27 @@ def test_backend_marks_missing_telemetry_without_activity_unavailable(tmp_path):
     assert usage.output_tokens is None
 
 
+def test_copilot_retry_detection_distinguishes_activity_from_an_unreadable_stream(tmp_path):
+    activity = tmp_path / "activity.jsonl"
+    _write_jsonl(
+        activity,
+        {
+            "type": "assistant.message",
+            "data": {
+                "content": "working",
+                "toolRequests": [{"toolCallId": "edit-1", "name": "edit"}],
+            },
+        },
+    )
+    malformed = tmp_path / "malformed.jsonl"
+    malformed.write_text("not json\n")
+    backend = CopilotBackend()
+
+    assert backend.retry_may_duplicate_model_work(str(activity)) is True
+    assert backend.retry_may_duplicate_model_work(str(malformed)) is False
+    assert backend.retry_may_duplicate_model_work(str(tmp_path / "missing.jsonl")) is False
+
+
 def test_cli_otel_output_mismatch_downgrades_usage(tmp_path):
     output = tmp_path / "output.jsonl"
     output.write_text("")

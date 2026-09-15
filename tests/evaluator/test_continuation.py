@@ -383,6 +383,19 @@ def test_round_quota_exhaustion_stops_chain(tmp_path, monkeypatch):
     assert len(result["continuations"]) == 1
 
 
+def test_round_grader_error_stops_chain_instead_of_consuming_more_budget(tmp_path, monkeypatch):
+    backend = _ScriptedBackend()
+    agent = _install_agent(monkeypatch, backend, [GENUINE, GENUINE])
+    grader = _install_grader(monkeypatch, ["FAIL", "ERROR"])
+
+    result = runner.run_single_benchmark(_work_item(tmp_path, backend, max_continuations=3))
+
+    assert agent["n"] == 2
+    assert grader["n"] == 2
+    assert [round_result["check_verdict"] for round_result in result["continuations"]] == ["ERROR"]
+    assert result["continuations"][0]["grader_error_time_secs"] > 0
+
+
 def test_stale_agent_check_not_copied_into_round(tmp_path, monkeypatch):
     # The in-workspace self-check file survives across rounds (useful context
     # for the agent), but a round's agent_check.result artifact must only
@@ -638,6 +651,6 @@ def test_summary_excludes_interrupted_chains_from_continuation_rate(tmp_path):
     assert "**Pass rate**: 0/3 (0.0%)" in summary  # cut-chain's genuine first FAIL stays scored
     assert (
         "**Task-micro pass rate with continuations (≤3)**: 1/2 (50.0%) — 1 recovered by continuation "
-        "(pass@1 above is first-attempt only) · 1 chain(s) infra/quota-cut (excluded — re-run)"
+        "(pass@1 above is first-attempt only) · 1 chain(s) interrupted (excluded — re-run)"
     ) in summary
     assert "continuation chain cut at round 1 (excluded — re-run)" in summary  # per-row note discloses too

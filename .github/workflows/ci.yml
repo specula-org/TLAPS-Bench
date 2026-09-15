@@ -75,6 +75,11 @@ jobs:
           TLAPS_BENCH_REQUIRE_PI_CLI: "1"
         run: uv run pytest tests
 
+      - name: Verify generated proof-from-scratch module suite
+        env:
+          PYTHONPATH: src
+        run: uv run python -m dataset.proof_from_scratch.module_tasks --verify
+
       - name: Check tlaps-bench CLI help
         run: |
           set -euo pipefail
