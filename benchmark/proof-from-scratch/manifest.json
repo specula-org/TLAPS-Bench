@@ -756,6 +756,38 @@
       "tlaplus_examples_DieHard/DieHard_proof_TypeCorrectDefs.tla"
     ]
   },
+  "tlaplus_examples_Disruptor/Disruptor_MPMC_NoDataRacesCorrect.tla": {
+    "spec_id": "tlaplus_examples_Disruptor/Disruptor_MPMC.tla",
+    "context": [
+      "tlaplus_examples_Disruptor/Disruptor_MPMCModel.tla",
+      "tlaplus_examples_Disruptor/Disruptor_MPMC_NoDataRacesCorrect/RingBuffer.tla",
+      "tlaplus_examples_Disruptor/Disruptor_MPMC_NoDataRacesCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_Disruptor/Disruptor_MPMC_TypeOkCorrect.tla": {
+    "spec_id": "tlaplus_examples_Disruptor/Disruptor_MPMC.tla",
+    "context": [
+      "tlaplus_examples_Disruptor/Disruptor_MPMCModel.tla",
+      "tlaplus_examples_Disruptor/Disruptor_MPMC_TypeOkCorrect/RingBuffer.tla",
+      "tlaplus_examples_Disruptor/Disruptor_MPMC_TypeOkCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_Disruptor/Disruptor_SPMC_NoDataRacesCorrect.tla": {
+    "spec_id": "tlaplus_examples_Disruptor/Disruptor_SPMC.tla",
+    "context": [
+      "tlaplus_examples_Disruptor/Disruptor_SPMCModel.tla",
+      "tlaplus_examples_Disruptor/Disruptor_SPMC_NoDataRacesCorrect/RingBuffer.tla",
+      "tlaplus_examples_Disruptor/Disruptor_SPMC_NoDataRacesCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_Disruptor/Disruptor_SPMC_TypeOkCorrect.tla": {
+    "spec_id": "tlaplus_examples_Disruptor/Disruptor_SPMC.tla",
+    "context": [
+      "tlaplus_examples_Disruptor/Disruptor_SPMCModel.tla",
+      "tlaplus_examples_Disruptor/Disruptor_SPMC_TypeOkCorrect/RingBuffer.tla",
+      "tlaplus_examples_Disruptor/Disruptor_SPMC_TypeOkCorrectDefs.tla"
+    ]
+  },
   "tlaplus_examples_FiniteMonotonic/CRDT_proof_Convergence.tla": {
     "spec_id": "tlaplus_examples_FiniteMonotonic/CRDT_proof.tla",
     "context": [
@@ -1055,6 +1087,13 @@
     "context": [
       "tlaplus_examples_MultiCarElevator/Elevator_proof_TypeCorrect/Elevator.tla",
       "tlaplus_examples_MultiCarElevator/Elevator_proof_TypeCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_NanoBlockchain/Nano_Safety.tla": {
+    "spec_id": "tlaplus_examples_NanoBlockchain/Nano.tla",
+    "context": [
+      "tlaplus_examples_NanoBlockchain/NanoModel.tla",
+      "tlaplus_examples_NanoBlockchain/Nano_SafetyDefs.tla"
     ]
   },
   "tlaplus_examples_Paxos/Consensus_Invariance.tla": {
@@ -1391,6 +1430,195 @@
       "tlaplus_examples_bcastByz/bcastByz_Unforg_Step4Defs.tla"
     ]
   },
+  "tlaplus_examples_bosco/bosco_Lemma3_0Correct.tla": {
+    "spec_id": "tlaplus_examples_bosco/bosco.tla",
+    "context": [
+      "tlaplus_examples_bosco/boscoModel.tla",
+      "tlaplus_examples_bosco/bosco_Lemma3_0CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_bosco/bosco_Lemma3_1Correct.tla": {
+    "spec_id": "tlaplus_examples_bosco/bosco.tla",
+    "context": [
+      "tlaplus_examples_bosco/boscoModel.tla",
+      "tlaplus_examples_bosco/bosco_Lemma3_1CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_bosco/bosco_Lemma4_0Correct.tla": {
+    "spec_id": "tlaplus_examples_bosco/bosco.tla",
+    "context": [
+      "tlaplus_examples_bosco/boscoModel.tla",
+      "tlaplus_examples_bosco/bosco_Lemma4_0CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_bosco/bosco_Lemma4_1Correct.tla": {
+    "spec_id": "tlaplus_examples_bosco/bosco.tla",
+    "context": [
+      "tlaplus_examples_bosco/boscoModel.tla",
+      "tlaplus_examples_bosco/bosco_Lemma4_1CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_bosco/bosco_TypeOKCorrect.tla": {
+    "spec_id": "tlaplus_examples_bosco/bosco.tla",
+    "context": [
+      "tlaplus_examples_bosco/boscoModel.tla",
+      "tlaplus_examples_bosco/bosco_TypeOKCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_FlushBufferCorrect.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_FlushBufferCorrect/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_FlushBufferCorrect/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_FlushBufferCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv1.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv1/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv1Defs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv2CanAlwaysBeRestored.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv2CanAlwaysBeRestored/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv2CanAlwaysBeRestoredDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv3.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv3/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv3Defs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv4.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv4/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv4Defs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv5.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv5/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Inv5Defs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Read1Correct.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Read1Correct/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Read1Correct/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Read1CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_ReadCorrect.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_ReadCorrect/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_ReadCorrect/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_ReadCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Safety.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Safety/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Safety/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SafetyDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekCorrect.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekCorrect/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekCorrect/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekEstablishesInv2.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekEstablishesInv2/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_SeekEstablishesInv2Defs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_TypeOK.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_TypeOK/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_TypeOKDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Write1Correct.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Write1Correct/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Write1Correct/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_Write1CorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_WriteAtMostCorrect.tla": {
+    "spec_id": "tlaplus_examples_braf/BufferedRandomAccessFile.tla",
+    "context": [
+      "tlaplus_examples_braf/BufferedRandomAccessFileModel.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_WriteAtMostCorrect/Common.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_WriteAtMostCorrect/RandomAccessFile.tla",
+      "tlaplus_examples_braf/BufferedRandomAccessFile_Thm_WriteAtMostCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_btree/btree_InnersMustHaveLastCorrect.tla": {
+    "spec_id": "tlaplus_examples_btree/btree.tla",
+    "context": [
+      "tlaplus_examples_btree/btreeModel.tla",
+      "tlaplus_examples_btree/btree_InnersMustHaveLastCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_btree/btree_KeyOrderPreservedCorrect.tla": {
+    "spec_id": "tlaplus_examples_btree/btree.tla",
+    "context": [
+      "tlaplus_examples_btree/btreeModel.tla",
+      "tlaplus_examples_btree/btree_KeyOrderPreservedCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_btree/btree_KeysInLeavesAreUniqueCorrect.tla": {
+    "spec_id": "tlaplus_examples_btree/btree.tla",
+    "context": [
+      "tlaplus_examples_btree/btreeModel.tla",
+      "tlaplus_examples_btree/btree_KeysInLeavesAreUniqueCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_btree/btree_LeavesCantHaveLastCorrect.tla": {
+    "spec_id": "tlaplus_examples_btree/btree.tla",
+    "context": [
+      "tlaplus_examples_btree/btreeModel.tla",
+      "tlaplus_examples_btree/btree_LeavesCantHaveLastCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_btree/btree_TypeOkCorrect.tla": {
+    "spec_id": "tlaplus_examples_btree/btree.tla",
+    "context": [
+      "tlaplus_examples_btree/btreeModel.tla",
+      "tlaplus_examples_btree/btree_TypeOkCorrectDefs.tla"
+    ]
+  },
   "tlaplus_examples_byihive/VoucherLifeCycle_proof_Spec_TypeOK_Consistent.tla": {
     "spec_id": "tlaplus_examples_byihive/VoucherLifeCycle_proof.tla",
     "context": [
@@ -1476,6 +1704,36 @@
       "tlaplus_examples_byzpaxos/VoteProofModel.tla",
       "tlaplus_examples_byzpaxos/VoteProof_VT3/Consensus.tla",
       "tlaplus_examples_byzpaxos/VoteProof_VT3Defs.tla"
+    ]
+  },
+  "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrect.tla": {
+    "spec_id": "tlaplus_examples_dag-consensus/Sailfish.tla",
+    "context": [
+      "tlaplus_examples_dag-consensus/SailfishModel.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrect/BlockDag.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrect/Digraph.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrect/Utils.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_AgreementCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrect.tla": {
+    "spec_id": "tlaplus_examples_dag-consensus/Sailfish.tla",
+    "context": [
+      "tlaplus_examples_dag-consensus/SailfishModel.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrect/BlockDag.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrect/Digraph.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrect/Utils.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_LivenessCorrectDefs.tla"
+    ]
+  },
+  "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect.tla": {
+    "spec_id": "tlaplus_examples_dag-consensus/Sailfish.tla",
+    "context": [
+      "tlaplus_examples_dag-consensus/SailfishModel.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect/BlockDag.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect/Digraph.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect/Utils.tla",
+      "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrectDefs.tla"
     ]
   },
   "tlaplus_examples_ewd687a/EWD687a_proof_Safety.tla": {

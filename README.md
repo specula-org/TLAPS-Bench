@@ -38,9 +38,9 @@ can be derived.
 
 | Source | Examples | Proof completion | Proof from scratch | Total |
 |---|--:|--:|--:|--:|
-| [tlaplus/Examples](https://github.com/tlaplus/Examples) | 44 | 357 | 149 | 506 |
+| [tlaplus/Examples](https://github.com/tlaplus/Examples) | 50 | 357 | 181 | 538 |
 | [TLAPS distribution examples](https://github.com/tlaplus/tlapm) | 14 | 91 | 51 | 142 |
-| **Subtotal** | **58** | **448** | **200** | **648** |
+| **Subtotal** | **64** | **448** | **232** | **680** |
 
 **Systems specifications**
 
@@ -55,7 +55,7 @@ can be derived.
 | [two_thread_mutex (Anvil)](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | 1 | – | 1 | 1 |
 | **Subtotal** | **14** | **258** | **45** | **303** |
 
-**72 examples, 951 tasks in total.** A per-example breakdown is in
+**78 examples, 983 tasks in total.** A per-example breakdown is in
 [`docs/DATASET.md`](docs/DATASET.md).
 
 ## Running

@@ -64,6 +64,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [barriers](https://github.com/tlaplus/Examples/tree/master/specifications/barriers) | tlaplus/Examples | 11 | 5 | 16 |
 | [transaction_commit](https://github.com/tlaplus/Examples/tree/master/specifications/transaction_commit) | tlaplus/Examples | 12 | 4 | 16 |
 | [PaxosHowToWinATuringAward](https://github.com/tlaplus/Examples/tree/master/specifications/PaxosHowToWinATuringAward) | tlaplus/Examples | 9 | 6 | 15 |
+| [braf](https://github.com/tlaplus/Examples/tree/master/specifications/braf) | tlaplus/Examples | – | 14 | 14 |
 | [locks_auxiliary_vars](https://github.com/tlaplus/Examples/tree/master/specifications/locks_auxiliary_vars) | tlaplus/Examples | 9 | 5 | 14 |
 | [BlockingQueue](https://github.com/lemmy/BlockingQueue) | tlaplus/Examples | 8 | 5 | 13 |
 | [LearnProofs](https://github.com/tlaplus/Examples/tree/master/specifications/LearnProofs) | tlaplus/Examples | 5 | 6 | 11 |
@@ -78,10 +79,14 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [Bakery-Boulangerie](https://github.com/tlaplus/Examples/tree/master/specifications/Bakery-Boulangerie) | tlaplus/Examples | 2 | 4 | 6 |
 | [ReadersWriters](https://github.com/tlaplus/Examples/tree/master/specifications/ReadersWriters) | tlaplus/Examples | 3 | 2 | 5 |
 | [Termination](https://github.com/tlaplus/Examples/tree/master/specifications/Termination) | tlaplus/Examples | 4 | 1 | 5 |
+| [bosco](https://github.com/tlaplus/Examples/tree/master/specifications/bosco) | tlaplus/Examples | – | 5 | 5 |
+| [btree](https://github.com/tlaplus/Examples/tree/master/specifications/btree) | tlaplus/Examples | – | 5 | 5 |
+| [Disruptor](https://github.com/tlaplus/Examples/tree/master/specifications/Disruptor) | tlaplus/Examples | – | 4 | 4 |
 | [SpecifyingSystems_AsynchronousInterface](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/AsynchronousInterface) | tlaplus/Examples | 2 | 2 | 4 |
 | [DieHard](https://github.com/tlaplus/Examples/tree/master/specifications/DieHard) | tlaplus/Examples | 2 | 1 | 3 |
 | [SpecifyingSystems_CachingMemory](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/CachingMemory) | tlaplus/Examples | 2 | 1 | 3 |
 | [TwoPhase](https://github.com/tlaplus/Examples/tree/master/specifications/TwoPhase) | tlaplus/Examples | 1 | 2 | 3 |
+| [dag-consensus](https://github.com/tlaplus/Examples/tree/master/specifications/dag-consensus) | tlaplus/Examples | – | 3 | 3 |
 | [spanning](https://github.com/tlaplus/Examples/tree/master/specifications/spanning) | tlaplus/Examples | 2 | 1 | 3 |
 | [sums_even](https://github.com/tlaplus/Examples/tree/master/specifications/sums_even) | tlaplus/Examples | 1 | 2 | 3 |
 | [CoffeeCan](https://github.com/tlaplus/Examples/tree/master/specifications/CoffeeCan) | tlaplus/Examples | 1 | 1 | 2 |
@@ -91,8 +96,9 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_FIFO](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/FIFO) | tlaplus/Examples | 1 | 1 | 2 |
 | [SpecifyingSystems_TLC](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/TLC) | tlaplus/Examples | 1 | 1 | 2 |
 | [byihive](https://github.com/tlaplus/Examples/tree/master/specifications/byihive) | tlaplus/Examples | 1 | 1 | 2 |
+| [NanoBlockchain](https://github.com/tlaplus/Examples/tree/master/specifications/NanoBlockchain) | tlaplus/Examples | – | 1 | 1 |
 | [SpecifyingSystems_Composing](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/Composing) | tlaplus/Examples | – | 1 | 1 |
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 72 examples — 706 proof-completion + 245 proof-from-scratch = 951 tasks.**
+**Total: 78 examples — 706 proof-completion + 277 proof-from-scratch = 983 tasks.**

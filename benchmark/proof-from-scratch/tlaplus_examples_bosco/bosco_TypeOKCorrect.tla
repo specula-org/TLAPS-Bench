@@ -1,0 +1,10 @@
+---- MODULE bosco_TypeOKCorrect ----
+EXTENDS bosco_TypeOKCorrectDefs
+
+\* BEGIN AGENT HELPERS
+\* END AGENT HELPERS
+THEOREM TypeOKCorrect == Spec => []TypeOK
+\* BEGIN AGENT PROOF
+PROOF OBVIOUS
+\* END AGENT PROOF
+====
