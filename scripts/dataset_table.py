@@ -53,6 +53,8 @@ def source_label(group):
         return "two_thread_mutex (Anvil)"
     if group == "MongoDB":
         return "MongoDB distributed transactions"
+    if group == "CahillSSI":
+        return "Cahill serializable snapshot isolation"
     return "TLAPS distribution examples"
 
 
@@ -67,6 +69,7 @@ SOURCE_URL = {
     "OpenAddressing": "https://github.com/lemmy/Examples",
     "two_thread_mutex (Anvil)": "https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs",
     "MongoDB distributed transactions": "https://github.com/mongodb-labs/vldb25-dist-txns",
+    "Cahill serializable snapshot isolation": "https://github.com/pron/amazon-snapshot-spec",
 }
 
 
@@ -114,6 +117,10 @@ _GROUP_URL = {
     "MongoDB": (
         "https://github.com/mongodb-labs/vldb25-dist-txns/blob/"
         "74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla"
+    ),
+    "CahillSSI": (
+        "https://github.com/pron/amazon-snapshot-spec/blob/"
+        "9c60cb18151889d7b4c0a4ffd7de0b6fc2db0fb2/serializableSnapshotIsolation.tla"
     ),
 }
 

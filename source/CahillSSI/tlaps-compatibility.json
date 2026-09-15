@@ -1,0 +1,98 @@
+[
+  {
+    "before": "LET RECURSIVE BuildAbortOpSeq(_)\n                         BuildAbortOpSeq(RemainingTxns) ==",
+    "after": "LET BuildAbortOpSeq[RemainingTxns \\in SUBSET Txns] =="
+  },
+  {
+    "before": "BuildAbortOpSeq(RemainingTxns \\ {t})",
+    "after": "BuildAbortOpSeq[RemainingTxns \\ {t}]"
+  },
+  {
+    "before": "IN  \n                         BuildAbortOpSeq(Txns)",
+    "after": "IN  \n                         BuildAbortOpSeq[Txns]"
+  },
+  {
+    "before": "LET RECURSIVE extendPath(_)",
+    "after": "LET nonemptyPaths == {path \\in Seq(activeTxns) : Len(path) > 0}"
+  },
+  {
+    "before": "extendPath(currPath) ==",
+    "after": "extendPath[currPath \\in nonemptyPaths] =="
+  },
+  {
+    "before": "extendPath(Append(currPath, edge[2]))",
+    "after": "extendPath[Append(currPath, edge[2])]"
+  },
+  {
+    "before": "IN extendPath(<<txn>>)",
+    "after": "IN extendPath[<<txn>>]"
+  },
+  {
+    "before": "LET RECURSIVE findCycleNodes(_, _)   (* startNode, visitedSet *)",
+    "after": "LET nodes == UNION {{edge[1], edge[2]} : edge \\in edges}"
+  },
+  {
+    "before": "findCycleNodes(node, visitedSet) ==",
+    "after": "findCycleNodes[node \\in nodes, visitedSet \\in SUBSET nodes] =="
+  },
+  {
+    "before": "findCycleNodes(neighbor, newVisited)",
+    "after": "findCycleNodes[neighbor, newVisited]"
+  },
+  {
+    "before": "findCycleNodes(node, {})",
+    "after": "findCycleNodes[node, {}]"
+  },
+  {
+    "before": "{<<from, to>> \\in activeTxns \\X activeTxns :",
+    "after": "{waitEdge \\in activeTxns \\X activeTxns :\n                LET from == waitEdge[1] to == waitEdge[2] IN"
+  },
+  {
+    "before": "{<<e_from, e_to>> \\in newWaitingForXLockHeldByEdges : e_from = from}",
+    "after": "{candidateEdge \\in newWaitingForXLockHeldByEdges : candidateEdge[1] = from}"
+  },
+  {
+    "before": "CHOOSE <<e_from, e_to>> \\in outgoingEdges : TRUE",
+    "after": "CHOOSE selectedEdge \\in outgoingEdges : TRUE"
+  },
+  {
+    "before": "{to : <<from, to>> \\in \n                                           {<<from, to>> \\in edges : from = node}}",
+    "after": "{link[2] : link \\in {outgoing \\in edges : outgoing[1] = node}}"
+  },
+  {
+    "before": "{from : <<from, to>> \\in edges}",
+    "after": "{link[1] : link \\in edges}"
+  },
+  {
+    "before": "\\A <<key, ver>> \\in KeyVersionsReadByTxn(history, txn) :",
+    "after": "\\A keyVersion \\in KeyVersionsReadByTxn(history, txn) :\n                LET key == keyVersion[1] ver == keyVersion[2] IN"
+  },
+  {
+    "before": "{<<key, ver>> \\in read_key_ver : key \\in written_key}",
+    "after": "{keyVersion \\in read_key_ver : keyVersion[1] \\in written_key}"
+  },
+  {
+    "before": "\\A <<key, ver>> \\in key_ver_of_keys_that_txn_also_wrote :",
+    "after": "\\A keyVersion \\in key_ver_of_keys_that_txn_also_wrote :\n                       LET key == keyVersion[1] ver == keyVersion[2] IN"
+  },
+  {
+    "before": "{<<T1, T2>> \\in ct \\X ct :",
+    "after": "{transactionPair \\in ct \\X ct :\n                LET T1 == transactionPair[1] T2 == transactionPair[2] IN"
+  },
+  {
+    "before": "{<<writer_txn, reader_txn>> \\in ct \\X ct :",
+    "after": "{transactionPair \\in ct \\X ct :\n                LET writer_txn == transactionPair[1] reader_txn == transactionPair[2] IN"
+  },
+  {
+    "before": "{<<Ti, Tj>> \\in ct \\X ct :",
+    "after": "{transactionPair \\in ct \\X ct :\n                LET Ti == transactionPair[1] Tj == transactionPair[2] IN"
+  },
+  {
+    "before": "{<<Tk, Ti>> \\in ct \\X ct :",
+    "after": "{transactionPair \\in ct \\X ct :\n                LET Tk == transactionPair[1] Ti == transactionPair[2] IN"
+  },
+  {
+    "before": "MODULE serializableSnapshotIsolation",
+    "after": "MODULE CahillSSIModel"
+  }
+]

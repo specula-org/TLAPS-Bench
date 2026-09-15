@@ -63,6 +63,13 @@
       "BubbleSort/BubbleSort_line202Defs.tla"
     ]
   },
+  "CahillSSI/CahillSerializability_CahillSerializableCorrect.tla": {
+    "spec_id": "CahillSSI/CahillSerializability.tla",
+    "context": [
+      "CahillSSI/CahillSerializability_CahillSerializableCorrect/CahillSSIModel.tla",
+      "CahillSSI/CahillSerializability_CahillSerializableCorrectDefs.tla"
+    ]
+  },
   "Cantor/Cantor1_cantor.tla": {
     "spec_id": "Cantor/Cantor1.tla",
     "context": [
