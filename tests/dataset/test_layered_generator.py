@@ -839,10 +839,25 @@ def test_instance_qualified_uses_ignore_string_literals():
     assert instance_qualified_uses('C!Spec /\\ x = "C!Inv"') == {("C", "Spec")}
 
 
+@pytest.mark.parametrize(
+    "expression, expected",
+    [
+        ("Storage(s)!Start", {("Storage", "Start")}),
+        ("Storage(F(s), G(H(s)))!Read", {("Storage", "Read")}),
+        ("Storage(Other!Argument) ! Read", {("Storage", "Read"), ("Other", "Argument")}),
+        ('Storage(")!Unused")!Read', {("Storage", "Read")}),
+        ("Storage((* )!Unused *) s)\n! Read", {("Storage", "Read")}),
+    ],
+)
+def test_instance_qualified_uses_with_parameters(expression, expected):
+    assert instance_qualified_uses(expression) == expected
+
+
 def test_referenced_identifiers_skip_the_right_hand_name_of_a_qualified_use():
     """P!Spec must not put Spec in the bare seed set."""
     assert "Spec" not in referenced_identifiers("SpecHS => P!Spec")
     assert "P" in referenced_identifiers("SpecHS => P!Spec")
+    assert "Spec" not in referenced_identifiers("SpecHS => P(1) ! (* context *) Spec")
     assert "Spec" in referenced_identifiers("Spec => P!Spec")
     assert "Spec" not in referenced_identifiers('C!Spec /\\ x = "C!Inv"')
 

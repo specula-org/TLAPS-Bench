@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "b608d87a8cfa4d947390384f96afeddd1b3fbf0b52a465e1b88206202155c137",
+  "corpus_sha256": "a0befb2c66a4cfc6938aa988fc8018fb9668708fd19b5972f138d1f477a359c3",
   "complete": true,
   "module_tasks": [
     {
@@ -430,6 +430,27 @@
       "context": [
         "Euclid/Euclid-TLAPS-Example/EuclidDefs.tla",
         "Euclid/Euclid-TLAPS-Example/EuclidModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
+        "source_sha256": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
+        "proof_units": [
+          {
+            "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",
+            "statement_sha256": "6fcdbf61cd8d893dd98e65418d8847ec263f51abf13ef905b6ee42c63cf92432"
+          }
+        ]
+      },
+      "context": [
+        "MongoDB/MultiShardTxnSnapshot/ClientCentric.tla",
+        "MongoDB/MultiShardTxnSnapshot/MultiShardTxn.tla",
+        "MongoDB/MultiShardTxnSnapshot/Storage.tla",
+        "MongoDB/MultiShardTxnSnapshot/Util.tla",
+        "MongoDB/MultiShardTxnSnapshotDefs.tla"
       ],
       "renamed_bindings": {}
     },
