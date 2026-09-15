@@ -437,7 +437,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
-        "source_sha256": "20b3041097d5ffe2be1778e70b80156b4930b148a8f9d0b1cfaff601cd82ad4a",
+        "source_sha256": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
         "proof_units": [
           {
             "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",

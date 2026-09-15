@@ -5,6 +5,7 @@ ASSUME SnapshotConfiguration ==
     /\ RC = "snapshot"
     /\ IgnorePrepareBlocking = "false"
     /\ IgnoreWriteConflicts = "false"
+    /\ Timestamps \subseteq Nat
 
 WritesEachKeyAtMostOnce(transaction) ==
     \A i, j \in DOMAIN transaction :
