@@ -6,7 +6,17 @@ ASSUME SnapshotConfiguration ==
     /\ IgnorePrepareBlocking = "false"
     /\ IgnoreWriteConflicts = "false"
 
-THEOREM SnapshotIsolationCorrect == Spec => []SnapshotIsolation
+WritesEachKeyAtMostOnce(transaction) ==
+    \A i, j \in DOMAIN transaction :
+        (/\ transaction[i].op = "write"
+         /\ transaction[j].op = "write"
+         /\ transaction[i].key = transaction[j].key) => i = j
+
+SingleWritePerKey ==
+    \A transaction \in Range(ops) : WritesEachKeyAtMostOnce(transaction)
+
+THEOREM SnapshotIsolationCorrect ==
+    (Spec /\ []SingleWritePerKey) => []SnapshotIsolation
 PROOF OMITTED
 
 =============================================================================

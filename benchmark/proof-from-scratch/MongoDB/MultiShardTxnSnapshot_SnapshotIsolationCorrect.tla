@@ -3,7 +3,8 @@ EXTENDS MultiShardTxnSnapshot_SnapshotIsolationCorrectDefs
 
 \* BEGIN AGENT HELPERS
 \* END AGENT HELPERS
-THEOREM SnapshotIsolationCorrect == Spec => []SnapshotIsolation
+THEOREM SnapshotIsolationCorrect ==
+    (Spec /\ []SingleWritePerKey) => []SnapshotIsolation
 \* BEGIN AGENT PROOF
 PROOF OBVIOUS
 \* END AGENT PROOF

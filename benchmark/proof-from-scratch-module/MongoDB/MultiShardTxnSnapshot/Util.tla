@@ -2,7 +2,6 @@
 EXTENDS Sequences, Functions, Naturals, FiniteSets
 
 max(s) == CHOOSE i \in s : (~\E j \in s : j > i)
-min(s) == CHOOSE i \in s : (~\E j \in s : j < i)
 
 ReduceSet(op(_, _), set, base) ==
   LET iter[s \in SUBSET set] ==
@@ -13,7 +12,7 @@ ReduceSet(op(_, _), set, base) ==
 
 ReduceSeq(op(_, _), seq, acc) == FoldFunction(op, acc, seq)
 
-Index(seq, e) == min({i \in 1..Len(seq) : seq[i] = e})
+Index(seq, e) ==  CHOOSE i \in 1..Len(seq): seq[i] = e
 
 SeqToSet(s) == {s[i] : i \in DOMAIN s}
 

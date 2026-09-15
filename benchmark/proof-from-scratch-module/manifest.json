@@ -437,11 +437,11 @@
       "spec": {
         "format_version": 1,
         "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
-        "source_sha256": "ffc961d7a62d3c1c65c51cad91ed15debb5a7898bdc06127bca540ebd8110065",
+        "source_sha256": "20b3041097d5ffe2be1778e70b80156b4930b148a8f9d0b1cfaff601cd82ad4a",
         "proof_units": [
           {
             "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",
-            "statement_sha256": "c899223c4ac0c4074bfa288bcd6974c0d3e40212c000324b69becc9d49e323e7"
+            "statement_sha256": "6fcdbf61cd8d893dd98e65418d8847ec263f51abf13ef905b6ee42c63cf92432"
           }
         ]
       },
