@@ -31,7 +31,7 @@ def _installed_copilot() -> str | None:
     except (OSError, subprocess.TimeoutExpired):
         return None
     help_text = f"{result.stdout}\n{result.stderr}"
-    required_flags = ("--output-format", "--effort", "--no-auto-update")
+    required_flags = ("--output-format", "--reasoning-effort", "--no-auto-update")
     return binary if result.returncode == 0 and all(flag in help_text for flag in required_flags) else None
 
 

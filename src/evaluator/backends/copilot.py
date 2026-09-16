@@ -616,7 +616,7 @@ class CopilotBackend(AgenticBackend):
             "json",
             "--model",
             self.model,
-            "--effort",
+            "--reasoning-effort",
             self.reasoning_effort if self.reasoning_effort is not None else "max",
             "--log-level",
             "none",

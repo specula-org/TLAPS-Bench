@@ -40,7 +40,7 @@ def _has_option(command: list[str], option: str, value: str) -> bool:
         ("codex", "-c", "model_reasoning_effort=low"),
         ("codex_single_turn", "-c", "model_reasoning_effort=low"),
         ("claude_code", "--effort", "low"),
-        ("copilot", "--effort", "low"),
+        ("copilot", "--reasoning-effort", "low"),
         ("litellm", "--reasoning-effort", "low"),
         ("copilot_oneshot", "--reasoning-effort", "low"),
         ("litellm_oneshot", "--reasoning-effort", "low"),
@@ -189,7 +189,7 @@ def test_omitted_reasoning_effort_preserves_existing_defaults():
 
     assert not any(value.startswith("model_reasoning_effort=") for value in codex.build_command("/w", "/r"))
     assert _has_option(claude.build_command("/w", "/r"), "--effort", "max")
-    assert _has_option(copilot.build_command("/w", "/r"), "--effort", "max")
+    assert _has_option(copilot.build_command("/w", "/r"), "--reasoning-effort", "max")
     assert "--reasoning-effort" not in litellm.build_command("/w", "/r")
     assert "--reasoning-effort" not in copilot_oneshot.build_command("/w", "/r")
     assert "--reasoning-effort" not in litellm_oneshot.build_command("/w", "/r")
