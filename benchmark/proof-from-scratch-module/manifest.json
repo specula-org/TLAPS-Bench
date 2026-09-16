@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "8d7a02c262f5da68a14adaf5ecc3413eb22baf7af0988881e26bd07b73e8bd84",
+  "corpus_sha256": "9223e0276fe7377e1a1f112f84a3cfab88d92a8d1f6f0761ab17aed98e6cf6ab",
   "complete": true,
   "module_tasks": [
     {
@@ -120,6 +120,24 @@
           "A": "A1"
         }
       }
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "CahillSSI/CahillSerializability.tla",
+        "source_sha256": "c544bf7555929788380395c15f271e46c65ede7b408a80ae85fe8fa42c25c2fc",
+        "proof_units": [
+          {
+            "task_id": "CahillSSI/CahillSerializability_CahillSerializableCorrect.tla",
+            "statement_sha256": "5c7e05b779349b2097f6ddf3a35beddd13949bbc83880984d7560cc624285e8c"
+          }
+        ]
+      },
+      "context": [
+        "CahillSSI/CahillSerializability/CahillSSIModel.tla",
+        "CahillSSI/CahillSerializabilityDefs.tla"
+      ],
+      "renamed_bindings": {}
     },
     {
       "spec": {

@@ -21,6 +21,18 @@ LICENSES/Apache-2.0.txt and LICENSES/BSD-2-Clause.txt, respectively.
 
 == Benchmark specifications ==
 
+Cahill serializable snapshot isolation — benchmark group CahillSSI
+    Specification by Chris Newcombe, written for HPTS 2011, imported from
+    pron/amazon-snapshot-spec at commit
+    9c60cb18151889d7b4c0a4ffd7de0b6fc2db0fb2:
+    https://github.com/pron/amazon-snapshot-spec
+    The original source text is preserved with a lossless Windows-1252 to
+    UTF-8 conversion. CahillSSIModel.tla is a documented TLAPS-compatible
+    rendering using recursive functions and scalar binders. The source,
+    hashes, and transformation rules are in source/CahillSSI.
+    No upstream license declaration is present; this import does not
+    relicense those materials under this repository's MIT license.
+
 MongoDB distributed transactions — benchmark group MongoDB
     MultiShardTxn.tla, Storage.tla, ClientCentric.tla, and Util.tla are copied
     unchanged from mongodb-labs/vldb25-dist-txns at commit
