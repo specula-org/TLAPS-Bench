@@ -1,0 +1,424 @@
+{
+  "verified_at": "2026-09-16T17:33:03.087701+00:00",
+  "status": "intermediate_proofs_and_expected_controls_passed",
+  "full_si_theorem_proved": false,
+  "strongest_proved_theorem": "CallerHistoryEpochSpec => []TimestampSICertificate",
+  "open_target": "(CallerHistoryEpochSpec /\\ []SingleWritePerKey) => []FullSI",
+  "scope": {
+    "initial_state": "upstream Init",
+    "recovery": "no RollbackToStable",
+    "configuration": [
+      "RC = \"snapshot\"",
+      "Timestamps subseteq Nat",
+      "NoValue notin MTxId"
+    ],
+    "caller_contract": "FreshPrepareCall",
+    "fixed_parameter_bounds_in_theorem": false
+  },
+  "command": "./verify.sh --with-tlc",
+  "replay_id": "replay-20260916T172757Z-3078160",
+  "toolchain": {
+    "tlapm_version": "4600b24",
+    "tlc_revision": "5dbdb42",
+    "tool_lock": "../../config/verification-toolchain.json",
+    "proof_library_lock": "../../config/proof-library-sources.json"
+  },
+  "proof_modules": 30,
+  "proof_obligations": 1507,
+  "proof_checks": [
+    {
+      "module": "StorageContracts",
+      "obligations": 76,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageReadContracts",
+      "obligations": 27,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StoragePreparedContracts",
+      "obligations": 10,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageAdmissionContracts",
+      "obligations": 9,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageLifecycle",
+      "obligations": 16,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageSafety",
+      "obligations": 26,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageHistoryProjection",
+      "obligations": 11,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageSeqLemmas",
+      "obligations": 14,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageArithmetic",
+      "obligations": 34,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageEpoch",
+      "obligations": 5,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageLogAlgebra",
+      "obligations": 6,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageProvenance",
+      "obligations": 77,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageTimestamps",
+      "obligations": 122,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageReadAlgebra",
+      "obligations": 90,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageCommitProvenance",
+      "obligations": 31,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageCoherence",
+      "obligations": 108,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageVersionOrder",
+      "obligations": 127,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageHistoryAlgebra",
+      "obligations": 42,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageHistoryFidelity",
+      "obligations": 50,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageCommitIdentity",
+      "obligations": 82,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageCaller",
+      "obligations": 26,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageReadStability",
+      "obligations": 118,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageReadHistoryAlgebra",
+      "obligations": 38,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageCallerHistory",
+      "obligations": 16,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageHistoricalReads",
+      "obligations": 93,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageOrderWitness",
+      "obligations": 58,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageNoConf",
+      "obligations": 83,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageLocalHistory",
+      "obligations": 49,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageEpochSafety",
+      "obligations": 15,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    },
+    {
+      "module": "StorageSICertificate",
+      "obligations": 48,
+      "sany_exit": 0,
+      "tlapm_exit": 0
+    }
+  ],
+  "bounded_controls": [
+    {
+      "name": "epoch-contracts",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "diagnostic": "Model checking completed. No error has been found.",
+      "state_summary": "440087 states generated, 108680 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "epoch-si",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "diagnostic": "Model checking completed. No error has been found.",
+      "state_summary": "697791 states generated, 198490 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "commit-order",
+      "exit_code": 12,
+      "expected_exit_code": 12,
+      "diagnostic": "Invariant CommitAppendOrder is violated",
+      "state_summary": "8629 states generated, 3933 distinct states found, 3246 states left on queue."
+    },
+    {
+      "name": "rollback-si",
+      "exit_code": 12,
+      "expected_exit_code": 12,
+      "diagnostic": "Invariant FullSI is violated",
+      "state_summary": "13 states generated, 13 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "epoch-si-negative",
+      "exit_code": 12,
+      "expected_exit_code": 12,
+      "diagnostic": "Invariant FullSI is violated",
+      "state_summary": "16 states generated, 16 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "full-next",
+      "exit_code": 75,
+      "expected_exit_code": 75,
+      "diagnostic": "no element of S satisfied P",
+      "state_summary": "8848 states generated, 3493 distinct states found, 2543 states left on queue."
+    },
+    {
+      "name": "coherence-induction",
+      "exit_code": 12,
+      "expected_exit_code": 12,
+      "diagnostic": "Invariant ExternalCoherence is violated",
+      "state_summary": "2 states generated, 2 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "caller-collapse-si",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "diagnostic": "Model checking completed. No error has been found.",
+      "state_summary": "21 states generated, 21 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "caller-collapse-audit",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "diagnostic": "Model checking completed. No error has been found.",
+      "state_summary": "21 states generated, 21 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "identity-controls",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "diagnostic": "Model checking completed. No error has been found.",
+      "state_summary": "2 states generated, 1 distinct states found, 0 states left on queue."
+    },
+    {
+      "name": "legacy-collapse",
+      "exit_code": 12,
+      "expected_exit_code": 12,
+      "diagnostic": "Invariant LegacyFullSI is violated",
+      "state_summary": "21 states generated, 21 distinct states found, 0 states left on queue."
+    }
+  ],
+  "semantic_control_count": 19,
+  "prior_finite_explorations": {
+    "verified_at": "2026-09-16T07:39:57.563876+00:00",
+    "note": "Recorded before packaging; the TLA+ sources and configurations are byte-identical to this snapshot. These larger checks are separate from the fresh packaging replay.",
+    "results": {
+      "repair-caller-small": {
+        "exit_code": 0,
+        "elapsed_seconds": 11.065,
+        "completed": true,
+        "no_violation_observed": true,
+        "generated_states": 477669,
+        "distinct_states": 120730,
+        "queued_states": 0,
+        "log_summary": [
+          "Progress(9) at 2026-09-16 07:31:37: 128,447 states generated (128,447 s/min), 41,301 distinct states found (41,301 ds/min), 22,072 states left on queue.",
+          "Model checking completed. No error has been found.",
+          "477669 states generated, 120730 distinct states found, 0 states left on queue.",
+          "Finished in 10s at (2026-09-16 07:31:44)"
+        ]
+      },
+      "repair-caller-two-keys": {
+        "exit_code": 0,
+        "elapsed_seconds": 179.009,
+        "completed": true,
+        "no_violation_observed": true,
+        "generated_states": 7259009,
+        "distinct_states": 1394800,
+        "queued_states": 0,
+        "log_summary": [
+          "Progress(11) at 2026-09-16 07:33:37: 5,105,724 states generated (2,500,223 s/min), 1,140,316 distinct states found (475,865 ds/min), 378,924 states left on queue.",
+          "Model checking completed. No error has been found.",
+          "7259009 states generated, 1394800 distinct states found, 0 states left on queue.",
+          "Finished in 02min 58s at (2026-09-16 07:34:32)"
+        ]
+      },
+      "repair-caller-simulation": {
+        "exit_code": 124,
+        "elapsed_seconds": 120.029,
+        "completed": false,
+        "no_violation_observed": true,
+        "last_reported_traces": 5607,
+        "log_summary": [
+          "Progress: 1821926 states checked, 5607 traces generated (trace length: mean=19, var(x)=61, sd=8)"
+        ]
+      }
+    }
+  },
+  "upstream_commit": "74526c1201109405172eb845413154f547a815ee",
+  "source_hashes": {
+    "IdentitySIControls.tla": "dd6a32e07384ab9e6fe2e26b0bfabd9253ac229a1a3dc4644c75a31eafc61313",
+    "IdentitySnapshotIsolation.tla": "81038673def65122fec80317b53e0bbd28da47cccb37694a2ca3ec88a152c352",
+    "Storage.tla": "dfab057d1647dd5ccb951a3e7fb0d0dd4af68f29857ae79450d857e6f2aba6e5",
+    "StorageAdmissionContracts.tla": "8d73296f150823e1be7bbd05ec62621e9b46a40e62c27a617262d78754bdd330",
+    "StorageArithmetic.tla": "d7fbf082cbef7abb91a272c8ebf6dcb87f089ff9e47eff08d10f488d20f16969",
+    "StorageCaller.tla": "37d569fd88fd833f10c304fa8c2a0de7d326be3393a0923e0d05c48d4a54780a",
+    "StorageCallerCollapseAudit.tla": "cda0f3525ce7d8b827919a96cf8aa8ee43ef6445985d7b266856bd3f1a138682",
+    "StorageCallerCollapseSI.tla": "cbdc5f98568f151dea96b24d30ff410b4e91d924b1738b5c0e0325644befd379",
+    "StorageCallerHistory.tla": "84e17cb57f7fd20b6da7b81cc9cce62301c29074d11464fc17fb466de7cda57b",
+    "StorageCandidates.tla": "e86683c7b17be72ff272c6997764733035ece5c46d94907a9c0ce6fdbe8e10e6",
+    "StorageCoherence.tla": "6dcad8dcd605f91d1cc853bc439500176f334c1df4c87d5a48663580d1c47c85",
+    "StorageCoherenceAttempt.tla": "2813a1b792a2511dbf6b3a635871c2024b64e438fe965d1d752cb3c9ab2972ae",
+    "StorageCoherenceInduction.tla": "a902f155f2b479b237397680f29916af8e52b73142ffdd39ed4659d543e062f7",
+    "StorageCommitIdentity.tla": "bf027f5fd62f3fc17c459a9121edf02dc338e196fd944e597b21fb130ac2de61",
+    "StorageCommitProvenance.tla": "6022bfb174e5f5054b363bd7fb34ba5cb3b092d4ec14287dbc2a67a4deae67ea",
+    "StorageContracts.tla": "77f0202be159f1182d49f447303bdd84284c17cde72c75584ab1ca561dcfdc3d",
+    "StorageEpoch.tla": "fea9e584a76adaa28dd578a8f2f56ddf8b4bdaf1aa0b83138730c5270d2bab04",
+    "StorageEpochSI.tla": "a565d216d5933268922a1bc6bab2f165fbe0d3cf0b30b175a023cc33a4fb6b12",
+    "StorageEpochSafety.tla": "b2bae99e1f951ddaeedc389b64d712d7b27ae1bcad0a9dc627d6c625ef0b61c7",
+    "StorageHistoricalReads.tla": "4296f303e66449c0c16419123dcf8ebf30b372f966ea882345da9ac59daa37a6",
+    "StorageHistory.tla": "ceee23dd09359aeb7ab64e836831805ed0cc1e898c72ce001047f1403a36022f",
+    "StorageHistoryAlgebra.tla": "441fe201750d39f93199b91c3c93151aea1e0a26c51b7d5e06d3880a3aefe0b9",
+    "StorageHistoryFidelity.tla": "9c24e2d3cbb9a1fd4078c27f1fd4928a5d3695c2e1a6f28bc8d3d24b270353aa",
+    "StorageHistoryProjection.tla": "893b6701cd78028520baa0c94cf018b595e8f1d2216f0612f53462a60ed80c95",
+    "StorageIdentityMC.tla": "41769d636154679af0b5c31f1d259e2e4defe6c3da88b1dbb74e4d0ec107b44f",
+    "StorageLifecycle.tla": "571b128c6ab272673d3b0161296c3e6f7e31debb61fff3dce43b8b5bff506bcc",
+    "StorageLocalHistory.tla": "7e283ee481a022b33626fe05530b20973d5a29e186debeb9053a7bbfc6a737e0",
+    "StorageLogAlgebra.tla": "6f3cfb0b60f520a04356c455fd65589230027fdadbfcb463731887ec1c0daed7",
+    "StorageNoConf.tla": "f4b374850d067f382bd4f53571fab902a946117f665d9c7264ce193010fab374",
+    "StorageOrderWitness.tla": "c05a939859de0c520af9c125738c42dc6df8e7e873d6392c86f5b59b09d2e5c2",
+    "StoragePreparedContracts.tla": "1fb114862d9fb61de3305e643e78732c9338ba79670984a37cd8b46b2f3e6ed4",
+    "StorageProvenance.tla": "b068613671b688635fb73ce8083529e35a8fc3610c59f32eb86c573e6714d88c",
+    "StorageReadAlgebra.tla": "f97897675d63764e8e2707247d7621f905a18a39d111469e66a0a6fe597de1e7",
+    "StorageReadContracts.tla": "4006b24c2fb6aefc4e3552097e7060642ac6db63e96c88b8035f67cca794dd11",
+    "StorageReadHistoryAlgebra.tla": "b7507169af28bfd3ae68b738c1784185d32ca4cd53fe105859a793a1b95ac1dd",
+    "StorageReadStability.tla": "ba06c9a45937000a7b1132867640d1ea43d8b042284b43d9b2e38368cca6d488",
+    "StorageRollbackSI.tla": "17bd174fb249b3962fca7e350247751ab1b80b912637c2785217b9ba8b3dd221",
+    "StorageSICertificate.tla": "4511d16a914a27404c46b8efbf3988fba4b121a57bc08ca969f1523bc80f7f2e",
+    "StorageSafety.tla": "b96ef1b54384853b348957593ca1c157c0c1799896748cc22274e19fea9e6f5f",
+    "StorageSeqLemmas.tla": "735e332b8138a21174ebfbf12c520b786f7ba77a32836a8eb324478f6f335356",
+    "StorageTimestamps.tla": "a607dc8c18c0774d282931267d16a27e541648bc5faf1a890fa4cb3d18ca9364",
+    "StorageVersionOrder.tla": "2f7a12604c8f92f85a30e64d902acfe1a5d2afe9b478212702656dc8ffa7445e",
+    "Util.tla": "5c44cc019dd1682eda92d72a450ee55f1859af84f532dee586771067066fdc95",
+    "reference/ClientCentric.tla": "07c5d434a7bb3401168fe0cf3d7a793f37e2d2fef04d3a76dbe5855383158ff1",
+    "reference/MultiShardTxn.tla": "27866ff0c6819a0567a7aff7d1becc31f334ad3070aae84a74bd135cd1e1ebee",
+    "reference/MultiShardTxnSnapshot.tla": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
+    "reference/README.md": "bae79c6d3767238e1cf88e3043567ee1b06453385225a4b5cd4b8e9fe6b98358",
+    "reference/Storage.cfg": "93947f94dc5329bf689c38a3a6fd25437014aa21dfdd514aa82eac61eba5b952",
+    "reference/upstream.json": "2f7b6fca13add7e350213c93f3257cc876144f5b6cf4db0316b3cdee9d05c62f",
+    "spec/CallerCollapseAudit.cfg": "b8a8a47b5ad2c88f98723389365728fd15bcc159234d648ed7856cb9acf79c75",
+    "spec/CallerCollapseLegacy.cfg": "5056c611a8f13c889162d9110c86770835389a58a199bc5a648a0504546127f0",
+    "spec/CallerCollapseSI.cfg": "80237ee39d02224163599a478d22aab59b6b4c6c4b9a267cbfd4cbeaafc51eeb",
+    "spec/CoherenceInduction.cfg": "6e33f6e9eea0931b2e85929bf76ce101c08ea62eb18a1e04694af822846dd1f4",
+    "spec/CommitAppendOrder.cfg": "e953e384001015c797820e0f33179723da772d7720df0062a1871a98ebdfcea9",
+    "spec/EpochContracts.cfg": "e1eaa94602c2b3e24cdc968b5e9a5b687c52e141f2299a185ecb0437572f24a7",
+    "spec/EpochSI.cfg": "37c7888819e6e14d6c1d507a270a1cfe6e27a0108905c5589c6451ffa7f7b34b",
+    "spec/FullNextContracts.cfg": "e4aa6cdf6c147262cce6e126da7fc5242c036358df3e15659496610f59674007",
+    "spec/HistoryEpoch.cfg": "3a9d6b658b3295b6a65e26712f95efb4f4bb106ce64be875289a509019164f7c",
+    "spec/HistoryEpochSmall.cfg": "4dbc9ae432b43b80528e0947ab23354aafa4e00c623665ed8c14e48f79d4e15b",
+    "spec/IdentityCallerSimulation.cfg": "9f050e62ca9b798f48cc3a938dcd4b3b693bd1b38714576113702ac3f62b0e46",
+    "spec/IdentityCallerSmall.cfg": "0f1878e5762d9bfc59b72e651176d9d46f12e3a09a5667a8f1733397fcbca3a6",
+    "spec/IdentityCallerTwoKeys.cfg": "f1db2ad874593c2dd442312c216a68310ac965ec52c8fe1345091f88f28ba10f",
+    "spec/IdentitySIControls.cfg": "0c325ea6e4967cd8c424956cbb22590baa0442e4ccef8749eab9bede2bbfc49f",
+    "spec/RollbackSI.cfg": "a5531e0a5d409159b1f02ff6ce13352073206250a5bb2802db3438d83dea3976",
+    "spec/StrongEpochContracts.cfg": "6639950e341d5d72d7c4ac7e59dfd983e0c897b9245808f2e6760b4c85b4e61b",
+    "spec/check-identity-si.py": "2760ef28f8a198a6c5285bdaf464da8ff93c347d06d3ec5c2cd53a77631339d3",
+    "spec/check-proof.sh": "1a00340d71e880fa9995697896ad2a8e18b6b4f34fd3201ca978f86af0b534bc",
+    "spec/check-sany.sh": "c762e835cf66a1dce7afb0b37b9bbb59612fe89fbdd4d65749d989def9e7f421",
+    "spec/env.sh": "d2df44d3b380850020139441ee6b4abe3554a2a04de38d1d16e30c6dd006b87f",
+    "spec/run-caller-collapse-audit.sh": "870a7394063c64f78e3a3001021a39df9212f659eb95bb1d8e599b2e647aab04",
+    "spec/run-caller-collapse-si.sh": "85326c429cad94c6ec31d6db805d7d938ebbdc5b205b674c09a5ed3f695eaf1b",
+    "spec/run-coherence-induction.sh": "5fa63fce57291bb85c108f6444a348371bbc3d21c66da45639d1544d94294a39",
+    "spec/run-epoch-si.sh": "46fda0cab8e0b6e88f90e95d2e2fc9a81089399ccef5b937e1e549fe46da18fd",
+    "spec/run-history.sh": "dc212057698e48d220c7eec22f371721b3277b68b0a6ca5192ef9fa95f141568",
+    "spec/run-rollback-si.sh": "10d997cfe6f5f8a7e339f2dacc60af6702f7b660ce2192304663d9c12fc2371a",
+    "spec/run-tlapm.sh": "99326e1d132ad1c9125f6a4e504fdf79e5c57b0f4912f150c8962e604b64a23c",
+    "spec/run-tlc.sh": "a3bdacf4188af4d417db576a6f2e1de94a74a52250bc9fff8280d666203f77f0",
+    "verify.sh": "7bdbd70da6dc2e40d89a7a37215d8848f17644cba9e260abd712762b1c3faea3"
+  },
+  "limitations": [
+    "The certificate-to-SI bridge is unproved.",
+    "The observer converse lifting direction is unproved.",
+    "Recovery-inclusive SI semantics and proof remain separate.",
+    "StorageCoherenceAttempt is an unsuccessful candidate used only by a negative control; it is not among the proved modules.",
+    "Finite checks do not establish the unrestricted SI theorem."
+  ]
+}

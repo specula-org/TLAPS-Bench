@@ -1,0 +1,155 @@
+Fresh replay of the published proof sources
+Command: ./verify.sh --with-tlc
+TLAPM flags: --strict --nofp --threads 1
+These are per-module checker summaries extracted from the full local logs.
+Replay the command to produce the complete logs under spec/output/.
+
+StorageContracts
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 76 obligations proved.
+
+StorageReadContracts
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 27 obligations proved.
+
+StoragePreparedContracts
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 10 obligations proved.
+
+StorageAdmissionContracts
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 9 obligations proved.
+
+StorageLifecycle
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 16 obligations proved.
+
+StorageSafety
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 26 obligations proved.
+
+StorageHistoryProjection
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 11 obligations proved.
+
+StorageSeqLemmas
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 14 obligations proved.
+
+StorageArithmetic
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 34 obligations proved.
+
+StorageEpoch
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 5 obligations proved.
+
+StorageLogAlgebra
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 6 obligations proved.
+
+StorageProvenance
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 77 obligations proved.
+
+StorageTimestamps
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 122 obligations proved.
+
+StorageReadAlgebra
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 90 obligations proved.
+
+StorageCommitProvenance
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 31 obligations proved.
+
+StorageCoherence
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 108 obligations proved.
+
+StorageVersionOrder
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 127 obligations proved.
+
+StorageHistoryAlgebra
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 42 obligations proved.
+
+StorageHistoryFidelity
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 50 obligations proved.
+
+StorageCommitIdentity
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 82 obligations proved.
+
+StorageCaller
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 26 obligations proved.
+
+StorageReadStability
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 118 obligations proved.
+
+StorageReadHistoryAlgebra
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 38 obligations proved.
+
+StorageCallerHistory
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 16 obligations proved.
+
+StorageHistoricalReads
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 93 obligations proved.
+
+StorageOrderWitness
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 58 obligations proved.
+
+StorageNoConf
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 83 obligations proved.
+
+StorageLocalHistory
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 49 obligations proved.
+
+StorageEpochSafety
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 15 obligations proved.
+
+StorageSICertificate
+  SANY exit: 0
+  TLAPM exit: 0
+  [INFO]: All 48 obligations proved.

@@ -1,0 +1,57 @@
+Expected outcomes of the finite executable controls
+Several controls intentionally fail an invariant or reproduce a model evaluation error.
+
+epoch-contracts
+  Exit: 0 (expected 0)
+  Model checking completed. No error has been found.
+  440087 states generated, 108680 distinct states found, 0 states left on queue.
+
+epoch-si
+  Exit: 0 (expected 0)
+  Model checking completed. No error has been found.
+  697791 states generated, 198490 distinct states found, 0 states left on queue.
+
+commit-order
+  Exit: 12 (expected 12)
+  Invariant CommitAppendOrder is violated
+  8629 states generated, 3933 distinct states found, 3246 states left on queue.
+
+rollback-si
+  Exit: 12 (expected 12)
+  Invariant FullSI is violated
+  13 states generated, 13 distinct states found, 0 states left on queue.
+
+epoch-si-negative
+  Exit: 12 (expected 12)
+  Invariant FullSI is violated
+  16 states generated, 16 distinct states found, 0 states left on queue.
+
+full-next
+  Exit: 75 (expected 75)
+  no element of S satisfied P
+  8848 states generated, 3493 distinct states found, 2543 states left on queue.
+
+coherence-induction
+  Exit: 12 (expected 12)
+  Invariant ExternalCoherence is violated
+  2 states generated, 2 distinct states found, 0 states left on queue.
+
+caller-collapse-si
+  Exit: 0 (expected 0)
+  Model checking completed. No error has been found.
+  21 states generated, 21 distinct states found, 0 states left on queue.
+
+caller-collapse-audit
+  Exit: 0 (expected 0)
+  Model checking completed. No error has been found.
+  21 states generated, 21 distinct states found, 0 states left on queue.
+
+identity-controls
+  Exit: 0 (expected 0)
+  Model checking completed. No error has been found.
+  2 states generated, 1 distinct states found, 0 states left on queue.
+
+legacy-collapse
+  Exit: 12 (expected 12)
+  Invariant LegacyFullSI is violated
+  21 states generated, 21 distinct states found, 0 states left on queue.

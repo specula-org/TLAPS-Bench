@@ -1,0 +1,7 @@
+!/*.tla
+!/reference/*.tla
+/tmp/
+/spec/cache/
+/spec/output/
+/*_TTrace_*
+__pycache__/
