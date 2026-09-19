@@ -16,6 +16,9 @@ ASSUME OAAssumption ==
 
 ASSUME EmptyNotInt == empty \notin Int
 
+ASSUME WriterFinite == IsFiniteSet(Writer)
+ASSUME ReaderFinite == IsFiniteSet(Reader)
+
 ----------------------------------------------------------------------------
 
 last(seq) == seq[Len(seq)]                     

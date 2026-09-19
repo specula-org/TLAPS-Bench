@@ -476,7 +476,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "OpenAddressing/OpenAddressing.tla",
-        "source_sha256": "f80fddf429f1afb6aa45af809b68a3f6d33dd835c194674285fd0ed20e9e76b2",
+        "source_sha256": "8334077bf3c82cf9a9184d3d710de642d9ab841863c54ac7dedeb813b861f015",
         "proof_units": [
           {
             "task_id": "OpenAddressing/OpenAddressing_CompleteAsSafety.tla",
