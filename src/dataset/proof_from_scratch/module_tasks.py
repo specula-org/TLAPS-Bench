@@ -13,8 +13,8 @@ carries every target statement of that module, each followed by its own
 identified ``PROOF OMITTED`` region. The existing theorem task IDs become the
 scored proof-unit IDs, so a module scores k/n.
 
-The current 244-task corpus is the target-selection source and is never written
-to; module tasks are emitted into their own suite root.
+The checked-in corpus defines the target selection and is never written to;
+module tasks are emitted into their own suite root.
 """
 
 from __future__ import annotations
@@ -489,7 +489,7 @@ def sany_check_module_task(task_id: str, context: Sequence[str], output_root: Pa
 
 
 def _assert_writable_output(output_root: Path, corpus_dir: Path) -> None:
-    """Refuse to emit into the 244-task corpus, which this generator only reads."""
+    """Refuse to emit into the target-selection corpus, which this generator only reads."""
 
     corpus = corpus_dir.resolve()
     output = output_root.resolve()

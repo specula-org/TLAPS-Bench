@@ -94,7 +94,7 @@ def _proof_from_scratch_generate_args(args: list[str]) -> list[str]:
 
     ``tlaps-bench generate`` documents ``--output-dir`` / ``--source-dir``.
     Module-task generation uses ``--output-root`` / ``--source-root`` so it
-    cannot be aimed at the frozen 244-task corpus by accident.
+    cannot be aimed at the frozen target-selection corpus by accident.
     """
 
     rewritten: list[str] = []

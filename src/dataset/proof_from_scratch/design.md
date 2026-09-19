@@ -241,7 +241,7 @@ scratch. (Exception: when the target property *is* an invariant, as in
 
 - **Input**: `source/<Module>/<File>.tla`
 - **Output**: `benchmark/proof-from-scratch/<Module>/<File>_<TheoremName>.tla` (one file per top-level theorem, plus copied INSTANCE dependency `.tla` files)
-- **CLI**: `uv run python -m dataset.proof_from_scratch.generate --layered [--filter <pattern>] [--source-dir source/] [--output-dir benchmark/proof-from-scratch/]` rebuilds the frozen 244-task selection corpus. `tlaps-bench generate --mode proof-from-scratch` emits the module suite under `benchmark/proof-from-scratch-module/` and does not write the 244-task tree.
+- **CLI**: `uv run python -m dataset.proof_from_scratch.generate --layered [--filter <pattern>] [--source-dir source/] [--output-dir benchmark/proof-from-scratch/]` rebuilds the frozen target-selection corpus. `tlaps-bench generate --mode proof-from-scratch` emits the module suite under `benchmark/proof-from-scratch-module/` and does not write the selection tree.
 
 ## Module tasks (Issue #132)
 
@@ -251,10 +251,16 @@ the author cited and work shared between siblings is reproved once per task.
 targets by `spec_id` and emits one task per source module, retaining the current
 task IDs as the scored proof-unit IDs. A module scores k/n.
 
-The 244-task corpus stays the only target-selection source and is never written
+The checked-in corpus stays the only target-selection source and is never written
 to: the generator refuses an output root inside it, and no theorem the corpus
 left out becomes a proof unit. The module suite lives beside it under
 `benchmark/proof-from-scratch-module/`.
+
+The selection excludes FLASH's `Lemma_5_Correct`, which follows directly from
+`CacheDataCorrect`, and `CacheStateCorrect`, which follows directly from
+`Lemma_1_Correct`. Both stronger targets remain selected. The source declarations
+are preserved; generators follow the manifest selection and do not restore the
+excluded targets. Historical result archives remain tied to their original corpus.
 
 Each module task keeps only the definitions in the union of its target
 statements' dependency closures. A copied dependency module is pruned the same

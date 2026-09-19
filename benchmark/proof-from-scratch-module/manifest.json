@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "9223e0276fe7377e1a1f112f84a3cfab88d92a8d1f6f0761ab17aed98e6cf6ab",
+  "corpus_sha256": "d365ff1df454c6152ce38d826b6bad66c13a582df91c34b5ba8f6d5deefcd248",
   "complete": true,
   "module_tasks": [
     {
@@ -1216,10 +1216,6 @@
             "statement_sha256": "b72d688bc8b4f64c4d720db49227e32023f9038d2249c971cce91eea0455516a"
           },
           {
-            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrect.tla",
-            "statement_sha256": "a74c0359d3a70e57923338db227d8aca73df337749cbeea2232f8a46b8d192b4"
-          },
-          {
             "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheDataCorrect.tla",
             "statement_sha256": "851a717ae62bb6542688025f51571275708ff951cff56593b207942968733e11"
           },
@@ -1242,10 +1238,6 @@
           {
             "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_4_Correct.tla",
             "statement_sha256": "5495ecf82b9bd8a37260fed173aeb9863729ee3c95a5de376e394039a72f945e"
-          },
-          {
-            "task_id": "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_Correct.tla",
-            "statement_sha256": "793100faa58531bff635662349cbe4a86676d79e86cd1b91b471bc7fda1c2966"
           }
         ]
       },

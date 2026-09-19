@@ -83,10 +83,6 @@ ShWbProgress == (ShWbMsg.Cmd # "SHWB_None") ~> (ShWbMsg.Cmd = "SHWB_None")
 
 NakcProgress == (NakcMsg.Cmd = "NAKC_Nakc") ~> (NakcMsg.Cmd = "NAKC_None")
 
-CacheStateProp ==
-    \A p, q \in NODE :
-        p # q => ~(Proc[p].CacheState = "CACHE_E" /\ Proc[q].CacheState = "CACHE_E")
-
 CacheDataProp ==
     \A p \in NODE :
         /\ (Proc[p].CacheState = "CACHE_E" => Proc[p].CacheData = CurrData)
@@ -130,6 +126,4 @@ Lemma_4 ==
                  /\ (UniMsg[q].Cmd \in {"UNI_Get", "UNI_GetX"} => UniMsg[q].Proc = Home)
                  /\ (UniMsg[q].Cmd = "UNI_PutX" => (UniMsg[q].Proc = Home /\ PendReqSrc = q))
 
-Lemma_5 ==
-    \A p \in NODE : Proc[p].CacheState = "CACHE_E" => Proc[p].CacheData = CurrData
 =============================================================================
