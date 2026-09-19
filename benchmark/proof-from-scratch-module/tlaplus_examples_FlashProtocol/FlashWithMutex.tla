@@ -49,11 +49,6 @@ THEOREM NakcProgressCorrect == FairSpec => NakcProgress
 PROOF OMITTED
 \* END AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_NakcProgressCorrect.tla
 
-THEOREM CacheStateCorrect == Spec => []CacheStateProp
-\* BEGIN AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrect.tla
-PROOF OMITTED
-\* END AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrect.tla
-
 THEOREM CacheDataCorrect == Spec => []CacheDataProp
 \* BEGIN AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_CacheDataCorrect.tla
 PROOF OMITTED
@@ -83,9 +78,4 @@ THEOREM Lemma_4_Correct == Spec => []Lemma_4
 \* BEGIN AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_4_Correct.tla
 PROOF OMITTED
 \* END AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_4_Correct.tla
-
-THEOREM Lemma_5_Correct == Spec => []Lemma_5
-\* BEGIN AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_Correct.tla
-PROOF OMITTED
-\* END AGENT PROOF tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_Correct.tla
 ====

@@ -824,13 +824,6 @@
       "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheDataCorrectDefs.tla"
     ]
   },
-  "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrect.tla": {
-    "spec_id": "tlaplus_examples_FlashProtocol/FlashWithMutex.tla",
-    "context": [
-      "tlaplus_examples_FlashProtocol/FlashWithMutexModel.tla",
-      "tlaplus_examples_FlashProtocol/FlashWithMutex_CacheStateCorrectDefs.tla"
-    ]
-  },
   "tlaplus_examples_FlashProtocol/FlashWithMutex_DirProgressCorrect.tla": {
     "spec_id": "tlaplus_examples_FlashProtocol/FlashWithMutex.tla",
     "context": [
@@ -871,13 +864,6 @@
     "context": [
       "tlaplus_examples_FlashProtocol/FlashWithMutexModel.tla",
       "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_4_CorrectDefs.tla"
-    ]
-  },
-  "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_Correct.tla": {
-    "spec_id": "tlaplus_examples_FlashProtocol/FlashWithMutex.tla",
-    "context": [
-      "tlaplus_examples_FlashProtocol/FlashWithMutexModel.tla",
-      "tlaplus_examples_FlashProtocol/FlashWithMutex_Lemma_5_CorrectDefs.tla"
     ]
   },
   "tlaplus_examples_FlashProtocol/FlashWithMutex_MemDataCorrect.tla": {

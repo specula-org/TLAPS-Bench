@@ -2,7 +2,7 @@
 
 One task per source module, every corpus target present as an identified
 ``PROOF OMITTED`` region, so a proof can cite the sibling the author cited. The
-generator reads the 244-task corpus and never writes to it; these tests pin the
+generator reads the target-selection corpus and never writes to it; these tests pin the
 grouping, the emitted module shape, the binder repair that a shared module
 makes necessary, and a verifier that trusts neither the manifest it reads nor
 the tree it finds.

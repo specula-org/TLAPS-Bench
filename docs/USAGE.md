@@ -227,7 +227,7 @@ uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-completion
 uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-from-scratch
 ```
 
-Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch-module/` respectively. The 277-task tree under `benchmark/proof-from-scratch/` is the module generator's read-only target-selection source, not the suite `run` loads.
+Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch-module/` respectively. The 276-task tree under `benchmark/proof-from-scratch/` is the module generator's read-only target-selection source, not the suite `run` loads.
 
 ### Layered-task trust boundary
 
@@ -354,7 +354,7 @@ uv run tlaps-bench generate --mode proof-from-scratch
 uv run tlaps-bench generate --mode proof-from-scratch --verify
 ```
 
-Proof-from-scratch generation emits the module suite under `benchmark/proof-from-scratch-module/`: one task per source `spec_id`, with the existing 277 theorem IDs as proof units. It reads `benchmark/proof-from-scratch/` and will not write into that tree. `--verify` regenerates into a scratch directory and compares the shipped suite. To rebuild the frozen 277-task selection corpus itself, invoke `uv run python -m dataset.proof_from_scratch.generate --layered` directly.
+Proof-from-scratch generation emits the module suite under `benchmark/proof-from-scratch-module/`: one task per source `spec_id`, with the existing 276 theorem IDs as proof units. It reads `benchmark/proof-from-scratch/` and will not write into that tree. `--verify` regenerates into a scratch directory and compares the shipped suite. To rebuild the frozen 276-task selection corpus itself, invoke `uv run python -m dataset.proof_from_scratch.generate --layered` directly.
 
 Proof-completion generation emits the layered suite described in [Layered-task trust boundary](#layered-task-trust-boundary): one read-only `<base>Model.tla` per source, one read-only `<task>Scaffold.tla` per target, an editable `<task>.tla` holding the fixed theorem statement and the marked proof region, and a `manifest.json` naming every task's source specification and exact context. Use `--legacy` only for the old generators.
 
