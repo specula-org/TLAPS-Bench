@@ -27,15 +27,6 @@
 EXTENDS OpenAddressing, TLAPS, SequenceTheorems, FiniteSetTheorems
 
 (***************************************************************************)
-(* The sets `Writer' and `Reader' are concurrent-process identifiers; the  *)
-(* spec's `waitIns' precondition `waitCnt = Cardinality(Writer) - 1 +      *)
-(* Cardinality(Reader)' is meaningful only when both sets are finite.  We *)
-(* state this as a standing proof-level assumption.                        *)
-(***************************************************************************)
-ASSUME WriterFinite == IsFiniteSet(Writer)
-ASSUME ReaderFinite == IsFiniteSet(Reader)
-
-(***************************************************************************)
 (* The set of pc labels that appear in the spec.  The PlusCal translation  *)
 (* uses string labels at every control point of `p(self)' and the          *)
 (* `Evict(self)' procedure (plus the implicit `Done' label injected by the *)
