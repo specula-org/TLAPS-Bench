@@ -315,10 +315,11 @@ def test_parser_records_partial_report_as_fail_with_derived_totals() -> None:
     assert result["trusted_proof_unit_ids"] == [UNIT_A]
 
 
-def test_parser_reports_known_obligations_as_a_lower_bound_after_unit_timeout() -> None:
+@pytest.mark.parametrize("verdict", ["TIMEOUT", "BUDGET_EXHAUSTED", "NOT_STARTED"])
+def test_parser_reports_known_obligations_as_a_lower_bound_after_unit_timeout(verdict) -> None:
     report = _partial_report()
     report["units"][1].update(
-        raw_verdict="TIMEOUT",
+        raw_verdict=verdict,
         tlapm_exit=None,
         missing_proofs=None,
         obligation_failed=None,

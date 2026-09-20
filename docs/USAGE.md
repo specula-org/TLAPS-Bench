@@ -263,8 +263,9 @@ uv run tlaps-bench run [flags]
 | `--filter` | (all benchmarks) | Substring match on path, comma-separated |
 | `--task-list` | (all benchmarks) | Registered cohort name or file of exact mode-relative task IDs; mutually exclusive with `--filter` |
 | `--jobs` | `1` | Number of parallel backend runs |
-| `--timeout` | `28800` | Per-benchmark backend timeout in seconds |
-| `--check-timeout` | `600` | Per-benchmark checker (tlapm) timeout in seconds |
+| `--timeout` | `28800` | Per-benchmark backend timeout in seconds; `0` disables the limit |
+| `--check-timeout` | `600` | Checker timeout in seconds; PFS scales this base by the module's target count |
+| `--check-cpus` | `8` | PFS CPU cap per module, including nested workers; integer from 1 to 8 |
 | `--output-dir` | auto-generated | Output directory |
 | `--resume` | off | Skip benchmarks already marked `SKIP` or genuine `PASS` (first-attempt or continuation) |
 | `--infra-retries` | `3` | Extra attempts after a transient startup/infra failure that the backend approves as safe to replay |
@@ -276,6 +277,8 @@ uv run tlaps-bench run [flags]
 | `--allow-unpriced-model` | off | Continue with blank equivalent cost when public pricing is unavailable |
 
 Run `uv run tlaps-bench run --help` for the full flag list.
+
+For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * min(1 + 0.25 * (N - 1), 3))` seconds, where `N` is its selected original target count. Self-checking and grading each receive this budget. Native PFS runs require Linux and `taskset`; use Docker on other platforms.
 
 The default remains the complete suite. To run the committed 190-task Proof Completion Core:
 
@@ -299,7 +302,9 @@ uv run tlaps-bench check path/to/file.tla --sany-only
 
 Full proof-from-scratch and marked proof-completion checks automatically require canonical replay. Pass an independent directory containing the original target and its declared context with `--benchmark-dir`; the canonical target must not alias the submitted file. Inside the evaluator runner this directory is supplied automatically. Full checks fail closed when no independent canonical context is available. `--sany-only` checks only the submitted file and its workspace dependencies, so it does not require canonical context. Legacy unmarked proof-completion checks keep their previous behavior.
 
-By default, `check` reuses `<target-dir>/.tlacache`; use `--no-cache` for a cold check, or `--timeout 0` for no checker deadline.
+Proof Completion checks reuse `<target-dir>/.tlacache` by default; use `--no-cache` for a cold check, or `--timeout 0` for no checker deadline.
+
+PFS checks require a positive `--timeout T`, used without scaling. Use `--check-session DIR` to resume a check with its remaining budget, or omit it to start a new check. With `--container`, `DIR` must be inside the mounted workspace.
 
 Cheating is checked before proving: a detected cheat fails fast and skips the tlapm run (`--keep-verifying` verifies anyway). Each run also snapshots the workspace to a hidden git ref — browse it with `git log refs/tlaps-check/history`; `--no-git-track` disables.
 

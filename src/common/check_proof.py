@@ -56,7 +56,6 @@ import bisect
 import contextlib
 import glob
 import json
-import math
 import os
 import re
 import shutil
@@ -66,6 +65,8 @@ import sys
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
+from pathlib import Path
 
 from common.cheating_detection import (
     detect_dependency_modification,
@@ -100,6 +101,15 @@ from common.task_contract import (
     contains_marker_text,
     parse_editable_regions,
     parse_proof_region,
+)
+from common.verification_budget import (
+    POLICY_ENV,
+    TOOLCHAIN_ENV,
+    VERIFICATION_RESULT_PREFIX,
+    CheckSession,
+    content_digest,
+    cpu_limit,
+    policy_for_check,
 )
 from tlacore.model import Module
 from tlacore.sany.dump import SanyRun, SanyStatus, run_normalized
@@ -196,7 +206,8 @@ def run_killgroup(cmd, timeout, cwd):
     try:
         out, err = proc.communicate(timeout=timeout)
         return out, err, proc.returncode
-    except subprocess.TimeoutExpired:
+    except BaseException:
+        # Interrupting a check must also stop its backends before recovery.
         escapees = _descendant_pids(proc.pid)
         with contextlib.suppress(ProcessLookupError, PermissionError):
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
@@ -1169,6 +1180,9 @@ def _module_unit_result(
     tmp_dir: str,
     deadline: float | None,
     index: int,
+    cache_root: str | None = None,
+    threads: int = 1,
+    no_cache: bool = False,
 ) -> tuple[dict[str, object], str]:
     base = {
         "unit_id": unit.unit_id,
@@ -1208,7 +1222,7 @@ def _module_unit_result(
         return (
             {
                 **base,
-                "raw_verdict": "TIMEOUT",
+                "raw_verdict": "NOT_STARTED",
                 "tlapm_exit": None,
                 "missing_proofs": None,
                 "obligation_failed": None,
@@ -1224,28 +1238,30 @@ def _module_unit_result(
         str(unit.line_start),
         str(unit.line_end),
         "--threads",
-        "1",
+        str(threads),
         "-I",
         tlapm_lib,
     ]
     if community_lib:
         command += ["-I", community_lib]
-    cache_dir = os.path.join(tmp_dir, "unit-cache", str(index))
+    cache_dir = os.path.join(cache_root or tmp_dir, "unit-cache", str(index))
     os.makedirs(cache_dir, exist_ok=True)
     command += ["--cache-dir", cache_dir, "--safefp", staged_file]
+    if no_cache:
+        command.insert(1, "--nofp")
     try:
         stdout, stderr, returncode = run_killgroup(command, remaining, tmp_dir)
     except subprocess.TimeoutExpired:
         return (
             {
                 **base,
-                "raw_verdict": "TIMEOUT",
+                "raw_verdict": "BUDGET_EXHAUSTED",
                 "tlapm_exit": None,
                 "missing_proofs": None,
                 "obligation_failed": None,
                 "obligations": None,
             },
-            "TLAPM timed out",
+            "module budget exhausted while checking this proof unit",
         )
     except Exception as exc:
         return (
@@ -1261,6 +1277,18 @@ def _module_unit_result(
         )
 
     output = stdout + stderr
+    if returncode not in (0, 10, 11):
+        return (
+            {
+                **base,
+                "raw_verdict": "ERROR",
+                "tlapm_exit": None,
+                "missing_proofs": None,
+                "obligation_failed": None,
+                "obligations": None,
+            },
+            f"TLAPM tool error (exit {returncode})\n{output}",
+        )
     complete, missing, obligation_failed = parse_strict_status(returncode, output)
     # This TLAPM invocation is scoped to exactly one submitted target/helper.
     # Exit 11 therefore means that unit still contains an omitted or missing
@@ -1279,7 +1307,118 @@ def _module_unit_result(
     )
 
 
-def run_module_task_check(
+def run_module_task_check(*, check_session=None, check_cpus=None, no_cache=False, **kwargs) -> int:
+    """Start a fresh examination, or resume one explicit, input-bound session."""
+    emit = kwargs["emit"]
+    try:
+        policy = policy_for_check(kwargs["timeout"], kwargs["expected_unit_ids"], check_cpus)
+        files = [("candidate", Path(kwargs["filepath"]))]
+        files.extend(
+            (f"canonical/{path.name}", path)
+            for path in Path(kwargs["benchmark_dir"]).iterdir()
+            if path.is_file() and (path.suffix == ".tla" or path.name.endswith(".json"))
+        )
+        if check_session:
+            executable = Path(kwargs["tlapm_path"])
+            if executable.is_file():
+                files.append(("tlapm-executable", executable))
+            for label, directory in (
+                ("tlapm-library", kwargs["tlapm_lib"]),
+                ("community-library", find_community_lib(kwargs["filepath"])),
+            ):
+                if directory:
+                    files.extend((f"{label}/{path.name}", path) for path in Path(directory).glob("*.tla"))
+        toolchain = os.environ.get(TOOLCHAIN_ENV)
+        if check_session and not toolchain:
+            from common.verification_toolchain import verification_toolchain_identity
+            from tlacore.sany.dump import _RUN_SH
+
+            root = (
+                Path(sys.executable).resolve().parent
+                if getattr(sys, "frozen", False)
+                else Path(__file__).resolve().parents[2]
+            )
+            lock = root / "config/verification-toolchain.json"
+            if not lock.is_file():
+                lock = Path("/opt/tlaps-bench/config/verification-toolchain.json")
+            toolchain = verification_toolchain_identity(
+                Path(kwargs["tlapm_path"]),
+                Path(_RUN_SH).resolve().parents[3] / "lib/tla2tools.jar",
+                lock_path=lock,
+            )["digest"]
+        identity = {
+            "inputs": content_digest(files),
+            "policy": policy.as_dict(),
+            "toolchain": toolchain,
+            "no_cache": no_cache,
+        }
+        if check_session:
+            managed_execution = None
+            with contextlib.suppress(ValueError, TypeError):
+                recorded_tools = json.loads(toolchain or "null")
+                if isinstance(recorded_tools, dict):
+                    managed_execution = recorded_tools.get("execution")
+            if isinstance(managed_execution, str) and re.fullmatch(r"[0-9a-f]{64}", managed_execution):
+                # Match the runner's semantic identity: an unrelated Git
+                # revision/build stamp must not invalidate a legal resume.
+                identity["checker_digest"] = managed_execution
+            else:
+                if getattr(sys, "frozen", False):
+                    code_files = [("checker", Path(sys.executable))]
+                else:
+                    source_root = Path(__file__).resolve().parents[1]
+                    code_files = [
+                        (str(path.relative_to(source_root)), path)
+                        for path in source_root.rglob("*.py")
+                        if path.name != "_build_version.py"
+                    ]
+                identity["checker_digest"] = content_digest(code_files)
+        with (
+            tempfile.TemporaryDirectory(prefix="tlaps_examination_") as temporary,
+            cpu_limit(policy.cpus, str(kwargs["expected_unit_ids"])),
+            CheckSession(Path(check_session or temporary), identity, kwargs["timeout"]) as session,
+        ):
+
+            def report(line=""):
+                if line.startswith(MODULE_RESULT_PREFIX):
+                    value = json.loads(line[len(MODULE_RESULT_PREFIX) :])
+                    value["verification"] = {"policy": policy.as_dict(), **session.metrics()}
+                    value["budget_exhausted"] = any(
+                        unit["raw_verdict"] in {"BUDGET_EXHAUSTED", "NOT_STARTED"} for unit in value["units"]
+                    )
+                    line = MODULE_RESULT_PREFIX + json.dumps(value, sort_keys=True, separators=(",", ":"))
+                emit(line)
+
+            try:
+                return _run_module_task_check(
+                    **{**kwargs, "emit": report}, session=session, cpus=policy.cpus, no_cache=no_cache
+                )
+            except BaseException:
+                session.state["cpu_complete"] = False
+                raise
+            finally:
+                emit(
+                    VERIFICATION_RESULT_PREFIX
+                    + json.dumps({"policy": policy.as_dict(), **session.metrics()}, sort_keys=True)
+                )
+    except (OSError, ValueError) as exc:
+        emit(f"ERROR: cannot run module verification: {exc}")
+        return 3
+
+
+def _session_sany(session, key, filepath, *, dep_dir, timeout):
+    # Parsing is a completed stage of this examination. Restoring it is needed
+    # to preserve dependency information even when no proving budget remains.
+    saved = session.load(key)
+    if saved is not None:
+        return SanyRun(**{**saved, "status": SanyStatus(saved["status"]), "command": tuple(saved["command"])})
+    result = run_normalized(filepath, dep_dir=dep_dir, timeout=timeout)
+    if result.status is SanyStatus.VALID:
+        session.save(key, asdict(result))
+    return result
+
+
+def _run_module_task_check(
     *,
     filepath: str,
     benchmark_dir: str,
@@ -1290,10 +1429,13 @@ def run_module_task_check(
     output_path: str,
     import_violations: list,
     emit,
+    session: CheckSession,
+    cpus: int,
+    no_cache: bool,
 ) -> int:
     """Grade one complete submitted module and emit per-unit trust evidence."""
 
-    deadline = None if timeout <= 0 else time.monotonic() + timeout
+    deadline = session.deadline
     canonical_path = os.path.join(benchmark_dir, os.path.basename(filepath))
     try:
         with open(canonical_path, encoding="utf-8", newline="") as stream:
@@ -1322,13 +1464,13 @@ def run_module_task_check(
             return 3
 
         remaining = None if deadline is None else deadline - time.monotonic()
-        if remaining is not None and remaining <= 0:
+        if remaining is not None and remaining <= 0 and session.load("submitted-sany") is None:
             emit("SANY-STATUS: unavailable")
             emit("CHECK-TIMEOUT: module checker budget exhausted before SANY validation")
             emit("ERROR: module checker timeout exhausted before SANY validation")
             return 3
-        sany_timeout = 180 if remaining is None else max(1, min(180, math.ceil(remaining)))
-        sany_run = run_normalized(staged_file, dep_dir=tmp_dir, timeout=sany_timeout)
+        sany_timeout = min(180, remaining)
+        sany_run = _session_sany(session, "submitted-sany", staged_file, dep_dir=tmp_dir, timeout=sany_timeout)
         try:
             write_sany_log(sany_run, output_path)
         except OSError as exc:
@@ -1357,12 +1499,14 @@ def run_module_task_check(
 
         assert sany_run.raw is not None
         remaining = None if deadline is None else deadline - time.monotonic()
-        if remaining is not None and remaining <= 0:
+        if remaining is not None and remaining <= 0 and session.load("canonical-sany") is None:
             emit("CHECK-TIMEOUT: module checker budget exhausted before canonical SANY validation")
             emit("ERROR: module checker timeout exhausted before canonical SANY validation")
             return 3
-        canonical_sany_timeout = 180 if remaining is None else max(1, min(180, math.ceil(remaining)))
-        canonical_sany_run = run_normalized(
+        canonical_sany_timeout = min(180, remaining)
+        canonical_sany_run = _session_sany(
+            session,
+            "canonical-sany",
             canonical_path,
             dep_dir=benchmark_dir,
             timeout=canonical_sany_timeout,
@@ -1409,16 +1553,30 @@ def run_module_task_check(
         unit_results: list[dict[str, object]] = []
         community_lib = find_community_lib(filepath)
         for index, unit in enumerate(analysis.checked_units):
-            unit_result, raw_output = _module_unit_result(
-                unit=unit,
-                tlapm_path=tlapm_path,
-                tlapm_lib=tlapm_lib,
-                community_lib=community_lib,
-                staged_file=staged_file,
-                tmp_dir=tmp_dir,
-                deadline=deadline,
-                index=index,
-            )
+            saved = session.load(f"unit-{index}")
+            if saved is not None:
+                unit_result, raw_output = saved
+            else:
+                session.remaining()
+                unit_result, raw_output = _module_unit_result(
+                    unit=unit,
+                    tlapm_path=tlapm_path,
+                    tlapm_lib=tlapm_lib,
+                    community_lib=community_lib,
+                    staged_file=staged_file,
+                    tmp_dir=tmp_dir,
+                    deadline=deadline,
+                    index=index,
+                    cache_root=str(session.directory),
+                    threads=cpus,
+                    no_cache=no_cache,
+                )
+                if unit_result["raw_verdict"] not in {"ERROR", "NOT_STARTED"}:
+                    session.save(f"unit-{index}", [unit_result, raw_output])
+                if unit_result["raw_verdict"] == "BUDGET_EXHAUSTED":
+                    # Killed descendants may not have been reaped by TLAPM.
+                    # Keep the measured CPU value, explicitly mark it partial.
+                    session.state["cpu_complete"] = False
             unit_results.append(unit_result)
             emit("-" * 60)
             emit(f"PROOF UNIT {unit.unit_id}: {unit_result['raw_verdict']}")
@@ -1443,9 +1601,18 @@ def run_module_task_check(
         }
         emit(MODULE_RESULT_PREFIX + json.dumps(report, sort_keys=True, separators=(",", ":")))
 
-        unavailable = any(result["raw_verdict"] in {"ERROR", "TIMEOUT"} for result in unit_results)
+        exhausted = any(result["raw_verdict"] in {"BUDGET_EXHAUSTED", "NOT_STARTED"} for result in unit_results)
+        if exhausted:
+            emit("CHECK-TIMEOUT: module verification budget exhausted")
+        unavailable = any(
+            result["raw_verdict"] in {"ERROR", "TIMEOUT", "BUDGET_EXHAUSTED", "NOT_STARTED"} for result in unit_results
+        )
         if unavailable:
-            emit("ERROR: one or more proof-unit checks were unavailable")
+            emit(
+                "INCOMPLETE: module budget exhausted; see per-unit progress"
+                if exhausted
+                else "ERROR: one or more proof-unit checks were unavailable"
+            )
             return 3
         if complete:
             emit(
@@ -1522,6 +1689,13 @@ def _run_in_container(filepath, args):
         cmd += ["--no-git-track"]
     if args.shards is not None:
         cmd += ["--shards", str(args.shards)]
+    if getattr(args, "check_cpus", None) is not None:
+        cmd += ["--check-cpus", str(args.check_cpus)]
+    if getattr(args, "check_session", None):
+        session_path = os.path.abspath(args.check_session)
+        if os.path.commonpath((session_path, workspace)) != workspace:
+            raise ValueError("--check-session must be inside the mounted workspace when using --container")
+        cmd += ["--check-session", "/workspace/" + os.path.relpath(session_path, workspace)]
 
     config = ContainerConfig(
         image=container_image,
@@ -1532,6 +1706,11 @@ def _run_in_container(filepath, args):
     config.env["GIT_CONFIG_COUNT"] = "1"
     config.env["GIT_CONFIG_KEY_0"] = "safe.directory"
     config.env["GIT_CONFIG_VALUE_0"] = "/workspace"
+    if args.mode == "proof-from-scratch":
+        config.cpus = getattr(args, "check_cpus", None) or 8
+        for name in (POLICY_ENV, TOOLCHAIN_ENV):
+            if name in os.environ:
+                config.env[name] = os.environ[name]
     # Keep --timeout 0 unbounded in the outer Docker call too.
     container_timeout = args.timeout + 60 if args.timeout > 0 else None
     try:
@@ -1573,6 +1752,10 @@ def main(*, require_canonical_for_proof_from_scratch: bool = False):
     )
     parser.add_argument("--tlapm", default=None, help="Path to tlapm binary")
     parser.add_argument("--tlapm-lib", default=None, help="Path to tlapm lib directory")
+    parser.add_argument("--check-cpus", type=int, default=None, help="PFS CPU cap per module (default: 8; range 1..8)")
+    parser.add_argument(
+        "--check-session", help="Persist/resume this PFS examination in DIR; omit for a fresh examination"
+    )
     parser.add_argument(
         "--timeout",
         type=int,
@@ -1789,6 +1972,9 @@ def main(*, require_canonical_for_proof_from_scratch: bool = False):
             output_path=output_path,
             import_violations=import_violations,
             emit=emit,
+            check_session=args.check_session,
+            check_cpus=args.check_cpus,
+            no_cache=args.no_cache,
         )
         write_result_and_exit(exit_code)
 

@@ -9,7 +9,10 @@ Run: PYTHONPATH=src python3 -m pytest tests/common/test_process_reaping.py
 
 import os
 import subprocess
+import sys
 import time
+
+import pytest
 
 from common import check_proof
 from common.check_proof import _descendant_pids, _parent_pids
@@ -46,3 +49,29 @@ def test_descendants_are_found_leaves_first():
     finally:
         child.kill()
         child.wait()
+
+
+def test_interrupt_kills_running_verifier_before_check_can_resume(tmp_path, monkeypatch):
+    real_popen = subprocess.Popen
+    processes = []
+
+    def interrupted_popen(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        processes.append(process)
+        communicate = process.communicate
+        first = True
+
+        def interrupted(*args, **kwargs):
+            nonlocal first
+            if first:
+                first = False
+                raise KeyboardInterrupt
+            return communicate(*args, **kwargs)
+
+        process.communicate = interrupted
+        return process
+
+    monkeypatch.setattr(check_proof.subprocess, "Popen", interrupted_popen)
+    with pytest.raises(KeyboardInterrupt):
+        check_proof.run_killgroup([sys.executable, "-c", "import time; time.sleep(30)"], 60, str(tmp_path))
+    assert len(processes) == 1 and processes[0].poll() is not None

@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Mapping
 from typing import Any
 
 from common.proof_from_scratch_module import ModuleTaskContractError, compute_trusted_units
+from common.verification_budget import VerificationPolicy
 
-MODULE_RESULT_SCHEMA_VERSION = 2
-SUPPORTED_MODULE_RESULT_SCHEMA_VERSIONS = frozenset({1, MODULE_RESULT_SCHEMA_VERSION})
+MODULE_RESULT_SCHEMA_VERSION = 3
+SUPPORTED_MODULE_RESULT_SCHEMA_VERSIONS = frozenset({1, 2, MODULE_RESULT_SCHEMA_VERSION})
 MODULE_RESULT_PREFIX = "MODULE-RESULT: "
-RAW_VERDICTS = frozenset({"PASS", "FAIL", "UNRESOLVED", "TIMEOUT", "ERROR"})
+RAW_VERDICTS = frozenset({"PASS", "FAIL", "UNRESOLVED", "TIMEOUT", "ERROR", "BUDGET_EXHAUSTED", "NOT_STARTED"})
 
 
 class ModuleResultError(ValueError):
@@ -39,6 +41,28 @@ def _string_list(value: object, *, label: str) -> list[str]:
     return value
 
 
+def validate_verification_metrics(metrics, expected=None):
+    if type(metrics) is not dict or set(metrics) != {
+        "policy",
+        "wall_secs",
+        "cpu_secs",
+        "cpu_complete",
+        "cpu_source",
+    }:
+        raise ModuleResultError("invalid module verification metrics")
+    try:
+        policy = VerificationPolicy.from_dict(metrics["policy"])
+    except ValueError as exc:
+        raise ModuleResultError(str(exc)) from exc
+    if expected is not None and policy.proof_unit_ids != tuple(expected):
+        raise ModuleResultError("verification policy has different proof units")
+    for field in ("wall_secs", "cpu_secs"):
+        if type(metrics[field]) not in (int, float) or not math.isfinite(metrics[field]) or metrics[field] < 0:
+            raise ModuleResultError(f"invalid verification {field}")
+    if type(metrics["cpu_complete"]) is not bool or metrics["cpu_source"] != "getrusage_self_and_reaped_children":
+        raise ModuleResultError("invalid verification CPU accounting")
+
+
 def validate_module_result(raw: object, expected_unit_ids: Iterable[str]) -> dict[str, object]:
     """Validate checker output and recompute dependency-closed trust."""
 
@@ -56,12 +80,16 @@ def validate_module_result(raw: object, expected_unit_ids: Iterable[str]) -> dic
         "trusted_proof_unit_ids",
         "complete",
     }
-    allowed = required | {"unused_helper_names", "integrity_issues"}
+    allowed = required | {"unused_helper_names", "integrity_issues", "verification", "budget_exhausted"}
     if not required <= set(raw) or set(raw) - allowed:
         raise ModuleResultError("module result has missing or unknown fields")
     if type(raw["schema_version"]) is not int or raw["schema_version"] not in SUPPORTED_MODULE_RESULT_SCHEMA_VERSIONS:
         raise ModuleResultError(f"unsupported module result schema_version {raw['schema_version']!r}")
     schema_version = raw["schema_version"]
+    if "verification" in raw:
+        validate_verification_metrics(raw["verification"], expected)
+    if "budget_exhausted" in raw and type(raw["budget_exhausted"]) is not bool:
+        raise ModuleResultError("invalid module budget_exhausted")
     if type(raw["sany_status"]) is not str or raw["sany_status"] not in {"valid", "invalid"}:
         raise ModuleResultError("module result sany_status must be valid or invalid")
     if tuple(_string_list(raw["proof_unit_ids"], label="proof_unit_ids")) != expected:
@@ -140,7 +168,7 @@ def validate_module_result(raw: object, expected_unit_ids: Iterable[str]) -> dic
             tlapm_exit is not None or missing_proofs is None or missing_proofs < 1 or obligation_failed is not False
         ):
             raise ModuleResultError(f"module result unit {unit_id!r} has inconsistent UNRESOLVED evidence")
-        if verdict in {"TIMEOUT", "ERROR"} and (
+        if verdict in {"TIMEOUT", "ERROR", "BUDGET_EXHAUSTED", "NOT_STARTED"} and (
             tlapm_exit is not None or missing_proofs is not None or obligation_failed is not None
         ):
             raise ModuleResultError(f"module result unit {unit_id!r} has inconsistent {verdict} evidence")
@@ -150,7 +178,7 @@ def validate_module_result(raw: object, expected_unit_ids: Iterable[str]) -> dic
                 raise ModuleResultError(f"module result unit {unit_id!r} has invalid obligations")
             if verdict == "UNRESOLVED" and obligations != 0:
                 raise ModuleResultError(f"module result unit {unit_id!r} has inconsistent UNRESOLVED obligations")
-            if verdict in {"TIMEOUT", "ERROR"} and obligations is not None:
+            if verdict in {"TIMEOUT", "ERROR", "BUDGET_EXHAUSTED", "NOT_STARTED"} and obligations is not None:
                 raise ModuleResultError(f"module result unit {unit_id!r} has inconsistent {verdict} obligations")
         if verdict == "PASS":
             raw_pass.add(unit_id)

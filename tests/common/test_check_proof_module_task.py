@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -465,3 +467,111 @@ def test_unit_checker_error_emits_machine_report_and_exit_three(tmp_path, monkey
     assert report["units"][0]["trusted"] is False
     assert report["complete"] is False
     validate_module_result(report, (UNIT_A,))
+
+
+@pytest.mark.parametrize("no_cache", [False, True])
+def test_real_budget_expiration_preserves_passes_and_not_started_units(tmp_path, monkeypatch, no_cache):
+    ids = (UNIT_A, UNIT_B, "Suite/Task_C.tla")
+    analysis = _analysis(tuple(_unit(uid, line_start=10 + i * 10, line_end=19 + i * 10) for i, uid in enumerate(ids)))
+    filepath, benchmark = _write_inputs(tmp_path)
+    real_run = check_proof.run_killgroup
+    calls = []
+
+    def short_process(command, timeout, cwd):
+        line = int(command[command.index("--toolbox") + 1])
+        calls.append(line)
+        script = "print('All 1 obligation proved.')" if line == 10 else "import time; time.sleep(30)"
+        return real_run([sys.executable, "-c", script], timeout, cwd)
+
+    _patch_common(monkeypatch, analysis, run_killgroup=short_process)
+    monkeypatch.setenv("TLAPS_VERIFICATION_TOOLCHAIN", "frozen-test-tools")
+    lines = []
+    kwargs = dict(
+        filepath=str(filepath),
+        benchmark_dir=str(benchmark),
+        expected_unit_ids=ids,
+        tlapm_path="tlapm",
+        tlapm_lib="/tlaps/lib",
+        timeout=1,
+        output_path=str(tmp_path / "check.result"),
+        import_violations=[],
+        emit=lines.append,
+        check_session=str(tmp_path / "examination"),
+        no_cache=no_cache,
+    )
+    start = time.monotonic()
+    assert check_proof.run_module_task_check(**kwargs) == 3
+    assert time.monotonic() - start < 3
+    report = _report(lines)
+    assert [unit["raw_verdict"] for unit in report["units"]] == ["PASS", "BUDGET_EXHAUSTED", "NOT_STARTED"]
+    assert report["trusted_proof_unit_ids"] == [UNIT_A]
+    assert not report["complete"]
+    assert report["budget_exhausted"]
+    assert report["verification"]["wall_secs"] >= 1
+    assert report["verification"]["cpu_complete"] is False
+    validate_module_result(report, ids)
+    assert calls == [10, 20]
+    lines.clear()
+    assert check_proof.run_module_task_check(**kwargs) == 3
+    resumed = _report(lines)
+    assert resumed["trusted_proof_unit_ids"] == [UNIT_A]
+    assert calls == [10, 20]  # No renewed budget or redundant parsing/proving.
+    assert resumed["verification"]["wall_secs"] >= report["verification"]["wall_secs"]
+
+
+def test_added_helpers_do_not_increase_frozen_budget(tmp_path, monkeypatch):
+    from common.verification_budget import VerificationPolicy
+
+    policy = VerificationPolicy.create(24, (UNIT_A, UNIT_B))
+    assert policy.effective_timeout_secs == 30
+    monkeypatch.setenv("TLAPS_VERIFICATION_POLICY", json.dumps(policy.as_dict()))
+    targets = (_unit(UNIT_A), _unit(UNIT_B))
+    helpers = tuple(_unit(f"helper:H{i}", kind="helper") for i in range(10))
+    exit_code, lines, calls = _run_module_check(
+        monkeypatch, tmp_path, _analysis(targets, helpers), responses={10: ("All 1 obligation proved.", "", 0)}
+    )
+    assert exit_code == 0
+    assert len(calls) == 12
+    assert _report(lines)["verification"]["policy"] == policy.as_dict()
+
+
+@pytest.mark.parametrize("change", ["candidate", "canonical", "toolchain", "timeout", "provenance_only"])
+def test_check_session_rejects_changed_verification_context(tmp_path, monkeypatch, change):
+    analysis = _analysis((_unit(UNIT_A),))
+    filepath, benchmark = _write_inputs(tmp_path)
+    calls = []
+    _patch_common(
+        monkeypatch, analysis, run_killgroup=_tlapm_responses({10: ("All 1 obligation proved.", "", 0)}, calls)
+    )
+    monkeypatch.setenv("TLAPS_VERIFICATION_TOOLCHAIN", "original-tools")
+    lines = []
+    kwargs = dict(
+        filepath=str(filepath),
+        benchmark_dir=str(benchmark),
+        expected_unit_ids=(UNIT_A,),
+        tlapm_path="tlapm",
+        tlapm_lib="/tlaps/lib",
+        timeout=30,
+        output_path=str(tmp_path / "check.result"),
+        import_violations=[],
+        emit=lines.append,
+        check_session=str(tmp_path / "examination"),
+    )
+    assert check_proof.run_module_task_check(**kwargs) == 0
+    if change == "candidate":
+        filepath.write_text(filepath.read_text() + "\n")
+    elif change == "canonical":
+        (benchmark / "Task.tla").write_text("changed")
+    elif change == "toolchain":
+        monkeypatch.setenv("TLAPS_VERIFICATION_TOOLCHAIN", "new-tools")
+    elif change == "provenance_only":
+        monkeypatch.setattr(check_proof, "BUILD_VERSION", "unrelated-documentation-commit")
+    else:
+        kwargs["timeout"] = 31
+    lines.clear()
+    if change == "provenance_only":
+        assert check_proof.run_module_task_check(**kwargs) == 0
+    else:
+        assert check_proof.run_module_task_check(**kwargs) == 3
+        assert any("cannot resume check" in line for line in lines)
+    assert len(calls) == 1
