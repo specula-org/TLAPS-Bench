@@ -263,8 +263,8 @@ uv run tlaps-bench run [flags]
 | `--filter` | (all benchmarks) | Substring match on path, comma-separated |
 | `--task-list` | (all benchmarks) | Registered cohort name or file of exact mode-relative task IDs; mutually exclusive with `--filter` |
 | `--jobs` | `1` | Number of parallel backend runs |
-| `--timeout` | `28800` | Per-benchmark backend timeout in seconds |
-| `--check-timeout` | `600` | Base verification seconds; PFS module budgets scale with selected original targets, up to 3x |
+| `--timeout` | `28800` | Per-benchmark backend timeout in seconds; `0` disables the limit |
+| `--check-timeout` | `600` | Checker timeout in seconds; PFS scales this base by the module's target count |
 | `--check-cpus` | `8` | PFS CPU cap per module, including nested workers; integer from 1 to 8 |
 | `--output-dir` | auto-generated | Output directory |
 | `--resume` | off | Skip benchmarks already marked `SKIP` or genuine `PASS` (first-attempt or continuation) |
@@ -278,15 +278,7 @@ uv run tlaps-bench run [flags]
 
 Run `uv run tlaps-bench run --help` for the full flag list.
 
-For Proof From Scratch, the runner freezes the selected original `proof_unit_ids` before execution and computes `T = ceil(x * min(1 + 0.25 * (N - 1), 3))`, where `x` is the positive `--check-timeout` and `N` is the number of selected original targets in that module. One, two, three, five, and nine or more targets receive 1x, 1.25x, 1.5x, 2x, and 3x respectively. Added helper lemmas do not affect this budget. Other evaluation modes retain their existing timeout semantics. `--timeout 0` still gives the agent unlimited total running time.
-
-The runner passes the already computed T to both self-checking and grading. Each independent examination receives its own full T: self-checking does not spend the final grader's allowance, and the same candidate may be examined again. Within one examination, parsing and proving share a wall-clock budget; batching and interruption recovery retain elapsed time. Grader examinations persist under the attempt's grading directory and resume only with matching candidate bytes, canonical inputs, toolchain, and policy. New policy settings cannot silently resume an older run.
-
-Standalone `tlaps-bench check --timeout T` takes an effective budget and never scales it again. Omit `--check-session` for a fresh examination, or use the same `--check-session DIR` to persist and resume one examination. Completed unit receipts and SANY parses are reused only within that input-bound session; final grading has a separate, grader-owned state directory. With `--container`, the session directory must be inside the mounted workspace. A crash may conservatively charge at most one extra 0.25-second checkpoint interval. Time between invocations is excluded. These budgets impose no new per-backend or per-obligation time limits.
-
-Each module is capped at eight CPU cores by default, independently of `--jobs`. Docker limits the module container, including direct TLAPM calls; native Linux execution constrains the agent and checker process trees to at most eight CPUs with inherited affinity. Native PFS execution requires Linux and `taskset`; use Docker on other platforms. CPU affinity is a cooperative resource bound, not a sandbox against deliberately changing affinity. Module results record wall time and process CPU time (including reaped children); CPU accounting is marked incomplete after an abrupt interruption or when killed descendants could not be accounted for.
-
-The structured module report distinguishes `BUDGET_EXHAUSTED` (a unit was running when the module deadline expired), `NOT_STARTED` (the budget ran out before the unit started), proof `FAIL`, and tool `ERROR`. `TIMEOUT` remains supported for historical reports. Verified targets and dependencies remain in partial reports; only dependency-closed coverage of every original target yields complete success. Run manifests record the base, original IDs/count, effective budget, CPU cap, absence of local limits, and policy version.
+For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * min(1 + 0.25 * (N - 1), 3))` seconds, where `N` is its selected original target count. Self-checking and grading each receive this budget. Native PFS runs require Linux and `taskset`; use Docker on other platforms.
 
 The default remains the complete suite. To run the committed 190-task Proof Completion Core:
 
@@ -310,7 +302,9 @@ uv run tlaps-bench check path/to/file.tla --sany-only
 
 Full proof-from-scratch and marked proof-completion checks automatically require canonical replay. Pass an independent directory containing the original target and its declared context with `--benchmark-dir`; the canonical target must not alias the submitted file. Inside the evaluator runner this directory is supplied automatically. Full checks fail closed when no independent canonical context is available. `--sany-only` checks only the submitted file and its workspace dependencies, so it does not require canonical context. Legacy unmarked proof-completion checks keep their previous behavior.
 
-Proof Completion checks reuse `<target-dir>/.tlacache` by default; use `--no-cache` for a cold check, or `--timeout 0` for no checker deadline. PFS module checks require a positive deadline and keep fingerprints within their examination directory. `--no-cache` disables TLAPM fingerprint reuse; completed SANY stages and unit receipts are retained as examination progress during recovery.
+Proof Completion checks reuse `<target-dir>/.tlacache` by default; use `--no-cache` for a cold check, or `--timeout 0` for no checker deadline.
+
+PFS checks require a positive `--timeout T`, used without scaling. Use `--check-session DIR` to resume a check with its remaining budget, or omit it to start a new check. With `--container`, `DIR` must be inside the mounted workspace.
 
 Cheating is checked before proving: a detected cheat fails fast and skips the tlapm run (`--keep-verifying` verifies anyway). Each run also snapshots the workspace to a hidden git ref — browse it with `git log refs/tlaps-check/history`; `--no-git-track` disables.
 
