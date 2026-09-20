@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from common.verification_budget import CheckSession, VerificationPolicy
 from evaluator import runner
 from evaluator.backends.agentic import AgenticBackend
 from evaluator.proof_module_artifact import publish_module_artifact
@@ -2321,3 +2324,95 @@ def test_resume_archives_all_prior_owned_evidence(tmp_path):
     assert sorted(path.name for path in history.iterdir()) == sorted(owned)
     assert all(not (result_dir / name).exists() for name in owned)
     assert (result_dir / "operator-note.txt").read_text() == "keep this unrelated evidence"
+
+
+@pytest.mark.parametrize("round_number", [0, 1])
+def test_runner_resume_keeps_verification_budget_and_completed_units(tmp_path, monkeypatch, round_number):
+    output_dir = tmp_path / "results"
+    output_dir.mkdir()
+    saved = b"saved module awaiting final grading"
+    artifact = publish_module_artifact(output_dir, saved)
+    attempt = _attempt(artifact=artifact, verdict="ERROR")
+    if round_number:
+        attempt["round"] = round_number
+        pending = _attempt(artifact=artifact, module_result=_module_result(complete=False), verdict="FAIL")
+        pending.update(continuations=[attempt], max_continuations=1)
+    else:
+        pending = attempt
+    pending["module_grading_pending"] = round_number
+    checkpoint = write_module_checkpoint(output_dir, _identity(), pending)
+    item = _resume_item(
+        tmp_path, pending, saved, checkpoint_sequence=checkpoint.sequence, max_continuations=round_number
+    )
+    policy = VerificationPolicy.create(10, (UNIT_ID,))
+    result_dir = output_dir / "Suite/Task"
+    grading_dir = result_dir / ("continuations/round-1" if round_number else "grading")
+    session_dir = grading_dir / f"verification-{artifact['sha256']}"
+    identity = {"candidate": artifact["sha256"], "policy": policy.as_dict()}
+    completed_unit = _module_result(complete=True)["units"][0]
+    with CheckSession(session_dir, identity, 10) as session:
+        session.save("unit-0", completed_unit)
+        time.sleep(0.03)
+    spent = json.loads((session_dir / "state.json").read_text())["wall_secs"]
+    (grading_dir / "check_debug.txt").write_text("previous diagnostics")
+
+    # Run the real runner/grader subprocess seam. Only proof solving is replaced;
+    # the checker reads the actual session path supplied by the runner.
+    checker = tmp_path / "checker.py"
+    checker.write_text(f"""
+import argparse, json
+from pathlib import Path
+from common.verification_budget import CheckSession
+parser = argparse.ArgumentParser()
+parser.add_argument('--timeout', type=int)
+parser.add_argument('--check-session', type=Path)
+args = parser.parse_args()
+with CheckSession(args.check_session, {identity!r}, args.timeout) as session:
+    assert session.prior_wall >= {spent!r}, 'verification budget was reset'
+    assert session.remaining() <= args.timeout - {spent!r}
+    assert session.load('unit-0') == {completed_unit!r}, 'completed unit was lost'
+    visits = (session.load('visits') or 0) + 1
+    session.save('visits', visits)
+    print('SANY-STATUS: valid')
+    if visits == 1:
+        print('ERROR: simulated interruption after loading progress')
+        raise SystemExit(3)
+    print('MODULE-RESULT: ' + {json.dumps(_module_result(complete=True))!r})
+""")
+    monkeypatch.setenv("PYTHONPATH", str(Path(runner.__file__).resolve().parents[1]))
+    monkeypatch.setattr(
+        runner,
+        "_run_backend_with_retries",
+        lambda *_args, **_kwargs: pytest.fail("grading recovery must not invoke a model"),
+    )
+    for visit in (1, 2):
+        item.verification_policy = policy
+        monkeypatch.setattr(
+            item.mode,
+            "checker_command",
+            lambda _ws, _name, _out, timeout, **_kw: [sys.executable, str(checker), "--timeout", str(timeout)],
+            raising=False,
+        )
+        recovered = runner.run_single_benchmark(item)
+        recovered_attempt = recovered["continuations"][0] if round_number else recovered
+        assert session_dir.is_dir()
+        assert json.loads((session_dir / "visits.json").read_text()) == visit
+        assert json.loads((session_dir / "unit-0.json").read_text()) == completed_unit
+        assert json.loads((session_dir / "state.json").read_text())["wall_secs"] >= spent
+        if visit == 1:
+            assert recovered_attempt["check_verdict"] == "ERROR"
+            assert recovered["module_grading_pending"] == round_number
+            checkpoint = load_module_checkpoint(output_dir, _identity())
+            item = _resume_item(
+                tmp_path,
+                checkpoint.result,
+                saved,
+                checkpoint_sequence=checkpoint.sequence,
+                max_continuations=round_number,
+            )
+        else:
+            assert recovered_attempt["check_verdict"] == "PASS"
+            assert "module_grading_pending" not in recovered
+    history = result_dir / "resume-history"
+    assert any(path.read_text() == "previous diagnostics" for path in history.rglob("check_debug.txt"))
+    assert not list(history.rglob("verification-*"))

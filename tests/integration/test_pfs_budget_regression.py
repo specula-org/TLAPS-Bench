@@ -24,7 +24,8 @@ REPO = Path(__file__).resolve().parents[2]
 @pytest.mark.skipif(not hasattr(os, "sched_getaffinity"), reason="native PFS containment requires Linux")
 @pytest.mark.parametrize("name", ["AddTwo", "FindHighest"])
 @pytest.mark.parametrize("cpus", [1, 8])
-def test_existing_reference_proofs_and_examination_recovery(tmp_path, name, cpus):
+@pytest.mark.parametrize("relative_session", [False, True])
+def test_existing_reference_proofs_and_examination_recovery(tmp_path, name, cpus, relative_session):
     executable = next(
         (path for path in (Path("/opt/tlapm/bin/tlapm"), Path.home() / ".tlapm/bin/tlapm") if path.is_file()), None
     )
@@ -69,7 +70,7 @@ def test_existing_reference_proofs_and_examination_recovery(tmp_path, name, cpus
         "COMMUNITY_LIB": str(REPO / "lib/community"),
         "SANY_RUN_SH": str(REPO / "src/dataset/sany-dump/run.sh"),
     }
-    session = tmp_path / "examination"
+    session = Path("state/examination") if relative_session else tmp_path / "examination"
     command = [
         sys.executable,
         str(REPO / "src/common/check_proof.py"),
@@ -91,7 +92,7 @@ def test_existing_reference_proofs_and_examination_recovery(tmp_path, name, cpus
     reports = []
     for _ in range(2):
         result = subprocess.run(
-            command, capture_output=True, text=True, env=env, timeout=policy.effective_timeout_secs + 30
+            command, capture_output=True, text=True, env=env, cwd=tmp_path, timeout=policy.effective_timeout_secs + 30
         )
         assert result.returncode == 0, result.stdout + result.stderr
         report = next(

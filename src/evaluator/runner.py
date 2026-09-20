@@ -2809,7 +2809,12 @@ def _reset_benchmark_artifacts(
                 suffix += 1
             os.mkdir(history_dir)
             for name in existing:
-                os.replace(os.path.join(result_dir, name), os.path.join(history_dir, name))
+                source = os.path.join(result_dir, name)
+                destination = os.path.join(history_dir, name)
+                if name in {"grading", "continuations"}:
+                    _archive_grading_outputs(source, destination)
+                else:
+                    os.replace(source, destination)
         return
 
     for name in owned_names:
@@ -2820,6 +2825,20 @@ def _reset_benchmark_artifacts(
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+
+def _archive_grading_outputs(source: str, destination: str) -> None:
+    """Archive diagnostics while leaving resumable check sessions in place."""
+    if os.path.islink(source) or not os.path.isdir(source):
+        os.replace(source, destination)
+        return
+    if re.fullmatch(r"verification-[0-9a-f]{64}", os.path.basename(source)):
+        return
+    os.mkdir(destination)
+    for name in os.listdir(source):
+        _archive_grading_outputs(os.path.join(source, name), os.path.join(destination, name))
+    if not os.listdir(source):
+        os.rmdir(source)
 
 
 def _stash_failed_attempt(

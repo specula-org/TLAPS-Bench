@@ -172,7 +172,7 @@ class CheckSession:
     """
 
     def __init__(self, directory: Path, identity: dict, timeout: float):
-        self.directory = directory
+        self.directory = directory.absolute()
         self.identity = identity
         self.timeout = timeout
         self._mutex = threading.RLock()
