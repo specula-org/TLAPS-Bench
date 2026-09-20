@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from common.verification_budget import VerificationPolicy
 from evaluator import runner
 from evaluator.modes.base import Mode
 
@@ -117,6 +118,26 @@ def test_resume_rejects_changed_verification_toolchain(tmp_path):
 
     with pytest.raises(ValueError, match="verification-toolchain inputs"):
         runner._validate_resume_run_manifest(str(tmp_path), expected)
+
+
+@pytest.mark.parametrize("change", ["base", "cpus", "targets", "version", "legacy"])
+def test_resume_rejects_incompatible_verification_policy(tmp_path, change):
+    policy = VerificationPolicy.create(60, ("A", "B")).as_dict()
+    recorded = {"verification": policy}
+    (tmp_path / runner.RUN_MANIFEST_RECORD).write_text(json.dumps(recorded))
+    updated = dict(policy)
+    if change == "base":
+        updated = VerificationPolicy.create(61, ("A", "B")).as_dict()
+    elif change == "cpus":
+        updated = VerificationPolicy.create(60, ("A", "B"), 4).as_dict()
+    elif change == "targets":
+        updated = VerificationPolicy.create(60, ("A", "C")).as_dict()
+    elif change == "version":
+        updated["version"] = "other-policy"
+    else:
+        updated = None
+    with pytest.raises(ValueError, match="cannot resume"):
+        runner._validate_resume_run_manifest(str(tmp_path), {"verification": updated})
 
 
 def test_resume_rejects_changed_agent_or_budget_policy(tmp_path):

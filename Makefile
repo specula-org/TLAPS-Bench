@@ -1,6 +1,8 @@
 CHECKER_SOURCES := \
 	src/common/__init__.py \
 	src/common/check_proof.py \
+	src/common/verification_budget.py \
+	src/common/verification_toolchain.py \
 	src/common/cheating_detection.py \
 	src/common/proof_from_scratch_grading.py \
 	src/common/proof_from_scratch_module.py \

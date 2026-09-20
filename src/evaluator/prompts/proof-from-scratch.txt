@@ -26,6 +26,8 @@ check_proof_bin {benchmark_basename} --mode proof-from-scratch
 
 The checker reports a raw result for every target and every helper theorem used by a target. A raw PASS counts only when all local theorem dependencies are also trusted, so a proof cannot rely on an omitted or circular sibling.
 
+Run the checker in the foreground and wait for that tool execution to finish. For a long-running tool call, use the tool's blocking wait facility rather than repeatedly launching checks or polling files. Each independent self-check has the same module budget as final grading; use `--check-session DIR` only when intentionally resuming one interrupted check of the unchanged candidate. A `NOT_STARTED` result means the module budget expired before that unit was checked, not that its proof failed.
+
 For a quick syntax check, run:
 
 ~~~sh

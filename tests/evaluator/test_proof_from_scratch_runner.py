@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,6 +19,7 @@ from common.proof_from_scratch_module import (
 )
 from common.proof_libraries import OfficialLibraryCatalog
 from common.task_contract import BEGIN_AGENT_HELPERS, END_AGENT_HELPERS
+from common.verification_budget import POLICY_ENV, VerificationPolicy
 from evaluator import runner
 from evaluator.backends.agentic import AgenticBackend
 from evaluator.backends.base import BackendCapabilities, SubmissionDisposition, SubmissionPlan
@@ -355,10 +357,13 @@ def test_invalid_module_submission_fails_without_grading_canonical_input(tmp_pat
     assert runner._module_resume_action(result, max_continuations=0) == runner.MODULE_RESUME_COMPLETE
 
 
-def test_cli_captures_all_replay_inputs_before_backend_setup(tmp_path, monkeypatch):
+@pytest.mark.parametrize("target_count,expected_timeout", [(1, 13), (2, 17), (5, 26), (12, 39)])
+def test_cli_captures_all_replay_inputs_before_backend_setup(tmp_path, monkeypatch, target_count, expected_timeout):
     benchmark_root, _suite, task, model, task_source, model_source = _write_fixture(tmp_path)
 
     mode = ProofFromScratch(str(benchmark_root), "/checker")
+    selected_ids = tuple(f"Suite/Task_Target{i}.tla" for i in range(target_count))
+    monkeypatch.setattr(mode, "module_task_spec", lambda _path: SimpleNamespace(proof_unit_ids=selected_ids))
     backend = _Backend()
     captured_items = []
 
@@ -396,6 +401,10 @@ def test_cli_captures_all_replay_inputs_before_backend_setup(tmp_path, monkeypat
             "--no-container",
             "--output-dir",
             str(tmp_path / "results"),
+            "--check-timeout",
+            "13",
+            "--timeout",
+            "0",
         ],
     )
 
@@ -409,8 +418,105 @@ def test_cli_captures_all_replay_inputs_before_backend_setup(tmp_path, monkeypat
     checkpoint_identity = captured_items[0].module_checkpoint_identity
     assert checkpoint_identity is not None
     assert checkpoint_identity.task_id == MODULE_TASK_ID
-    assert checkpoint_identity.proof_unit_ids == (PROOF_UNIT_ID,)
+    assert checkpoint_identity.proof_unit_ids == selected_ids
     assert checkpoint_identity.canonical_input_sha256 == canonical_inputs.digest()
+    item = captured_items[0]
+    assert item.check_timeout == expected_timeout
+    assert item.timeout == 0
+    policy = item.verification_policy
+    assert policy.proof_unit_ids == selected_ids
+    assert policy.base_timeout_secs == 13
+    record = json.loads((tmp_path / "results" / runner.RUN_MANIFEST_RECORD).read_text())
+    assert record["execution_policy"]["verification"]["modules"][MODULE_TASK_ID] == policy.as_dict()
+
+
+@pytest.mark.parametrize(
+    "option,value", [("--check-timeout", "0"), ("--check-timeout", "-1"), ("--check-cpus", "0"), ("--check-cpus", "9")]
+)
+def test_invalid_pfs_budget_fails_before_tool_or_model_setup(tmp_path, monkeypatch, option, value):
+    benchmark_root, *_ = _write_fixture(tmp_path)
+    mode = ProofFromScratch(str(benchmark_root), "/checker")
+    monkeypatch.setattr(runner, "get_backend", lambda *args, **kwargs: _Backend())
+    monkeypatch.setattr(runner, "get_mode", lambda *args, **kwargs: mode)
+    monkeypatch.setattr(runner, "ensure_image", lambda **_kwargs: pytest.fail("invalid budget reached tool setup"))
+    monkeypatch.setattr(sys, "argv", ["tlaps-bench", "--mode", "proof-from-scratch", option, value])
+    with pytest.raises(SystemExit) as exc:
+        runner.main()
+    assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("container", [False, True])
+def test_self_check_and_grader_receive_identical_effective_policy(tmp_path, monkeypatch, container):
+    root, _, task, _, _, _ = _write_fixture(tmp_path)
+    mode = ProofFromScratch(str(root), "/checker")
+    backend = _Backend()
+    policy = VerificationPolicy.create(60, ("A", "B", "C", "D", "E"))
+    item = runner.WorkItem(
+        str(task),
+        str(tmp_path),
+        0,
+        policy.effective_timeout_secs,
+        backend,
+        mode,
+        "/tlapm",
+        "/tlapm/lib",
+        verification_policy=policy,
+    )
+    captured = {}
+
+    class FakeRunner:
+        def run(self, config, cmd, **_kwargs):
+            captured["agent"] = (config.env, cmd, config.cpus)
+            raise RuntimeError("captured without a model call")
+
+        def run_with_output(self, config, cmd, **_kwargs):
+            captured["grader"] = (config.env, cmd, config.cpus)
+            raise RuntimeError("captured without a checker call")
+
+        def cleanup_credential_tmps(self):
+            pass
+
+    if container:
+        monkeypatch.setattr(runner, "ContainerRunner", FakeRunner)
+        runner._run_backend_container(
+            item, backend, str(task.parent), str(tmp_path), str(tmp_path / "agent.jsonl"), "prompt", {}
+        )
+        runner._run_grader_container(
+            item, str(task.parent), task.name, str(tmp_path), str(tmp_path / "check.result"), {}
+        )
+    else:
+
+        def popen(cmd, **kwargs):
+            captured["agent"] = (kwargs["env"], cmd, 8)
+            raise RuntimeError("captured without a model call")
+
+        def run(cmd, **kwargs):
+            captured["grader"] = (kwargs["env"], cmd, 8)
+            raise RuntimeError("captured without a checker call")
+
+        monkeypatch.setattr(runner.subprocess, "Popen", popen)
+        monkeypatch.setattr(runner.subprocess, "run", run)
+        runner._run_backend_local(
+            item,
+            backend,
+            mode,
+            str(task.parent),
+            str(tmp_path),
+            str(tmp_path / "agent.jsonl"),
+            "prompt",
+            {},
+            "/checker",
+        )
+        runner._run_grader_local(item, str(task.parent), task.name, str(tmp_path), str(tmp_path / "check.result"), {})
+    agent_env, agent_cmd, agent_cpus = captured["agent"]
+    grader_env, grader_cmd, grader_cpus = captured["grader"]
+    assert agent_env["TLAPS_CHECK_TIMEOUT"] == "120"
+    assert grader_cmd[grader_cmd.index("--timeout") + 1] == "120"
+    assert json.loads(agent_env[POLICY_ENV]) == json.loads(grader_env[POLICY_ENV]) == policy.as_dict()
+    assert agent_cpus == grader_cpus == 8
+    assert "--check-session" in grader_cmd
+    if not container:
+        assert "--cpu-list" in agent_cmd and "--cpu-list" in grader_cmd
 
 
 def test_proof_from_scratch_tool_free_backend_fails_before_setup(tmp_path, monkeypatch, capsys):

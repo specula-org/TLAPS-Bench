@@ -57,6 +57,16 @@ from common.proof_libraries import (
     scan_official_libraries,
 )
 from common.task_contract import TaskContractError
+from common.verification_budget import (
+    DEFAULT_CPUS,
+    POLICY_ENV,
+    POLICY_VERSION,
+    TOOLCHAIN_ENV,
+    VERIFICATION_RESULT_PREFIX,
+    VerificationPolicy,
+    cpu_command,
+    validate_cpus,
+)
 from common.verification_toolchain import (
     VerificationToolchainError,
     validate_toolchain_identity,
@@ -619,9 +629,11 @@ class WorkItem:
     run_identity: dict[str, object] | None = None
     module_resume: ModuleResume | None = None
     module_checkpoint_identity: ModuleCheckpointIdentity | None = None
+    verification_policy: VerificationPolicy | None = None
 
 
 _LOGICAL_PROOF_EVIDENCE_KEYS = (
+    "verification",
     "module_result",
     "trusted_proof_unit_count",
     "trusted_proof_unit_ids",
@@ -1857,6 +1869,7 @@ def _execution_policy_identity(
     infra_retries: int,
     max_continuations: int,
     session_dir: str,
+    verification_policies: dict | None = None,
 ) -> dict[str, object]:
     """Freeze every option that can change an attempt or its reported score."""
 
@@ -1869,6 +1882,7 @@ def _execution_policy_identity(
         "environment": "container" if use_container else "local",
         "timeout": timeout,
         "check_timeout": check_timeout,
+        "verification": {"version": POLICY_VERSION, "modules": verification_policies or {}},
         "infra_retries": infra_retries,
         "max_continuations": max_continuations,
         # A resumed module must see the same backend state tree. Unlike the
@@ -2378,6 +2392,8 @@ def run_single_benchmark(item: WorkItem):
     if item.run_identity is not None:
         result["corpus_digest"] = item.run_identity["corpus_digest"]
         result["proof_library_digest"] = item.run_identity["proof_library_digest"]
+    if isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+        result["verification_policy"] = item.verification_policy.as_dict()
     if _supports_cost_time(backend) and not recovered_result:
         result["equivalent_cost_usd"] = None
     # Usage is runner-owned structured evidence; backend metadata must not
@@ -3204,6 +3220,9 @@ def _run_backend_container(
     # so a proof near the time boundary can't pass the agent's check yet time out
     # at grading.
     config.env["TLAPS_CHECK_TIMEOUT"] = str(item.check_timeout)
+    if isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+        config.cpus = item.verification_policy.cpus
+        config.env.update(_verification_environment(item))
 
     container_run = None
     agent_started_at: float | None = None
@@ -3365,11 +3384,15 @@ def _run_backend_local(
         agent_env["TLAPS_CANONICAL_REPLAY_REQUIRED"] = "1"
     # Same tlapm budget the grader uses, so the discharge verdict matches.
     agent_env["TLAPS_CHECK_TIMEOUT"] = str(item.check_timeout)
+    agent_env.update(_verification_environment(item))
+    agent_command = ["bash", "-c", shell_cmd]
+    if isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+        agent_command = cpu_command(agent_command, item.verification_policy.cpus, item.benchmark_path)
 
     try:
         with open(agent_jsonl, "w") as jsonl_f:
             proc = subprocess.Popen(
-                ["bash", "-c", shell_cmd],
+                agent_command,
                 stdin=subprocess.PIPE,
                 stdout=jsonl_f,
                 stderr=subprocess.PIPE,
@@ -3448,6 +3471,31 @@ def _build_backend_command(
     return backend.build_run_command(workspace, result_dir, deadline)
 
 
+def _verification_environment(item: WorkItem) -> dict[str, str]:
+    if not isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+        return {}
+    identity = item.run_identity or {}
+    return {
+        POLICY_ENV: json.dumps(item.verification_policy.as_dict(), sort_keys=True),
+        TOOLCHAIN_ENV: json.dumps(
+            {
+                "toolchain": identity.get("verification_toolchain_digest"),
+                "libraries": identity.get("proof_library_digest"),
+                "execution": identity.get("execution_source_digest"),
+            },
+            sort_keys=True,
+        ),
+    }
+
+
+def _verification_session_name(workspace: str, basename: str) -> str:
+    # Each logical attempt has its own grading directory. Regrading its same
+    # frozen artifact resumes that examination; a changed artifact gets a new one.
+    with open(os.path.join(workspace, basename), "rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
+    return f"verification-{digest}"
+
+
 def _run_grader_container(
     item: WorkItem,
     workspace: str,
@@ -3484,6 +3532,10 @@ def _run_grader_container(
     config.env["GIT_CONFIG_KEY_0"] = "safe.directory"
     config.env["GIT_CONFIG_VALUE_0"] = "/workspace"
     config.env[CATALOG_ENV] = f"/benchmark/{CATALOG_FILENAME}"
+    config.env.update(_verification_environment(item))
+    if isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+        config.cpus = item.verification_policy.cpus
+        check_cmd += ["--check-session", "/results/" + _verification_session_name(workspace, basename)]
     try:
         exit_code, stdout, stderr = runner.run_with_output(config, check_cmd, timeout=item.check_timeout + 60)
         with open(os.path.join(grading_dir, "check_debug.txt"), "w") as dbg:
@@ -3531,6 +3583,10 @@ def _run_grader_local(
     )
     try:
         check_env = dict(os.environ)
+        check_env.update(_verification_environment(item))
+        if isinstance(getattr(item, "verification_policy", None), VerificationPolicy):
+            check_cmd += ["--check-session", os.path.join(grading_dir, _verification_session_name(workspace, basename))]
+            check_cmd = cpu_command(check_cmd, item.verification_policy.cpus, item.benchmark_path)
         check_env["TLAPS_LIB"] = item.tlapm_lib
         check_env.setdefault("COMMUNITY_LIB", os.path.join(REPO_ROOT, "lib", "community"))
         if canonical_dir:
@@ -3581,6 +3637,7 @@ def _grade_submission(
     if previous_grader_error and attempt.get("error") == previous_grader_error:
         attempt["error"] = ""
     for key in (
+        "verification",
         "module_result",
         "trusted_proof_unit_ids",
         "obligations",
@@ -3653,6 +3710,20 @@ def _parse_grader_result(
         result["check_verdict"] = "FAIL"
     else:
         result["check_verdict"] = "ERROR"
+    verification_matches = re.findall(rf"^{re.escape(VERIFICATION_RESULT_PREFIX)}(.+)$", stdout or "", re.MULTILINE)
+    if verification_matches:
+        try:
+            if len(verification_matches) != 1:
+                raise ValueError("multiple verification metrics records")
+            metrics = json.loads(verification_matches[0])
+            from evaluator.proof_module_result import validate_verification_metrics
+
+            validate_verification_metrics(metrics, expected_module_unit_ids)
+            result["verification"] = metrics
+        except (ValueError, ModuleResultError) as exc:
+            result["check_verdict"] = "ERROR"
+            result["error"] = f"invalid verification metrics: {exc}"
+            return
     sany_matches = re.findall(
         r"^SANY-STATUS:[ \t]*([^\r\n]*?)[ \t]*$",
         stdout or "",
@@ -3713,7 +3784,9 @@ def _parse_grader_result(
             return
         if exit_code not in (0, 1):
             raw_verdicts = {unit["raw_verdict"] for unit in module_result["units"]}
-            result["check_verdict"] = "TIMEOUT" if "TIMEOUT" in raw_verdicts else "ERROR"
+            result["check_verdict"] = (
+                "TIMEOUT" if raw_verdicts & {"TIMEOUT", "BUDGET_EXHAUSTED", "NOT_STARTED"} else "ERROR"
+            )
         if module_result["sany_status"] != sany_status:
             result["check_verdict"] = "ERROR"
             result["error"] = "module grader SANY status disagrees with SANY-STATUS marker"
@@ -3892,7 +3965,16 @@ def main():
         help="Backend timeout per benchmark in seconds (default: 28800 = 8h; 0 = no limit)",
     )
     parser.add_argument(
-        "--check-timeout", type=int, default=600, help="Checker timeout per benchmark in seconds (default: 600)"
+        "--check-timeout",
+        type=int,
+        default=600,
+        help="Base verification seconds (default: 600); PFS scales by selected original targets, up to 3x",
+    )
+    parser.add_argument(
+        "--check-cpus",
+        type=int,
+        default=DEFAULT_CPUS,
+        help="PFS CPU cap per module, including nested workers (1..8; default: 8)",
     )
     parser.add_argument("--output-dir", default=None, help="Output directory")
     # Proactive quota gate. Before launching an agent, pause when the backend's
@@ -4031,6 +4113,20 @@ def main():
             2, f"{parser.prog}: error: no benchmarks found for mode {mode.name!r} under {mode.benchmark_dir()}\n"
         )
 
+    verification_policies = {}
+    module_spec_loader = getattr(mode, "module_task_spec", None)
+    if module_spec_loader is not None:
+        try:
+            validate_cpus(args.check_cpus)
+            for path in benchmark_files:
+                verification_policies[path] = VerificationPolicy.create(
+                    args.check_timeout, module_spec_loader(path).proof_unit_ids, args.check_cpus
+                )
+            if not use_container:
+                cpu_command(["true"], args.check_cpus, "preflight")
+        except ValueError as exc:
+            parser.error(str(exc))
+
     # Module runs always persist the exact selected cohort, including Full and
     # --filter runs. A resume must select the same physical module tasks.
     recorded_task_ids = task_ids
@@ -4105,6 +4201,10 @@ def main():
                     infra_retries=args.infra_retries,
                     max_continuations=args.max_continuations,
                     session_dir=session_dir,
+                    verification_policies={
+                        os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/"): policy.as_dict()
+                        for path, policy in verification_policies.items()
+                    },
                 ),
                 agent_skills_snapshot,
             )
@@ -4328,7 +4428,11 @@ def main():
                 benchmark_path=bf,
                 output_dir=output_dir,
                 timeout=args.timeout,
-                check_timeout=args.check_timeout,
+                check_timeout=(
+                    verification_policies[bf].effective_timeout_secs
+                    if bf in verification_policies
+                    else args.check_timeout
+                ),
                 backend=backend,
                 mode=mode,
                 tlapm_path=tlapm_root,
@@ -4349,6 +4453,7 @@ def main():
                 run_identity=run_identity,
                 module_resume=module_resumes.get(rel),
                 module_checkpoint_identity=module_checkpoint_identities.get(rel),
+                verification_policy=verification_policies.get(bf),
             )
         )
 
