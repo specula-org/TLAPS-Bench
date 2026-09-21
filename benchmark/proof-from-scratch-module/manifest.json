@@ -2198,7 +2198,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_btree/btree.tla",
-        "source_sha256": "ad3d9b2f2d4c762858caaf150e546f7c822a29f18d0e538d46646e8525b92d03",
+        "source_sha256": "d0ffc162611b0b456c4291d3d41db38b88c7f6d8a4eec7b380b8eec0675a9d12",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_btree/btree_TypeOkCorrect.tla",
