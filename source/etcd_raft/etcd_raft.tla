@@ -226,11 +226,14 @@ CommitTo(i, c) ==
 
 CurrentLeaders == {i \in Server : state[i] = Leader}
 
+\* Persist log contents as well as their length; volatile conflict handling may
+\* truncate or replace entries before the next Ready step.
 PersistState(i) == 
     durableState' = [durableState EXCEPT ![i] = [
         currentTerm |-> currentTerm[i],
         votedFor |-> votedFor[i],
         log |-> Len(log[i]),
+        logEntries |-> log[i],
         commitIndex |-> commitIndex[i],
         config |-> config[i]
     ]]
@@ -255,6 +258,7 @@ InitDurableState ==
         currentTerm |-> currentTerm[i],
         votedFor |-> votedFor[i],
         log |-> Len(log[i]),
+        logEntries |-> log[i],
         commitIndex |-> commitIndex[i],
         config |-> config[i]
     ]]
@@ -283,7 +287,7 @@ Restart(i) ==
     /\ currentTerm' = [currentTerm EXCEPT ![i] = durableState[i].currentTerm]
     /\ commitIndex' = [commitIndex EXCEPT ![i] = durableState[i].commitIndex]
     /\ votedFor' = [votedFor EXCEPT ![i] = durableState[i].votedFor]
-    /\ log' = [log EXCEPT ![i] = SubSeq(@, 1, durableState[i].log)]
+    /\ log' = [log EXCEPT ![i] = durableState[i].logEntries]
     /\ config' = [config EXCEPT ![i] = durableState[i].config]
     /\ UNCHANGED <<messages, durableState, reconfigCount>>
 
@@ -886,7 +890,7 @@ CommittedIsDurableInv ==
 (***************************************************************************)
 (* Benchmark targets. `Spec => []LogInv` is upstream's own theorem; the     *)
 (* remaining invariants are defined upstream but never asserted, so they    *)
-(* are stated here. Everything above this banner is upstream.               *)
+(* are stated here. Local model repairs are documented in README.md.         *)
 (***************************************************************************)
 THEOREM CommittedIsDurable == Spec => []CommittedIsDurableInv
 PROOF OBVIOUS

@@ -759,7 +759,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "etcd_raft/etcd_raft.tla",
-        "source_sha256": "7e0b52c35bacb918f0eba4ac2ac9acce9feb25e47e134564d06ba2403d4c3b52",
+        "source_sha256": "5a8441bde8cd7051dad1c59be8b9ec7870a26ce99d28002ff3ccf83387fd35db",
         "proof_units": [
           {
             "task_id": "etcd_raft/etcd_raft_LogInv.tla",

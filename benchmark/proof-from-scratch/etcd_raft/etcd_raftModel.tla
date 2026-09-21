@@ -136,6 +136,7 @@ PersistState(i) ==
         currentTerm |-> currentTerm[i],
         votedFor |-> votedFor[i],
         log |-> Len(log[i]),
+        logEntries |-> log[i],
         commitIndex |-> commitIndex[i],
         config |-> config[i]
     ]]
@@ -158,6 +159,7 @@ InitDurableState ==
         currentTerm |-> currentTerm[i],
         votedFor |-> votedFor[i],
         log |-> Len(log[i]),
+        logEntries |-> log[i],
         commitIndex |-> commitIndex[i],
         config |-> config[i]
     ]]
@@ -180,7 +182,7 @@ Restart(i) ==
     /\ currentTerm' = [currentTerm EXCEPT ![i] = durableState[i].currentTerm]
     /\ commitIndex' = [commitIndex EXCEPT ![i] = durableState[i].commitIndex]
     /\ votedFor' = [votedFor EXCEPT ![i] = durableState[i].votedFor]
-    /\ log' = [log EXCEPT ![i] = SubSeq(@, 1, durableState[i].log)]
+    /\ log' = [log EXCEPT ![i] = durableState[i].logEntries]
     /\ config' = [config EXCEPT ![i] = durableState[i].config]
     /\ UNCHANGED <<messages, durableState, reconfigCount>>
 
