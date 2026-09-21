@@ -100,12 +100,19 @@ IsFree(node) == isLeaf[node] /\ keysOf[node] = {}
 
 ChooseFreeNode == CHOOSE n \in Nodes : IsFree(n)
 
+\* A split blocks if the fixed node pool has insufficient free nodes.
+\* CHOOSE alone does not guarantee a fresh node when its predicate has no witness.
+HasFreeNode == \E n \in Nodes : IsFree(n)
+HasTwoFreeNodes == \E n, m \in Nodes : n # m /\ IsFree(n) /\ IsFree(m)
 
+
+\* Single tuple binders avoid the TLAPS limitation in tlaplus/tlapm#294.
+\* The functions retain their Nodes \X Keys domain and f[n, k] access syntax.
 Init == /\ isLeaf = [n \in Nodes |-> TRUE]
         /\ keysOf = [n \in Nodes |-> {}]
-        /\ childOf = [n \in Nodes, k \in Keys |-> NIL]
+        /\ childOf = [nk \in Nodes \X Keys |-> NIL]
         /\ lastOf = [n \in Nodes |-> NIL]
-        /\ valOf = [n \in Nodes, k \in Keys |-> NIL]
+        /\ valOf = [nk \in Nodes \X Keys |-> NIL]
         /\ root = ChooseFreeNode
         /\ focus = NIL
         /\ toSplit = <<>>
@@ -219,13 +226,16 @@ SplitRootLeaf ==
         n2Keys == {x \in keys: x>=pivot} 
         keyToInsert == args[1] IN
     /\ state = SPLIT_ROOT_LEAF
+    /\ HasTwoFreeNodes
     /\ root' = newRoot
     /\ isLeaf' = [isLeaf EXCEPT ![newRoot]=FALSE, ![n2]=TRUE]
     /\ keysOf' = [keysOf EXCEPT ![newRoot]={pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
     /\ childOf' = [childOf EXCEPT ![newRoot, pivot]=n1]
     /\ lastOf' = [lastOf EXCEPT ![newRoot]=n2]
-    /\ valOf' = [n \in Nodes, k \in Keys |->
-        CASE n=n1 /\ k \in n2Keys -> NIL
+    /\ valOf' = [nk \in Nodes \X Keys |->
+        LET n == nk[1]
+            k == nk[2]
+        IN CASE n=n1 /\ k \in n2Keys -> NIL
           [] n=n2 /\ k \in n2Keys -> valOf[n1, k]
           [] OTHER                -> valOf[n, k]]
     \* No more splits necessary, add the focus to the leaf
@@ -250,11 +260,14 @@ SplitRootInner ==
         n1Keys == {x \in keys: x<pivot}
         n2Keys == {x \in keys: x>pivot} IN
     /\ state = SPLIT_ROOT_INNER
+    /\ HasTwoFreeNodes
     /\ root' = newRoot
     /\ isLeaf' = [isLeaf EXCEPT ![newRoot]=FALSE, ![n2]=FALSE]
     /\ keysOf' = [keysOf EXCEPT ![newRoot]={pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
-    /\ childOf' = [n \in Nodes, k \in Keys |->
-        CASE n=newRoot /\ k=pivot -> n1
+    /\ childOf' = [nk \in Nodes \X Keys |->
+        LET n == nk[1]
+            k == nk[2]
+        IN CASE n=newRoot /\ k=pivot -> n1
           [] n=n1 /\ k \in n2Keys -> NIL
           [] n=n1 /\ k \in n1Keys -> childOf[n1, k]
           [] n=n2 /\ k \in n2Keys -> childOf[n1, k]
@@ -275,6 +288,7 @@ SplitLeaf ==
         keyToInsert == args[1]
     IN
     /\ state = SPLIT_LEAF
+    /\ HasFreeNode
     /\ isLeaf' = [isLeaf EXCEPT ![n2]=TRUE]
     /\ keysOf' = [keysOf EXCEPT ![parent]=@ \union {pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
     \* In the parent, point the pivot key to n1, and point the parent key to n2.
@@ -283,8 +297,10 @@ SplitLeaf ==
                   THEN [childOf EXCEPT ![parent, pivot]=n1]
                   ELSE [childOf EXCEPT ![parent, pivot]=n1, ![parent, ParentKeyOf(n1)]=n2]
     /\ lastOf' = IF IsLastOfParent(n1) THEN [lastOf EXCEPT ![parent]=n2] ELSE lastOf
-    /\ valOf' = [n \in Nodes, k \in Keys |->
-        CASE n=n1 /\ k \in n2Keys -> NIL
+    /\ valOf' = [nk \in Nodes \X Keys |->
+        LET n == nk[1]
+            k == nk[2]
+        IN CASE n=n1 /\ k \in n2Keys -> NIL
           [] n=n2 /\ k \in n2Keys -> valOf[n1, k]
           [] OTHER                -> valOf[n, k]]
     /\ state' = ADD_TO_LEAF
