@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -106,3 +107,57 @@ def test_more_than_one_leader_rejects_nil_server(tmp_path):
     )
     assert "of module etcd_raftModel is false" in invalid
     assert "Computing initial states" not in invalid
+
+
+@pytest.mark.parametrize("recovery_case", ["truncate", "replace", "persist"])
+def test_restart_recovers_the_last_persisted_log(tmp_path, recovery_case):
+    """A reachable conflict must not corrupt log contents restored after a crash."""
+    if shutil.which("java") is None or not TLA2TOOLS.is_file() or not COMMUNITY.is_dir():
+        pytest.skip("TLC dependencies are not installed; run make setup")
+    fixture = REPO / "tests" / "fixtures" / "etcd_raft" / "DurableLogRecovery.tla"
+    shutil.copy2(fixture, tmp_path / fixture.name)
+    config = CONFIG.format(
+        invariant="RecoveredLog",
+        init_server="{s1, s2, s3}",
+        server="{s1, s2, s3}",
+        nil="Nil",
+    ).replace("SPECIFICATION Spec", "SPECIFICATION SSpec")
+    config += f'\nCONSTANTS s1 = s1 s2 = s2 s3 = s3\nRecoveryCase = "{recovery_case}"\nPROPERTY RefinesNext\n'
+    for invariant in (
+        "LogInv",
+        "CommittedIsDurableInv",
+        "ElectionSafetyInv",
+        "LeaderCompletenessInv",
+        "LogMatchingInv",
+        "MoreThanOneLeaderInv",
+        "MoreUpToDateCorrectInv",
+        "QuorumLogInv",
+    ):
+        config += f"INVARIANT {invariant}\n"
+    (tmp_path / "DurableLogRecovery.cfg").write_text(config)
+    # The fixture extends the module-level definitions used by experiments.
+    module_context = REPO / "benchmark" / "proof-from-scratch-module" / "etcd_raft"
+    classpath = os.pathsep.join((str(TLA2TOOLS), str(COMMUNITY), str(module_context)))
+    result = subprocess.run(
+        [
+            "java",
+            "-Xmx1g",
+            "-cp",
+            classpath,
+            "tlc2.TLC",
+            "-workers",
+            "1",
+            "-config",
+            "DurableLogRecovery.cfg",
+            "DurableLogRecovery.tla",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "Model checking completed. No error has been found." in output
+    depth = re.search(r"depth of the complete state graph search is (\d+)", output)
+    assert depth is not None and int(depth.group(1)) == 34, output
