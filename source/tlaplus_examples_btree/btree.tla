@@ -100,6 +100,11 @@ IsFree(node) == isLeaf[node] /\ keysOf[node] = {}
 
 ChooseFreeNode == CHOOSE n \in Nodes : IsFree(n)
 
+\* A split blocks if the fixed node pool has insufficient free nodes.
+\* CHOOSE alone does not guarantee a fresh node when its predicate has no witness.
+HasFreeNode == \E n \in Nodes : IsFree(n)
+HasTwoFreeNodes == \E n, m \in Nodes : n # m /\ IsFree(n) /\ IsFree(m)
+
 
 \* Single tuple binders avoid the TLAPS limitation in tlaplus/tlapm#294.
 \* The functions retain their Nodes \X Keys domain and f[n, k] access syntax.
@@ -221,6 +226,7 @@ SplitRootLeaf ==
         n2Keys == {x \in keys: x>=pivot} 
         keyToInsert == args[1] IN
     /\ state = SPLIT_ROOT_LEAF
+    /\ HasTwoFreeNodes
     /\ root' = newRoot
     /\ isLeaf' = [isLeaf EXCEPT ![newRoot]=FALSE, ![n2]=TRUE]
     /\ keysOf' = [keysOf EXCEPT ![newRoot]={pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
@@ -254,6 +260,7 @@ SplitRootInner ==
         n1Keys == {x \in keys: x<pivot}
         n2Keys == {x \in keys: x>pivot} IN
     /\ state = SPLIT_ROOT_INNER
+    /\ HasTwoFreeNodes
     /\ root' = newRoot
     /\ isLeaf' = [isLeaf EXCEPT ![newRoot]=FALSE, ![n2]=FALSE]
     /\ keysOf' = [keysOf EXCEPT ![newRoot]={pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
@@ -281,6 +288,7 @@ SplitLeaf ==
         keyToInsert == args[1]
     IN
     /\ state = SPLIT_LEAF
+    /\ HasFreeNode
     /\ isLeaf' = [isLeaf EXCEPT ![n2]=TRUE]
     /\ keysOf' = [keysOf EXCEPT ![parent]=@ \union {pivot}, ![n1]=n1Keys, ![n2]=n2Keys]
     \* In the parent, point the pivot key to n1, and point the parent key to n2.
