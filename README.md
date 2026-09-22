@@ -119,6 +119,14 @@ Choosing an agent (`--backend` / `--model`) and its credentials, the full CLI
 reference, and native (`--no-container`) setup are covered in the
 [usage guide](docs/USAGE.md).
 
+## Acknowledgement
+
+We are grateful to the generous support from
+* TLA+ Foundation
+* OpenAI
+* Anthropic (AI for Science Program)
+* Qingrong Chen
+
 ## License
 
 MIT — see [`LICENSE`](LICENSE). Third-party benchmark sources are attributed in
