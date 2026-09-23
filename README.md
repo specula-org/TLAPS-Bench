@@ -71,7 +71,7 @@ On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor 
 git clone https://github.com/specula-org/tlaps-bench.git  
 cd tlaps-bench  
 export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the default backend if no OpenAI key is provided.  
-uv run tlaps-bench run --filter GCD_GCD3 # This is an example task that can be finished in seconds.  
+uv run tlaps-bench run --mode proof-from-scratch --filter Euclid/Euclid-Hyperbook/GCD.tla --jobs 1 # A small proof-from-scratch example
 ```
 
 The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it 
