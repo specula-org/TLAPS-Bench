@@ -52,11 +52,12 @@ can be derived.
 | [etcd (Specula)](https://github.com/specula-org) | 1 | – | 8 | 8 |
 | [OpenAddressing](https://github.com/lemmy/Examples) | 1 | 1 | 5 | 6 |
 | [Cahill serializable snapshot isolation](https://github.com/pron/amazon-snapshot-spec) | 1 | – | 1 | 1 |
+| [TLC disk state queue](https://github.com/tlaplus/tlaplus) | 1 | – | 1 | 1 |
 | [MongoDB distributed transactions](https://github.com/mongodb-labs/vldb25-dist-txns) | 1 | – | 1 | 1 |
 | [two_thread_mutex (Anvil)](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | 1 | – | 1 | 1 |
-| **Subtotal** | **15** | **258** | **46** | **304** |
+| **Subtotal** | **16** | **258** | **47** | **305** |
 
-**79 examples, 982 tasks in total.** A per-example breakdown is in
+**80 examples, 983 tasks in total.** A per-example breakdown is in
 [`docs/DATASET.md`](docs/DATASET.md).
 
 ## Running

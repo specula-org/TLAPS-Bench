@@ -45,6 +45,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [Bakery](https://github.com/tlaplus/tlapm/blob/main/examples/Bakery.tla) | TLAPS distribution examples | – | 1 | 1 |
 | [Record](https://github.com/hengxin/tlaps-examples/tree/master/Record) | TLAPS distribution examples | – | 1 | 1 |
 | [SumAndMax](https://github.com/tlaplus/tlapm/blob/main/examples/SumAndMax.tla) | TLAPS distribution examples | – | 1 | 1 |
+| [DiskStateQueue](https://github.com/tlaplus/tlaplus/blob/f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55/tlatools/org.lamport.tlatools/spec/queue/DiskStateQueueWorkload.tla) | TLC disk state queue | – | 1 | 1 |
 | [ZooKeeper](https://github.com/Disalg-ICS-NJU/zookeeper-tla-spec/blob/main/high-level-spec/Zab.tla) | ZooKeeper (Remix) | – | 9 | 9 |
 | [ZooKeeper_LowLevel](https://github.com/Disalg-ICS-NJU/zookeeper-tla-spec/tree/main/low-level-spec/zk-3.7) | ZooKeeper (Remix) | – | 9 | 9 |
 | [ben-or83](https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16c1a801ff8ac64eb9aca038/ben-or83) | apalache-examples (Konnov) | 209 | – | 209 |
@@ -102,4 +103,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 79 examples — 706 proof-completion + 276 proof-from-scratch = 982 tasks.**
+**Total: 80 examples — 706 proof-completion + 277 proof-from-scratch = 983 tasks.**

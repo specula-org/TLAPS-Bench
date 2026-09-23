@@ -55,6 +55,8 @@ def source_label(group):
         return "MongoDB distributed transactions"
     if group == "CahillSSI":
         return "Cahill serializable snapshot isolation"
+    if group == "DiskStateQueue":
+        return "TLC disk state queue"
     return "TLAPS distribution examples"
 
 
@@ -70,6 +72,7 @@ SOURCE_URL = {
     "two_thread_mutex (Anvil)": "https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs",
     "MongoDB distributed transactions": "https://github.com/mongodb-labs/vldb25-dist-txns",
     "Cahill serializable snapshot isolation": "https://github.com/pron/amazon-snapshot-spec",
+    "TLC disk state queue": "https://github.com/tlaplus/tlaplus",
 }
 
 
@@ -121,6 +124,11 @@ _GROUP_URL = {
     "CahillSSI": (
         "https://github.com/pron/amazon-snapshot-spec/blob/"
         "9c60cb18151889d7b4c0a4ffd7de0b6fc2db0fb2/serializableSnapshotIsolation.tla"
+    ),
+    "DiskStateQueue": (
+        "https://github.com/tlaplus/tlaplus/blob/"
+        "f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55/"
+        "tlatools/org.lamport.tlatools/spec/queue/DiskStateQueueWorkload.tla"
     ),
 }
 
