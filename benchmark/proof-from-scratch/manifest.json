@@ -228,6 +228,14 @@
       "Data/Sets_PigeonHoleDefs.tla"
     ]
   },
+  "DiskStateQueue/DiskStateQueueProof_DeadlockFreedom.tla": {
+    "spec_id": "DiskStateQueue/DiskStateQueueProof.tla",
+    "context": [
+      "DiskStateQueue/DiskStateQueueProof_DeadlockFreedom/DiskStateQueue.tla",
+      "DiskStateQueue/DiskStateQueueProof_DeadlockFreedom/DiskStateQueueWorkload.tla",
+      "DiskStateQueue/DiskStateQueueProof_DeadlockFreedomDefs.tla"
+    ]
+  },
   "EWD840/EWD840_TerminationDetection.tla": {
     "spec_id": "EWD840/EWD840.tla",
     "context": [
