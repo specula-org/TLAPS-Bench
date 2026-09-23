@@ -675,6 +675,34 @@
       "ivy_examples_tlb/ivy_examples_tlb_SafetyDefs.tla"
     ]
   },
+  "libomp/libomp_ActiveTasksImplyActiveTeamCorrect.tla": {
+    "spec_id": "libomp/libomp.tla",
+    "context": [
+      "libomp/libomp_ActiveTasksImplyActiveTeamCorrect/libompRuntime.tla",
+      "libomp/libomp_ActiveTasksImplyActiveTeamCorrectDefs.tla"
+    ]
+  },
+  "libomp/libomp_NoQueuedTasksAfterDeactivationCorrect.tla": {
+    "spec_id": "libomp/libomp.tla",
+    "context": [
+      "libomp/libomp_NoQueuedTasksAfterDeactivationCorrect/libompRuntime.tla",
+      "libomp/libomp_NoQueuedTasksAfterDeactivationCorrectDefs.tla"
+    ]
+  },
+  "libomp/libomp_ParityConsistencyCorrect.tla": {
+    "spec_id": "libomp/libomp.tla",
+    "context": [
+      "libomp/libomp_ParityConsistencyCorrect/libompRuntime.tla",
+      "libomp/libomp_ParityConsistencyCorrectDefs.tla"
+    ]
+  },
+  "libomp/libomp_ParityRestoredAfterCancelCorrect.tla": {
+    "spec_id": "libomp/libomp.tla",
+    "context": [
+      "libomp/libomp_ParityRestoredAfterCancelCorrect/libompRuntime.tla",
+      "libomp/libomp_ParityRestoredAfterCancelCorrectDefs.tla"
+    ]
+  },
   "tlaplus_examples_Bakery-Boulangerie/Bakery_MutualExclusion.tla": {
     "spec_id": "tlaplus_examples_Bakery-Boulangerie/Bakery.tla",
     "context": [

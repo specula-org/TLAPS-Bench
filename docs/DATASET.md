@@ -29,6 +29,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [ticket_nested](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/ticket_nested.ivy) | Ivy liveness | – | 2 | 2 |
 | [tlb](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/tlb.ivy) | Ivy liveness | – | 2 | 2 |
 | [split_queue_2_new](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/split_queue_2_new.ivy) | Ivy liveness | – | 1 | 1 |
+| [libomp](https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp) | LLVM libomp (Specula) | – | 4 | 4 |
 | [MongoDB](https://github.com/mongodb-labs/vldb25-dist-txns/blob/74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla) | MongoDB distributed transactions | – | 1 | 1 |
 | [OpenAddressing](https://github.com/lemmy/Examples/tree/mku-OA/specifications/TLC) | OpenAddressing | 1 | 5 | 6 |
 | [Data](https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data) | TLAPS distribution examples | 15 | 9 | 24 |
@@ -103,4 +104,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 80 examples — 706 proof-completion + 277 proof-from-scratch = 983 tasks.**
+**Total: 81 examples — 706 proof-completion + 281 proof-from-scratch = 987 tasks.**
