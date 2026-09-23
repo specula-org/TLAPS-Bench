@@ -1,0 +1,28 @@
+{
+  "model_repository": "https://github.com/specula-org/specula-case-studies",
+  "model_commit": "8885d2c0687d1e197f261585919718a035ce4464",
+  "model_path": "systems/hashicorp-raft/modules/core/runs/case-studies-hashicorp-raft/spec/base.tla",
+  "model_sha256": "437408a6c9ed726b304c0091a1fb049c9a54776d0f1c3135a34cf0cd548ef28e",
+  "implementation_repository": "https://github.com/specula-org/hashicorp-raft",
+  "implementation_upstream": "https://github.com/hashicorp/raft",
+  "implementation_commit": "b8265ccdffa1d60b8355123c252a1f2889b0a9ac",
+  "implementation_files": {
+    "api.go": "8e6e2c6fd2b8b3125d0ed6d8b73fe6384dbbd6f21327673d14e9287271c5c4ed",
+    "commitment.go": "2b534893e015d26a33d37027a08c65ff76fb5e28e71a76d4408e3c9fcbcfd4fe",
+    "configuration.go": "5e4707f21fce4ef518d2f36e6941fd66e3d7597c5ca7d5310d8cd69d41ba719b",
+    "raft.go": "e713140d676148e2d47b99bc2a2c91713162e873819b6f0bb589aebf19042d83",
+    "replication.go": "5911c1d990615463a5edd0e2c9d4a3570c418a01b66a69883b176becc502ac3d",
+    "state.go": "9e73b5bcd67350db80c272c0d0f3f6c17afb24fb6e62b28e891c13e96107e189"
+  },
+  "variant": "repaired single-server membership-change model with passive safety histories",
+  "goals": [
+    "LeaderCompleteness",
+    "StateMachineSafety",
+    "CommittedEntriesPreserved",
+    "LogMatching",
+    "ElectionSafety",
+    "ConfigurationSafety"
+  ],
+  "validation": "regression traces, fault controls, and time-bounded model checking; no full theorem certificate",
+  "implementation_upstream_commit": "9e3b7155dd6f45b128d0679f22df32229319e81f"
+}

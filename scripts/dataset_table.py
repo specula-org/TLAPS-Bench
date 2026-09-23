@@ -55,6 +55,8 @@ def source_label(group):
         return "MongoDB distributed transactions"
     if group == "CahillSSI":
         return "Cahill serializable snapshot isolation"
+    if group == "HashicorpRaft":
+        return "HashiCorp Raft (Specula)"
     if group == "libomp":
         return "LLVM libomp (Specula)"
     if group == "DiskStateQueue":
@@ -64,6 +66,7 @@ def source_label(group):
 
 # Upstream provenance per source (see NOTICE for full attribution).
 SOURCE_URL = {
+    "HashiCorp Raft (Specula)": "https://github.com/hashicorp/raft",
     "tlaplus/Examples": "https://github.com/tlaplus/Examples",
     "TLAPS distribution examples": "https://github.com/tlaplus/tlapm",
     "ZooKeeper (Remix)": "https://arxiv.org/abs/2409.14301",
@@ -97,6 +100,7 @@ _APALACHE = "https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16
 _TLAPM_FILE = {"Allocator", "Bakery", "BubbleSort", "EWD840", "Peterson", "SimpleMutex", "SumAndMax"}
 _TLAPM_DIR = {"Cantor": "examples/cantor"}
 _GROUP_URL = {
+    "HashicorpRaft": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/hashicorp-raft",
     "libomp": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp",
     "Consensus": "https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus",
     "Data": "https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data",

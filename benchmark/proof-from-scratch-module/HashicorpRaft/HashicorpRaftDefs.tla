@@ -1,0 +1,4 @@
+---- MODULE HashicorpRaftDefs ----
+EXTENDS HashicorpRaftRuntime
+
+====

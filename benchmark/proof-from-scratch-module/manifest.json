@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "5988fec443127f665efa792bea2307fa3379a97525f3cdf76ae67905ea195123",
+  "corpus_sha256": "c494f334c92b30edf1db1b0a7ceb4edc750d28d2185dd7230fefe9898b822745",
   "complete": true,
   "module_tasks": [
     {
@@ -467,6 +467,44 @@
       "context": [
         "Euclid/Euclid-TLAPS-Example/EuclidDefs.tla",
         "Euclid/Euclid-TLAPS-Example/EuclidModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "HashicorpRaft/HashicorpRaft.tla",
+        "source_sha256": "6e2117ab4934a5d21f7526d565460e21b100c367d47f46767b1fabf0723860f4",
+        "proof_units": [
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_LeaderCompletenessCorrect.tla",
+            "statement_sha256": "ed812b04dc534c386408a853d47564e6f14c015a805b8e3cbe4343be8ff6b545"
+          },
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_StateMachineSafetyCorrect.tla",
+            "statement_sha256": "a684831144c84d6654ee1f66db4e48dfed4e40637edc6690d71353d717abf68c"
+          },
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_CommittedEntriesPreservedCorrect.tla",
+            "statement_sha256": "649170f4326ff917abe8da0f493742da2ee9d455558b94870a0facce5f58539a"
+          },
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_LogMatchingCorrect.tla",
+            "statement_sha256": "c4cb3161928803bc1f881ba7b1b9b1f978249f92bd42460cd3fa669f5d9e49ac"
+          },
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_ElectionSafetyCorrect.tla",
+            "statement_sha256": "5805a10ceffca8d279edd292b82333a1ef5600f7fb1b066eae2b5ec21e0eb43f"
+          },
+          {
+            "task_id": "HashicorpRaft/HashicorpRaft_ConfigurationSafetyCorrect.tla",
+            "statement_sha256": "a2ad894a99ad3ca00d2ee752256ebca846073a624b1ef5d6c97a0ceca886db66"
+          }
+        ]
+      },
+      "context": [
+        "HashicorpRaft/HashicorpRaft/HashicorpRaftRuntime.tla",
+        "HashicorpRaft/HashicorpRaftDefs.tla"
       ],
       "renamed_bindings": {}
     },
