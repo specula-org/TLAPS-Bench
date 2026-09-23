@@ -1,6 +1,6 @@
 {
   "runtime_sha256": "8f3bb6a05b2aa4b6913a5444962a09d260e7980c136815eb39d9be09aac660dc",
-  "status": "in_progress",
+  "status": "completed",
   "evidence_scope": "Time-bounded TLC exploration; not a proof of the unbounded theorems.",
   "tool": {
     "name": "TLC",
@@ -24,7 +24,15 @@
       "workers": 4,
       "heap_gib": 4,
       "seed": 20260926,
-      "simulation_depth": 100
+      "simulation_depth": 100,
+      "finished_utc": "2026-09-23T12:28:46Z",
+      "exit_code": 124,
+      "outcome": "no_violation_within_budget",
+      "exhaustive": false,
+      "last_progress_snapshot": "Progress: 619722468 states checked, 356781 traces generated (trace length: mean=81, var(x)=361, sd=19)",
+      "states_checked_at_last_progress": 619722468,
+      "traces_at_last_progress": 356781,
+      "log_sha256": "0204af3ae95fee3b1cb08004425266270a3142910e0a782eb70e73d3a17de635"
     },
     {
       "name": "sim5",
@@ -36,7 +44,15 @@
       "workers": 4,
       "heap_gib": 4,
       "seed": 20260928,
-      "simulation_depth": 100
+      "simulation_depth": 100,
+      "finished_utc": "2026-09-23T12:28:45Z",
+      "exit_code": 124,
+      "outcome": "no_violation_within_budget",
+      "exhaustive": false,
+      "last_progress_snapshot": "Progress: 357106380 states checked, 96699 traces generated (trace length: mean=81, var(x)=361, sd=19)",
+      "states_checked_at_last_progress": 357106380,
+      "traces_at_last_progress": 96699,
+      "log_sha256": "991bba8104755f06282cf82ff368e65c4b5ea3f396b9e22ec80e01a235cdaa35"
     },
     {
       "name": "bfs3",
@@ -46,7 +62,26 @@
       "started_utc": "2026-09-23T11:58:45Z",
       "config": "3Servers.cfg",
       "workers": 2,
-      "heap_gib": 8
+      "heap_gib": 8,
+      "finished_utc": "2026-09-23T12:28:46Z",
+      "exit_code": 124,
+      "outcome": "no_violation_within_budget",
+      "exhaustive": false,
+      "last_progress_snapshot": "Progress(12) at 2026-09-23 12:27:49: 288,013,499 states generated (9,851,716 s/min), 51,867,043 distinct states found (1,746,166 ds/min), 41,683,908 states left on queue.",
+      "depth_at_last_progress": 12,
+      "states_generated_at_last_progress": 288013499,
+      "distinct_states_at_last_progress": 51867043,
+      "queued_states_at_last_progress": 41683908,
+      "log_sha256": "613212fa69b7dd370ca3d078a2168cb77bc2ba6be9f192fecd725b6893a88ab7"
     }
-  ]
+  ],
+  "scope_note": "The TLC exploration used the recorded newer TLC build; regression fixtures and task generation used the repository-pinned v1.8.0 toolchain.",
+  "implementation_ci": {
+    "commit": "fe08f0be39c38c1b87eee192767c9acc4181ec76",
+    "run_url": "https://github.com/specula-org/TLAPS-Bench/actions/runs/35858540147",
+    "conclusion": "success",
+    "tests_passed": 2188,
+    "tests_skipped": 8,
+    "module_suite_verification": "passed"
+  }
 }
