@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="pics/logo.png">
-    <img alt="specula" src="pics/logo.png" width=65%>
+    <source media="(prefers-color-scheme: dark)" srcset="pics/logo.jpg">
+    <img alt="tlaps-bench" src="pics/logo.jpg" width=50%>
   </picture>
 </p>
 
