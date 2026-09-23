@@ -2372,7 +2372,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_dag-consensus/Sailfish.tla",
-        "source_sha256": "3c130922771a187fb1bd6f6941eca62180cd342a22588fc24571d0b2ffc4eeb2",
+        "source_sha256": "5fe225f5a29b98cbac82ee72ed014079e2f1c10a6e79b4a7eef5a444da871684",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_dag-consensus/Sailfish_TypeOKCorrect.tla",

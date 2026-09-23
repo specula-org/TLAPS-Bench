@@ -35,6 +35,10 @@ ASSUME ByzantineNodesAreNodes == F \subseteq N
 \* Rounds are contiguous, since a node entering round r reasons about r-1 and r-2:
 ASSUME RoundsStartAtOne == \E n \in R : R = 1..n
 
+\* INSTANCE BlockDag does not import its assumptions into this module.
+\* The leader of each protocol round must be one of the network nodes.
+ASSUME RoundLeadersAreNodes == \A r \in R : Leader(r) \in N
+
 \* GST need not be a member of R; if it is not, then the system never becomes
 \* synchronous in the rounds under consideration:
 ASSUME GSTIsARoundNumber == GST \in Nat

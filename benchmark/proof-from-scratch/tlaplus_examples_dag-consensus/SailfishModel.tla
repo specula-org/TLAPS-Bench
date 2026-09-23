@@ -17,6 +17,8 @@ ASSUME ByzantineNodesAreNodes == F \subseteq N
 
 ASSUME RoundsStartAtOne == \E n \in R : R = 1..n
 
+ASSUME RoundLeadersAreNodes == \A r \in R : Leader(r) \in N
+
 ASSUME GSTIsARoundNumber == GST \in Nat
 
 ASSUME CorrectNodesFormQuorum == IsQuorum(N \ F)
