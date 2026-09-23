@@ -6,7 +6,7 @@
 </p>
 
 <h2 align="center">
-A Benchmark of Formally Proving the Correctness of Complex Protocols and Systems using TLA+ Proof System (TLAPS)
+Formally Proving the Correctness of Complex Protocols and Systems using TLA+ Proof System (TLAPS)
 </h2>
 
 [![CI](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml)
