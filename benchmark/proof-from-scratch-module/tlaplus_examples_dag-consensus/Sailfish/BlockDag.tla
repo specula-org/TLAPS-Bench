@@ -30,15 +30,14 @@ PreviousLeader(dag, r) == CHOOSE l \in Vertices(dag) :
             {l2 \in Vertices(dag) : IsLeader(l2) /\ Round(l2) < r}})
 
 Linearize(dag, l) ==
-    LET linearize[d \in (SUBSET Vertices(dag)) \X (SUBSET Edges(dag)),
-                  v \in Vertices(dag)] ==
-          IF Vertices(d) = {<<>>} THEN <<>> ELSE
-          LET dagOfL == SubDag(d, {v})
+    LET linearize[v \in Vertices(dag)] ==
+          IF v = Genesis THEN <<>> ELSE
+          LET dagOfL == SubDag(dag, {v})
               prevL == PreviousLeader(dagOfL, Round(v))
-              dagOfPrev == SubDag(d, {prevL})
+              dagOfPrev == SubDag(dag, {prevL})
               remaining == Vertices(dagOfL) \ Vertices(dagOfPrev)
-          IN  linearize[dagOfPrev, prevL] \o OrderSet(remaining \ {v}) \o <<v>>
-    IN  linearize[dag, l]
+          IN  linearize[prevL] \o OrderSet(remaining \ {v}) \o <<v>>
+    IN  linearize[l]
 
 Compatible(s1, s2) == 
     \A i \in 1..Min({Len(s1), Len(s2)}) : s1[i] = s2[i]

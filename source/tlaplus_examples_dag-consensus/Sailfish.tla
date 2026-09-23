@@ -43,6 +43,10 @@ ASSUME GSTIsARoundNumber == GST \in Nat
 \* have to form a quorum, or else no round could ever be entered:
 ASSUME CorrectNodesFormQuorum == IsQuorum(N \ F)
 
+\* A certificate remains a quorum when additional nodes endorse it.
+ASSUME QuorumsAreMonotone ==
+    \A Q, S \in SUBSET N : Q \subseteq S /\ IsQuorum(Q) => IsQuorum(S)
+
 \* Removing the Byzantine nodes from a quorum leaves a blocking set:
 ASSUME QuorumMinusByzantineIsBlocking ==
     \A Q \in SUBSET N : IsQuorum(Q) => IsBlocking(Q \ F)
@@ -128,6 +132,11 @@ l0:     while (TRUE) {
                 else
                 with (delivered \in SUBSET {v \in vs : Round(v) = r-1}) {
                     await IsQuorum({Node(v) : v \in delivered}); \* ignored otherwise
+                    \* Reliable-broadcast validation also checks Byzantine leaders.
+                    \* A leader needs its predecessor or a no-vote certificate.
+                    if (Leader(r) = self)
+                        await   \/ LeaderVertex(r-1) \in delivered
+                                \/ NoLeaderVoteQuorum(r, {v \in vs : Round(v) = r}, {self});
                     vs := vs \cup {newV};
                     es := es \cup {<<newV, pv>> : pv \in delivered}
                 }
@@ -135,8 +144,8 @@ l0:     while (TRUE) {
         }
     }
 }*)
-\* BEGIN TRANSLATION (chksum(pcal) = "c16dfa43" /\ chksum(tla) = "9cdbd4f5")
-\* Label l0 of process correctNode at line 42 col 9 changed to l0_
+\* BEGIN TRANSLATION (chksum(pcal) = "1dcb31ed" /\ chksum(tla) = "ee626ee9")
+\* Label l0 of process correctNode at line 77 col 9 changed to l0_
 VARIABLES vs, es
 
 (* define statement *)
@@ -195,6 +204,10 @@ byzantineNode(self) == /\ \E r \in R:
                                          /\ es' = (es \cup {<<newV, Genesis>>})
                                     ELSE /\ \E delivered \in SUBSET {v \in vs : Round(v) = r-1}:
                                               /\ IsQuorum({Node(v) : v \in delivered})
+                                              /\ IF Leader(r) = self
+                                                    THEN /\ \/ LeaderVertex(r-1) \in delivered
+                                                            \/ NoLeaderVoteQuorum(r, {v \in vs : Round(v) = r}, {self})
+                                                    ELSE /\ TRUE
                                               /\ vs' = (vs \cup {newV})
                                               /\ es' = (es \cup {<<newV, pv>> : pv \in delivered})
                        /\ UNCHANGED << round, log >>

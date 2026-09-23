@@ -64,18 +64,18 @@ PreviousLeader(dag, r) == CHOOSE l \in Vertices(dag) :
 (* OrderSet) is fine. This assume a DAG where all paths end with the Genesis          *)
 (* vertex.                                                                            *)
 (**************************************************************************************)
-\* Each recursive call passes a sub-dag of dag and one of its vertices, so a
-\* function over the sub-dags of dag expresses the recursion directly.
+\* On a block DAG, each recursive call follows a leader of a smaller round.
+\* Keep the original graph fixed: its ancestor-closed subgraphs give the same
+\* causal history, without defining recursion over arbitrary broken subgraphs.
 Linearize(dag, l) ==
-    LET linearize[d \in (SUBSET Vertices(dag)) \X (SUBSET Edges(dag)),
-                  v \in Vertices(dag)] ==
-          IF Vertices(d) = {<<>>} THEN <<>> ELSE
-          LET dagOfL == SubDag(d, {v})
+    LET linearize[v \in Vertices(dag)] ==
+          IF v = Genesis THEN <<>> ELSE
+          LET dagOfL == SubDag(dag, {v})
               prevL == PreviousLeader(dagOfL, Round(v))
-              dagOfPrev == SubDag(d, {prevL})
+              dagOfPrev == SubDag(dag, {prevL})
               remaining == Vertices(dagOfL) \ Vertices(dagOfPrev)
-          IN  linearize[dagOfPrev, prevL] \o OrderSet(remaining \ {v}) \o <<v>>
-    IN  linearize[dag, l]
+          IN  linearize[prevL] \o OrderSet(remaining \ {v}) \o <<v>>
+    IN  linearize[l]
 
 Compatible(s1, s2) == \* whether the sequence s1 is a prefix of the sequence s2, or vice versa
     \A i \in 1..Min({Len(s1), Len(s2)}) : s1[i] = s2[i]
