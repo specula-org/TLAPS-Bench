@@ -1,134 +1,99 @@
-# TLAPS Proof Benchmark
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="pics/logo.jpg">
+    <img alt="tlaps-bench" src="pics/logo.jpg" width=50%>
+  </picture>
+</p>
+
+<h2 align="center">
+Formally Proving the Correctness of Complex Protocols and Systems <br>using TLA+ Proof System (TLAPS)
+</h2>
 
 [![CI](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A benchmark for evaluating AI's ability to write [TLAPS](https://proofs.tlaplus.net/doc/) (TLA+ Proof System) proofs.
+Check out [TLAPS-Bench Leaderboard](https://specula-org.github.io/tlaps-bench-website/#/leaderboard).
 
-Benchmark results are available on the [TLAPS-Bench website](https://specula-org.github.io/tlaps-bench-website/).
+**Our vision.** To prove the correctness of any given critical protocols and systems using [TLA+ Proof System (TLAPS)](https://proofs.tlaplus.net/doc/)
 
-## Overview
+TLAPS-Bench evaluates whether AI agents can formally prove (or disprove) the correctness of complex protocols and systems using TLAPS. 
 
-TLAPS proofs are checked mechanically by `tlapm`: a proof is either accepted or
-rejected, with no partial credit and no room for a plausible-but-wrong argument.
-That makes proof construction a sharp test of an AI's formal reasoning.
+Each problem in TLAPS-Bench is a TLA+ specification (including the formal model and the invariants that specify correctness properties). AI agents are asked to prove that the formal model satisfies the invariants. We consider each task in TLAPS-Bench to formally prove one invariant of a given specification.
 
-Each task presents a TLA+ theorem whose proof body is replaced by `PROOF OBVIOUS`;
-the AI must replace it with a real proof that `tlapm` accepts. Tasks come in two
-types:
+TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the given specification without cheating. The runtime is equipped with extensive checks to prevent reward hacking. We have used the runtime to prove many specifications, such as [2PC](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla), [Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/Paxos/Paxos.tla), [TCP state machine](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_tcp/tcp_proof.tla), [Byzantine Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/BPConProof.tla), [Byzantine broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_bcastByz/bcastByz.tla), etc.
 
-- **Proof completion** (`--mode proof-completion`) — the model and proof scaffold
-  (inductive invariants, lemma decomposition, and preceding lemmas marked
-  `PROOF OMITTED`) are given as read-only context, and the AI fills in one
-  marked target proof.
-- **Proof from scratch** (`--mode proof-from-scratch`) — only the model and
-  the target theorem statement remain; the AI must invent the entire proof
-  structure, including any helper lemmas.
+Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks, which AI has to invent the entire proof structure, are still nontrivial and take long-horizon efforts.
 
-## Benchmark problems
+## Benchmark Problems
 
-The benchmark draws on two kinds of source. A base of classic TLA+ **example
-libraries**, a small set of **systems specifications** — real
-protocols, several with no published proof. Both sets are expected to keep
-growing as more specifications are added.
-A `–` marks a source with no human proofs, from which no proof-completion task
-can be derived.
+We are currently focusing on a few hard problems (due to token shortage). 
 
-**Example libraries**
+| Problems | Type | # Spec | # Invariants |
+| :---- | :---- | :---- | :---- |
+| Ivy protocols ([alternating bit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla), [reliable broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla), <br>[split queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla), [ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket/ivy_examples_ticket.tla), [nested ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla)) | Protocol | 5  | 10 |
+| Cache coherence ([German](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanControlBenchmarks.tla), [German Data](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanData.tla), [FLASH](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 3 | 22 |
+| [ZooKeeper protocol](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper/Zab.tla) | Protocol | 1 | 9 |
+| [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
+| [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
+| [OpenAddressing](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/OpenAddressing/OpenAddressing.tla) | System | 1 | 5 |
+| [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
+| [etcd Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/etcd_raft/etcd_raft.tla) | System | 1 | 8 |
+| [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
+| [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
+| **Total** |  | 16 | 72 |
 
-| Source | Examples | Proof completion | Proof from scratch | Total |
-|---|--:|--:|--:|--:|
-| [tlaplus/Examples](https://github.com/tlaplus/Examples) | 50 | 357 | 179 | 536 |
-| [TLAPS distribution examples](https://github.com/tlaplus/tlapm) | 14 | 91 | 51 | 142 |
-| **Subtotal** | **64** | **448** | **230** | **678** |
+For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
-**Systems specifications**
+## Running TLAPS-Bench
 
-| Source | Examples | Proof completion | Proof from scratch | Total |
-|---|--:|--:|--:|--:|
-| [apalache-examples (Konnov)](https://github.com/konnov/apalache-examples) | 2 | 257 | – | 257 |
-| [ZooKeeper (Remix)](https://arxiv.org/abs/2409.14301) | 2 | – | 18 | 18 |
-| [Ivy liveness](https://github.com/kenmcmil/ivy) | 6 | – | 12 | 12 |
-| [etcd (Specula)](https://github.com/specula-org) | 1 | – | 8 | 8 |
-| [OpenAddressing](https://github.com/lemmy/Examples) | 1 | 1 | 5 | 6 |
-| [Cahill serializable snapshot isolation](https://github.com/pron/amazon-snapshot-spec) | 1 | – | 1 | 1 |
-| [TLC disk state queue](https://github.com/tlaplus/tlaplus) | 1 | – | 1 | 1 |
-| [MongoDB distributed transactions](https://github.com/mongodb-labs/vldb25-dist-txns) | 1 | – | 1 | 1 |
-| [two_thread_mutex (Anvil)](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | 1 | – | 1 | 1 |
-| **Subtotal** | **16** | **258** | **47** | **305** |
+### Requirements 
 
-**80 examples, 983 tasks in total.** A per-example breakdown is in
-[`docs/DATASET.md`](docs/DATASET.md).
-
-## Running
-
-Requirements: [uv](https://docs.astral.sh/uv/) and
-[Docker](https://docs.docker.com/get-docker/).
-Windows users should run the benchmark through WSL2; native Windows is not supported.
+* [uv](https://docs.astral.sh/uv/)  
+* [Docker](https://docs.docker.com/get-docker/).   
+* Windows users can run the benchmark using WSL2.
 
 ### Recommended hardware
 
-Proof checking can use substantial memory, especially for Isabelle-heavy tasks.
-A few of these tasks can use significantly more than 64 GB of RAM, even when
-only one job is running.
+Proof checking can use substantial memory, especially for Isabelle-heavy tasks. A few of these tasks can use significantly more than 64 GB of RAM for one job.
 
-Use the following as a rough capacity-planning reference per parallel job:
+We recommend the following hardware configurations
 
 | Profile | vCPUs per job | RAM per job | Guidance |
-|---|---:|---:|---|
+| :---- | :---- | :---- | :---- |
 | Recommended | 8–12 | 96 GB | Provides better memory headroom. |
-| Lower-headroom | 8–12 | 64 GB | A starting point; some Isabelle-heavy tasks may require more. |
+| Lower-headroom | 8–12 | 64 GB | A starting point; some Isabelle-heavy tasks <br> may require more. |
 
-On a small machine, start with `--jobs 1`. Increase the value after you
-monitor peak memory use.
+On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor peak memory use.
 
 ### Run the benchmark
 
-```bash
-git clone https://github.com/specula-org/tlaps-bench.git
-cd tlaps-bench
-export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the default backend if no OpenAI key is provided.
-uv run tlaps-bench run --filter GCD_GCD3
+```
+git clone https://github.com/specula-org/tlaps-bench.git  
+cd tlaps-bench  
+export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the default backend if no OpenAI key is provided.  
+uv run tlaps-bench run --filter GCD_GCD3 # This is an example task that can be finished in seconds.  
 ```
 
-The first run builds a sandbox Docker image (tlapm, SANY, and the proof checker
-bundled in) and runs the task inside it — a firewall allows only the LLM API
-hosts, and the benchmarks are mounted read-only. Later runs reuse the image.
-Results land in `results/<mode>/<backend>/<timestamp>/`.
+The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it 
+(a firewall allows only the LLM API hosts and the benchmarks are mounted read-only). Later runs reuse this image. Results are stored in `results/<mode>/<backend>/<timestamp>/`.
 
-Scale up, or switch task type:
-
-```bash
-# Proof-completion Core: 190 selected tasks, 4 in parallel
-uv run tlaps-bench run --task-list core --jobs 4 --timeout 7200
-
-# Full proof-completion suite: 4 in parallel, 2h timeout each
-uv run tlaps-bench run --jobs 4 --timeout 7200
-
-# Proof from scratch
-uv run tlaps-bench run --mode proof-from-scratch --jobs 4
+```  
+uv run tlaps-bench run --mode proof-from-scratch --jobs 4  
 ```
 
-Each run writes `results.json` and `summary.md` (with specification pass rate as
-the primary score and task-level pass rate as a secondary metric); `uv run
-tlaps-bench score` (re)computes and compares scores. See the [scoring documentation](docs/USAGE.md#tlaps-bench-score)
-for the grouping rule and formulas. Use `--resume` with a fixed `--output-dir` to
-skip tasks already recorded as PASS, and `--force-build` to rebuild the image
-after changing source.
-
-Choosing an agent (`--backend` / `--model`) and its credentials, the full CLI
-reference, and native (`--no-container`) setup are covered in the
-[usage guide](docs/USAGE.md).
+How to set up an agent (`--backend` and `--model`) and its credentials, the full CLI reference, and native (`--no-container`) setup are described in our [usage guide](https://github.com/specula-org/tlaps-bench/blob/main/docs/USAGE.md).
 
 ## Acknowledgement
 
 We are grateful to the generous support from
-* TLA+ Foundation
-* OpenAI
-* Anthropic (AI for Science Program)
+
+* TLA+ Foundation  
+* OpenAI  
+* Anthropic (AI for Science Program)  
 * Qingrong Chen
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE). Third-party benchmark sources are attributed in
-[`NOTICE`](NOTICE).
+* [MIT LICENSE](https://github.com/specula-org/tlaps-bench/blob/main/LICENSE)  
+* Third-party benchmark sources are attributed in [NOTICE](https://github.com/specula-org/tlaps-bench/blob/main/NOTICE)
+
