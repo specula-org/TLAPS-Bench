@@ -22,7 +22,7 @@ Each problem in TLAPS-Bench is a TLA+ specification (including the formal model 
 
 TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the given specification without cheating. The runtime is equipped with extensive checks to prevent reward hacking. We have used the runtime to prove many specifications, such as [2PC](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla), [Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/Paxos/Paxos.tla), [TCP state machine](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_tcp/tcp_proof.tla), [Byzantine Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/BPConProof.tla), [Byzantine broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_bcastByz/bcastByz.tla), etc.
 
-Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks -- which AI has to invent the entire proof structure -- are still nontrivial and take long-horizon efforts.
+Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks, which AI has to invent the entire proof structure, are still nontrivial and take long-horizon efforts.
 
 ## Benchmark Problems
 
@@ -74,7 +74,8 @@ export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the defaul
 uv run tlaps-bench run --filter GCD_GCD3 # This is an example task that can be finished in seconds.  
 ```
 
-The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it —- a firewall allows only the LLM API hosts, and the benchmarks are mounted read-only. Later runs reuse this image. Results are stored in `results/<mode>/<backend>/<timestamp>/`.
+The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it 
+(a firewall allows only the LLM API hosts and the benchmarks are mounted read-only). Later runs reuse this image. Results are stored in `results/<mode>/<backend>/<timestamp>/`.
 
 ```  
 uv run tlaps-bench run --mode proof-from-scratch --jobs 4  
