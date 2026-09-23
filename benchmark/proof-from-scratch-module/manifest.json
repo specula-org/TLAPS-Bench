@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "d365ff1df454c6152ce38d826b6bad66c13a582df91c34b5ba8f6d5deefcd248",
+  "corpus_sha256": "f7fe4200802fcdab656f848deeed9075709d1979cf8ee7253dd74bdef6203209",
   "complete": true,
   "module_tasks": [
     {
@@ -368,6 +368,25 @@
       },
       "context": [
         "Data/SetsDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "DiskStateQueue/DiskStateQueueProof.tla",
+        "source_sha256": "f5ec90d035c9ba3c43c0b4ce6b3e2724760b2e29e8cffb5d908a7e0a45cff644",
+        "proof_units": [
+          {
+            "task_id": "DiskStateQueue/DiskStateQueueProof_DeadlockFreedom.tla",
+            "statement_sha256": "86cd277f883a2575b2c2c6442bd6db6f77a515364da92ec727fc7fbfecaa1351"
+          }
+        ]
+      },
+      "context": [
+        "DiskStateQueue/DiskStateQueueProof/DiskStateQueue.tla",
+        "DiskStateQueue/DiskStateQueueProof/DiskStateQueueWorkload.tla",
+        "DiskStateQueue/DiskStateQueueProofDefs.tla"
       ],
       "renamed_bindings": {}
     },

@@ -1,0 +1,27 @@
+{
+  "repository": "https://github.com/tlaplus/tlaplus",
+  "commit": "f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55",
+  "files": {
+    "DiskStateQueue.tla": {
+      "path": "tlatools/org.lamport.tlatools/spec/queue/DiskStateQueue.tla",
+      "sha256": "ac3f1b759a1cb819684e724e5d2e7cc6d46a0ad9c78da7e27183ee768d62406c"
+    },
+    "DiskStateQueueWorkload.tla": {
+      "path": "tlatools/org.lamport.tlatools/spec/queue/DiskStateQueueWorkload.tla",
+      "sha256": "827b0a392930bcd7b049bdbdeb1be3dc4c0d42598abf7b4737bbcbe25c187177"
+    },
+    "validation/MCDiskStateQueueWorkload.cfg": {
+      "path": "tlatools/org.lamport.tlatools/spec/queue/MCDiskStateQueueWorkload.cfg",
+      "sha256": "b7519b92eb4e935b394ac1b7d0e43756e9121d7b7cb21b8d89a52d18a0edef86"
+    },
+    "MCDiskStateQueueWorkload.tla": {
+      "path": "tlatools/org.lamport.tlatools/spec/queue/MCDiskStateQueueWorkload.tla",
+      "sha256": "65cbf0ce20cdd1e42852bf1ce0b5aa8b164b735c45914e474aa807633df72c90"
+    }
+  },
+  "license": {
+    "path": "LICENSE",
+    "local_path": "LICENSES/tlaplus-MIT.txt",
+    "sha256": "3fa3a845ce5eb7b9b3508701dc1aa4d084b6b2c27cbae8cd44d277d10ee411bf"
+  }
+}
