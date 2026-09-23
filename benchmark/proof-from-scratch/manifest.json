@@ -276,6 +276,48 @@
       "Euclid/GCD_GCD3Defs.tla"
     ]
   },
+  "HashicorpRaft/HashicorpRaft_CommittedEntriesPreservedCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_CommittedEntriesPreservedCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_CommittedEntriesPreservedCorrectDefs.tla"
+    ]
+  },
+  "HashicorpRaft/HashicorpRaft_ConfigurationSafetyCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_ConfigurationSafetyCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_ConfigurationSafetyCorrectDefs.tla"
+    ]
+  },
+  "HashicorpRaft/HashicorpRaft_ElectionSafetyCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_ElectionSafetyCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_ElectionSafetyCorrectDefs.tla"
+    ]
+  },
+  "HashicorpRaft/HashicorpRaft_LeaderCompletenessCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_LeaderCompletenessCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_LeaderCompletenessCorrectDefs.tla"
+    ]
+  },
+  "HashicorpRaft/HashicorpRaft_LogMatchingCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_LogMatchingCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_LogMatchingCorrectDefs.tla"
+    ]
+  },
+  "HashicorpRaft/HashicorpRaft_StateMachineSafetyCorrect.tla": {
+    "spec_id": "HashicorpRaft/HashicorpRaft.tla",
+    "context": [
+      "HashicorpRaft/HashicorpRaft_StateMachineSafetyCorrect/HashicorpRaftRuntime.tla",
+      "HashicorpRaft/HashicorpRaft_StateMachineSafetyCorrectDefs.tla"
+    ]
+  },
   "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla": {
     "spec_id": "MongoDB/MultiShardTxnSnapshot.tla",
     "context": [

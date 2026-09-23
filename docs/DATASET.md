@@ -23,6 +23,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | Example | Source | Proof completion | Proof from scratch | Total |
 |---|---|--:|--:|--:|
 | [CahillSSI](https://github.com/pron/amazon-snapshot-spec/blob/9c60cb18151889d7b4c0a4ffd7de0b6fc2db0fb2/serializableSnapshotIsolation.tla) | Cahill serializable snapshot isolation | – | 1 | 1 |
+| [HashicorpRaft](https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/hashicorp-raft) | HashiCorp Raft (Specula) | – | 6 | 6 |
 | [hybrid_reliable_broadcast_cisa](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/hybrid_reliable_broadcast_cisa.ivy) | Ivy liveness | – | 3 | 3 |
 | [alternating_bit_protocol](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/alternating_bit_protocol.ivy) | Ivy liveness | – | 2 | 2 |
 | [ticket](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/ticket.ivy) | Ivy liveness | – | 2 | 2 |
@@ -104,4 +105,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 81 examples — 706 proof-completion + 281 proof-from-scratch = 987 tasks.**
+**Total: 82 examples — 706 proof-completion + 287 proof-from-scratch = 993 tasks.**

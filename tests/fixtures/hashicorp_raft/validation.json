@@ -1,0 +1,52 @@
+{
+  "runtime_sha256": "8f3bb6a05b2aa4b6913a5444962a09d260e7980c136815eb39d9be09aac660dc",
+  "status": "in_progress",
+  "evidence_scope": "Time-bounded TLC exploration; not a proof of the unbounded theorems.",
+  "tool": {
+    "name": "TLC",
+    "version": "2026.07.18.145032",
+    "revision": "30cc360",
+    "jar_sha256": "cc4803dce2a8ffaf0f5920a9dc39df4b5ee34ab4cb53fb58ac557277a7e516b3"
+  },
+  "regression_tool": "Repository-pinned TLC v1.8.0 in the benchmark validation image.",
+  "regressions": {
+    "passed": 47,
+    "description": "HashiCorp scenarios and fault controls plus shipped-suite and benchmark integrity checks"
+  },
+  "cases": [
+    {
+      "name": "sim3",
+      "server_count": 3,
+      "mode": "simulation",
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-23T11:58:45Z",
+      "config": "3Servers.cfg",
+      "workers": 4,
+      "heap_gib": 4,
+      "seed": 20260926,
+      "simulation_depth": 100
+    },
+    {
+      "name": "sim5",
+      "server_count": 5,
+      "mode": "simulation",
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-23T11:58:45Z",
+      "config": "5Servers.cfg",
+      "workers": 4,
+      "heap_gib": 4,
+      "seed": 20260928,
+      "simulation_depth": 100
+    },
+    {
+      "name": "bfs3",
+      "server_count": 3,
+      "mode": "BFS",
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-23T11:58:45Z",
+      "config": "3Servers.cfg",
+      "workers": 2,
+      "heap_gib": 8
+    }
+  ]
+}

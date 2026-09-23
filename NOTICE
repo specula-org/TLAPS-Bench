@@ -348,6 +348,15 @@ LLVM libomp / Specula — benchmark group libomp
     not bundled. Source pins and the benchmark's operational repairs are recorded
     in source/libomp/upstream.json and source/libomp/README.md.
 
+HashiCorp Raft / Specula — benchmark group HashicorpRaft
+    Repaired TLA+ model adapted from the Specula case study:
+    https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/hashicorp-raft
+    Implementation reference: specula-org/hashicorp-raft at
+    b8265ccdffa1d60b8355123c252a1f2889b0a9ac, derived from hashicorp/raft.
+    Implementation files are referenced, not bundled. Model changes, selected
+    safety properties, validation limits, and source hashes are documented in
+    source/HashicorpRaft/README.md and source/HashicorpRaft/upstream.json.
+
 == Bundled libraries ==
 
 TLA+ CommunityModules  —  MIT  —  https://github.com/tlaplus/CommunityModules
