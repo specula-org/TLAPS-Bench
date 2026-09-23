@@ -148,6 +148,63 @@ def test_linearization_preserves_causal_histories_and_genesis(tmp_path):
     assert "No error has been found" in out, out
 
 
+def stage_leader_domain(tmp_path, layout):
+    stage(tmp_path)
+    if layout == "source":
+        context = REPO / "source/tlaplus_examples_dag-consensus"
+        modules = context.glob("*.tla")
+        extends = "Sailfish"
+    elif layout == "layered":
+        context = REPO / "benchmark/proof-from-scratch/tlaplus_examples_dag-consensus"
+        modules = [*context.glob("*.tla"), *(context / "Sailfish_LivenessCorrect").glob("*.tla")]
+        extends = "Sailfish_LivenessCorrectDefs"
+    else:
+        return tmp_path / "SailfishModel.tla"
+    for module in modules:
+        shutil.copyfile(module, tmp_path / module.name)
+    fixture = tmp_path / "SailfishLeaderDomain.tla"
+    fixture.write_text(fixture.read_text().replace("EXTENDS SailfishDefs, TLC", f"EXTENDS {extends}, TLC"))
+    return tmp_path / ("Sailfish.tla" if layout == "source" else "SailfishModel.tla")
+
+
+def leader_domain_config(valid):
+    return (
+        CONSTANTS.replace(" c = c d = d e = e", "")
+        + f"LeaderInNodes = {str(valid).upper()}\n"
+        + "SPECIFICATION Spec\nCHECK_DEADLOCK FALSE\nINVARIANTS Liveness EndpointHasLeader\n"
+    )
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_outside_leader_rejected_before_initialization(tmp_path, layout):
+    stage_leader_domain(tmp_path, layout)
+    code, out = run_tlc(tmp_path, "SailfishLeaderDomain", leader_domain_config(False))
+    assert code == 10, out
+    assert "Assumption" in out and "is false" in out, out
+    assert "Computing initial states" not in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_missing_leader_domain_reproduces_liveness_failure(tmp_path, layout):
+    model = stage_leader_domain(tmp_path, layout)
+    original = model.read_text()
+    mutated = re.sub(r"ASSUME RoundLeadersAreNodes ==[^\n]*\n", "", original, count=1)
+    assert mutated != original
+    model.write_text(mutated)
+    code, out = run_tlc(tmp_path, "SailfishLeaderDomain", leader_domain_config(False))
+    assert code == 12, out
+    assert "Invariant Liveness is violated" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_correct_leader_reaches_commit(tmp_path, layout):
+    stage_leader_domain(tmp_path, layout)
+    code, out = run_tlc(tmp_path, "SailfishLeaderDomain", leader_domain_config(True))
+    assert code == 0, out
+    assert "4 distinct states found" in out, out
+    assert "No error has been found" in out, out
+
+
 def test_task_statements_are_unchanged():
     manifest = json.loads((MODEL.parent / "manifest.json").read_text())
     entry = next(

@@ -23,6 +23,14 @@ The original complete dependency bundle was model-checked independently. Both
 violations recur without modifying its state machine, invariants, or assumptions.
 These are faults of the proof task, not evidence that the targets are too hard.
 
+The follow-up proof attempt exposed a third defect: `LeadersAreNodes` was stated
+only in `BlockDag`, whose assumptions do not become assumptions of `Sailfish`
+through `INSTANCE`. A single correct node can reach round 3 with an empty log
+when every leader is outside `N`, violating Liveness for round 1. The source and
+both generated layouts now state `RoundLeadersAreNodes` in the model itself.
+This makes explicit the leader domain already required by `BlockDag`; it does
+not exclude Byzantine leaders or change any target theorem.
+
 ## Repair and protocol evidence
 
 1. State quorum upward closure explicitly. This narrows admissible quorum
@@ -51,12 +59,18 @@ predecessor reference; it does not add a new message-level protocol model.
 
 ## Validation
 
-`tests/dataset/test_sailfish_validity.py` runs ten regression checks. They replay
+`tests/dataset/test_sailfish_validity.py` runs nineteen regression checks. They replay
 both original violations, verify rejection of the bad quorum parameters, reach
 normal commits on corrected traces, distinguish sufficient and insufficient
 no-vote certificates, compare old/new causal histories on a branching DAG, and
 check that all three task statements remain unchanged. Removing either semantic
 fix independently reproduces its corresponding invariant violation.
+
+For the leader-domain repair, all three layouts (source, layered theorem task,
+and module task) reject an outside leader before initialization, reproduce the
+Liveness violation when only the new assumption is removed, and reach a normal
+commit with a valid leader. These controls explore all four reachable states
+of the one-node, three-round configuration.
 
 Additional exhaustive TLC configurations completed without an invariant violation:
 
