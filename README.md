@@ -20,7 +20,7 @@ TLAPS-Bench evaluates whether AI agents can formally prove (or disprove) the cor
 
 Each problem in TLAPS-Bench is a TLA+ specification (including the formal model and the invariants that specify correctness properties). AI agents are asked to prove that the formal model satisfies the invariants. We consider each task in TLAPS-Bench to formally prove one invariant of a given specification.
 
-TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the given specification without cheating. The runtime is equipped with extensive checks to prevent reward hacking. We have used the runtime to prove many specifications, such as 2PC, Paxos, TCP state machine, and many BFT and blockchain protocols.
+TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the given specification without cheating. The runtime is equipped with extensive checks to prevent reward hacking. We have used the runtime to prove many specifications, such as [2PC](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla), [Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/Paxos/Paxos.tla), [TCP state machine](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_tcp/tcp_proof.tla), and many BFT and blockchain protocols ([Byzantine Paxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/BPConProof.tla), [Byzantine broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_bcastByz/bcastByz.tla), etc.
 
 **Note.** Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We have retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks – which AI has to invent the entire proof structure – are still nontrivial and the proof problems take long-horizon efforts.
 
@@ -42,7 +42,7 @@ We are currently focusing on the following hard problems.
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
 | **Total** |  | 16 | 72 |
 
-For more problems, check out the full problem set.
+For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
 ## Running TLAPS-Bench
 
