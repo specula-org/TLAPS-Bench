@@ -21,6 +21,9 @@ ASSUME GSTIsARoundNumber == GST \in Nat
 
 ASSUME CorrectNodesFormQuorum == IsQuorum(N \ F)
 
+ASSUME QuorumsAreMonotone ==
+    \A Q, S \in SUBSET N : Q \subseteq S /\ IsQuorum(Q) => IsQuorum(S)
+
 ASSUME QuorumMinusByzantineIsBlocking ==
     \A Q \in SUBSET N : IsQuorum(Q) => IsBlocking(Q \ F)
 
@@ -84,6 +87,10 @@ byzantineNode(self) == /\ \E r \in R:
                                          /\ es' = (es \cup {<<newV, Genesis>>})
                                     ELSE /\ \E delivered \in SUBSET {v \in vs : Round(v) = r-1}:
                                               /\ IsQuorum({Node(v) : v \in delivered})
+                                              /\ IF Leader(r) = self
+                                                    THEN /\ \/ LeaderVertex(r-1) \in delivered
+                                                            \/ NoLeaderVoteQuorum(r, {v \in vs : Round(v) = r}, {self})
+                                                    ELSE /\ TRUE
                                               /\ vs' = (vs \cup {newV})
                                               /\ es' = (es \cup {<<newV, pv>> : pv \in delivered})
                        /\ UNCHANGED << round, log >>
