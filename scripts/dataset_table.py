@@ -55,6 +55,8 @@ def source_label(group):
         return "MongoDB distributed transactions"
     if group == "CahillSSI":
         return "Cahill serializable snapshot isolation"
+    if group == "libomp":
+        return "LLVM libomp (Specula)"
     if group == "DiskStateQueue":
         return "TLC disk state queue"
     return "TLAPS distribution examples"
@@ -73,6 +75,7 @@ SOURCE_URL = {
     "MongoDB distributed transactions": "https://github.com/mongodb-labs/vldb25-dist-txns",
     "Cahill serializable snapshot isolation": "https://github.com/pron/amazon-snapshot-spec",
     "TLC disk state queue": "https://github.com/tlaplus/tlaplus",
+    "LLVM libomp (Specula)": "https://github.com/specula-org/specula-case-studies/tree/main/systems/libomp",
 }
 
 
@@ -94,6 +97,7 @@ _APALACHE = "https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16
 _TLAPM_FILE = {"Allocator", "Bakery", "BubbleSort", "EWD840", "Peterson", "SimpleMutex", "SumAndMax"}
 _TLAPM_DIR = {"Cantor": "examples/cantor"}
 _GROUP_URL = {
+    "libomp": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp",
     "Consensus": "https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus",
     "Data": "https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data",
     # The current tlapm tree no longer keeps every module in these groups

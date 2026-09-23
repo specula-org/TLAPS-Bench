@@ -339,6 +339,15 @@ AbstractRaft  —  unvalidated proof exercise
     "In Search of an Understandable Consensus Algorithm", USENIX ATC 2014.
 
 
+LLVM libomp / Specula — benchmark group libomp
+    Repaired TLA+ barrier/tasking model adapted from the Specula case study:
+    https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp
+    The case study analyzed llvm/llvm-project at commit
+    5b1eed6278de1fffa195978b017039add70a94e3 (openmp/runtime/src).
+    LLVM implementation files are referenced for behavioral provenance and are
+    not bundled. Source pins and the benchmark's operational repairs are recorded
+    in source/libomp/upstream.json and source/libomp/README.md.
+
 == Bundled libraries ==
 
 TLA+ CommunityModules  —  MIT  —  https://github.com/tlaplus/CommunityModules

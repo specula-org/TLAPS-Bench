@@ -40,7 +40,8 @@ We are currently focusing on a few hard problems (due to token shortage).
 | [etcd Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/etcd_raft/etcd_raft.tla) | System | 1 | 8 |
 | [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
-| **Total** |  | 16 | 72 |
+| [LLVM libomp (repaired model)](benchmark/proof-from-scratch-module/libomp/libomp.tla) | System | 1 | 4 |
+| **Total** |  | 17 | 76 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 

@@ -1,0 +1,51 @@
+{
+  "runtime_sha256": "d873a12fc7e18775bb662a336d1673250f3fbf2a1237d749a35970084af3e5af",
+  "check_order": [
+    "LibompInitialization",
+    "LibompCounting",
+    "LibompBarrierDone",
+    "LibompCancelBarrier",
+    "LibompCancelQueuedTask",
+    "LibompCompleteTask",
+    "LibompDetachTask",
+    "LibompEarlyFulfillEvent",
+    "LibompExecuteTask",
+    "LibompFulfillEvent",
+    "LibompPrimaryCancelledBarrier",
+    "LibompPrimaryEnterBarrier",
+    "LibompPrimaryRelease",
+    "LibompPrimaryStartTaskWait",
+    "LibompPrimaryTaskTeamWait",
+    "LibompProxyTaskComplete",
+    "LibompReapTeam",
+    "LibompReapThread",
+    "LibompScheduleDetachTask",
+    "LibompScheduleTask",
+    "LibompSerializedParallelEntry",
+    "LibompSerializedParallelExit",
+    "LibompStartNextRound",
+    "LibompStealTask",
+    "LibompTaskTeamSync",
+    "LibompThreadFinishTasks",
+    "LibompThreadFinishTasksWeak",
+    "LibompWorkerCancelledBarrier",
+    "LibompWorkerEnterBarrier",
+    "LibompWorkerReceiveRelease",
+    "LibompWorkerStartTasks",
+    "LibompStuttering",
+    "LibompReference"
+  ],
+  "command": [
+    "tlapm",
+    "--strict",
+    "--nofp",
+    "--threads",
+    "2"
+  ],
+  "goals": [
+    "ActiveTasksImplyActiveTeamCorrect",
+    "NoQueuedTasksAfterDeactivationCorrect",
+    "ParityConsistencyCorrect",
+    "ParityRestoredAfterCancelCorrect"
+  ]
+}

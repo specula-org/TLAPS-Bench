@@ -1,0 +1,4 @@
+---- MODULE libompDefs ----
+EXTENDS libompRuntime
+
+====

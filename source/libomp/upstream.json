@@ -1,0 +1,22 @@
+{
+  "model_repository": "https://github.com/specula-org/specula-case-studies",
+  "model_commit": "8885d2c0687d1e197f261585919718a035ce4464",
+  "model_path": "systems/libomp/modules/core/runs/case-studies-libomp/spec/base.tla",
+  "model_sha256": "2e200b1c169717a1a3a466c32e6e846ba09988ad7165de30debaef4e3b3357af",
+  "implementation_repository": "https://github.com/llvm/llvm-project",
+  "implementation_commit": "5b1eed6278de1fffa195978b017039add70a94e3",
+  "implementation_files": {
+    "openmp/runtime/src/kmp_barrier.cpp": "332a0bd1ad9a7168f60d618e3e134c9323734217f0fa3e3b5b76aaf8d4e2e6bc",
+    "openmp/runtime/src/kmp_csupport.cpp": "2f0b7b465b47e1b0708837cb3ce25ea668c2dab12fd4b8e728cd3bae569b0ef9",
+    "openmp/runtime/src/kmp.h": "cda2255b32d64a75f67578d9fb4453f948023379304ace22064c78f5c959c32e",
+    "openmp/runtime/src/kmp_tasking.cpp": "ca65cd4ef5ba820b868467c3960d15b2cb106b50d5094149d9d29e3031ee7b37",
+    "openmp/runtime/src/kmp_runtime.cpp": "c6362c8c87776523278e555b1000832d0fec1b6b77cff2b0ef711ae1ea42771f"
+  },
+  "variant": "repaired barrier and tasking model",
+  "goals": [
+    "ActiveTasksImplyActiveTeam",
+    "NoQueuedTasksAfterDeactivation",
+    "ParityConsistency",
+    "ParityRestoredAfterCancel"
+  ]
+}
