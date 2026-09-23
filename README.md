@@ -6,7 +6,7 @@
 </p>
 
 <h2 align="center">
-Formally Proving the Correctness of Complex Protocols and Systems using TLA+ Proof System (TLAPS)
+Formally Proving the Correctness of Complex Protocols and Systems <br>using TLA+ Proof System (TLAPS)
 </h2>
 
 [![CI](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml)
@@ -61,7 +61,7 @@ We recommend the following hardware configurations
 | Profile | vCPUs per job | RAM per job | Guidance |
 | :---- | :---- | :---- | :---- |
 | Recommended | 8–12 | 96 GB | Provides better memory headroom. |
-| Lower-headroom | 8–12 | 64 GB | A starting point; some Isabelle-heavy tasks may require more. |
+| Lower-headroom | 8–12 | 64 GB | A starting point; some Isabelle-heavy tasks <br> may require more. |
 
 On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor peak memory use.
 
