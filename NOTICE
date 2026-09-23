@@ -21,6 +21,21 @@ LICENSES/Apache-2.0.txt and LICENSES/BSD-2-Clause.txt, respectively.
 
 == Benchmark specifications ==
 
+TLC disk state queue — benchmark group DiskStateQueue — MIT
+    DiskStateQueue.tla and DiskStateQueueWorkload.tla are copied unchanged
+    from tlaplus/tlaplus at commit
+    f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55:
+    https://github.com/tlaplus/tlaplus/tree/f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55/tlatools/org.lamport.tlatools/spec/queue
+    The upstream TLC exploration module and configuration are also preserved
+    in source/DiskStateQueue. Source paths and SHA-256 hashes are recorded in
+    source/DiskStateQueue/upstream.json.
+    Copyright (c) 199? HP Corporation
+    Copyright (c) 2003 Microsoft Corporation
+    Copyright (c) 2023 Linux Foundation
+    The upstream MIT license is preserved in LICENSES/tlaplus-MIT.txt.
+    DiskStateQueueProof.tla is a local wrapper stating one deadlock-freedom
+    theorem. No reference proof is supplied.
+
 Cahill serializable snapshot isolation — benchmark group CahillSSI
     Specification by Chris Newcombe, written for HPTS 2011, imported from
     pron/amazon-snapshot-spec at commit
