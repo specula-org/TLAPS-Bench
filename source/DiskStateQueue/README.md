@@ -2,9 +2,13 @@
 
 Source: [tlaplus/tlaplus](https://github.com/tlaplus/tlaplus/tree/f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55/tlatools/org.lamport.tlatools/spec/queue)
 at commit `f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55` on
-`mku-StateQueueTLA`. `DiskStateQueue.tla` and `DiskStateQueueWorkload.tla`
-are copied unchanged. `upstream.json` records the source paths and SHA-256
-hashes, including the upstream TLC exploration module and configuration.
+`mku-StateQueueTLA`. `DiskStateQueueWorkload.tla` is copied unchanged.
+`DiskStateQueue.tla` adds explicit parentheses around the unary `UNION` in
+`Blocked`: TLAPM otherwise parses `UNION A \cup B` as `UNION (A \cup B)`,
+while SANY/TLC parse it as `(UNION A) \cup B`. The parentheses preserve the
+SANY/TLC meaning and make both front ends agree. No assumptions or transitions
+are changed. `upstream.json` retains the original upstream hashes and records
+the local repair, including the patched source hash.
 The MIT license is preserved in `LICENSES/tlaplus-MIT.txt`; see `NOTICE`.
 
 `DiskStateQueueProof.tla` adds exactly one proof-from-scratch target:
