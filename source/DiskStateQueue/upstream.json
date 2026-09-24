@@ -23,5 +23,12 @@
     "path": "LICENSE",
     "local_path": "LICENSES/tlaplus-MIT.txt",
     "sha256": "3fa3a845ce5eb7b9b3508701dc1aa4d084b6b2c27cbae8cd44d277d10ee411bf"
-  }
+  },
+  "local_repairs": [
+    {
+      "file": "DiskStateQueue.tla",
+      "description": "Parenthesize the unary UNION operand in Blocked so TLAPM and SANY agree, preserving the original SANY/TLC semantics.",
+      "local_sha256": "f4690b9b46ba2bca496b5b68ab26898a067a79dfa2564d3d90596881fcb86880"
+    }
+  ]
 }
