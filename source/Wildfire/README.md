@@ -4,12 +4,12 @@ This adds one hard proof-from-scratch task for a **repaired** Wildfire
 cache-coherence protocol:
 
 ```tla
-THEOREM Refinement ==
-    (Spec /\ []ResponseReceptive) => AlphaModel!Spec
+THEOREM Refinement == TraceSpec => AlphaModel!Spec
 ```
 
-`WildfireProof.tla` extends the concrete protocol and instantiates the original
-Alpha memory specification. The goal retains Alpha's existential initial memory,
+`WildfireProof.tla` instantiates both the repaired concrete protocol and the
+original Alpha memory specification with the same request/response recorder.
+The goal retains Alpha's existential initial memory,
 temporal hiding of `reqSeq` and `beforeOrder`, and liveness requirement. There is
 no fixed refinement mapping, reference proof, or proof-completion task. The
 theorem is an open proof obligation, not an established correctness result.
@@ -29,9 +29,8 @@ The benchmark keeps the two-level switch network, non-FIFO control queues,
 separate data fills, memory barriers, LL/SC, evictions, shadow mode, and original
 fairness conditions. Processor count is finite but unbounded; address count and
 queue lengths have no benchmark bound. `DataLen` remains any positive natural.
-The environment's request/response operators remain parameters of both models.
-The theorem requires an environment that remains able to accept every legal
-response, as specified below.
+The published models retain their request/response parameters. The theorem
+wrapper supplies the explicit observation interface described below.
 
 ## Repairs
 
@@ -68,36 +67,53 @@ The two unproved upstream type/message-invariance theorems are removed from
 dependencies. Their predicate definitions remain available, but the task does
 not silently assume those theorems.
 
-## Response environment premise
+## Interface contract and scope
 
-The original benchmark goal `Spec => AlphaModel!Spec` is false when the
-unspecified `ResponseToEnv` operator permanently refuses responses. A
-one-processor, one-address instance can accept a read, finish it internally,
-queue its response, and stutter forever. `ProcSendResponse` is disabled, so
-its weak fairness requirement is satisfied. Alpha must record the accepted
-request, but cannot set its `responded` field to `TRUE` because its own
-`SendResponse` also requires `ResponseToEnv`. This contradicts Alpha's
-unconditional per-request liveness requirement.
+The official archive was downloaded from [Lamport's challenge page](https://lamport.azurewebsites.net/tla/wildfire-challenge.html)
+on 2026-09-26. All five specification modules are byte-identical to the pinned
+mirror; the archive hash is recorded in `upstream.json`.
 
-The theorem wrapper now states an explicit interface premise:
+The published `AlphaInterface.tla` leaves the representation of `aInt` and the
+request/response actions unspecified. Its comments treat them as the observable
+issue/delivery events. `InnerAlpha.Liveness` requires every non-MB request to
+receive a response. `Wildfire.Liveness` expresses the same intended progress
+using weak fairness. The concrete `Next` has no arbitrary message-loss action.
+Delayed and out-of-order delivery are modeled; packet-loss tolerance is not.
+
+To state a definite benchmark, the wrapper uses an **unbounded, lossless event
+history** as the interface representation:
 
 ```tla
-ResponseReceptive ==
-    \A p \in Proc, r \in Response :
-        ENABLED ResponseToEnv(aInt, aInt', p, r)
+RecordRequest(old, new, p, r) ==
+    new = Append(old, [kind |-> "request", proc |-> p, value |-> r])
+RecordResponse(old, new, p, r) ==
+    new = Append(old, [kind |-> "response", proc |-> p, value |-> r])
 ```
 
-`[]ResponseReceptive` means that at every state the environment permits some
-interface successor for each legal response. It says nothing about protocol
-queues, completed requests, or whether an enabled response is actually sent.
-Protocol progress must still follow from the concrete actions and fairness.
-Neither `Wildfire!Spec` nor `Alpha!Spec` is changed by this repair, and Alpha's
-safety, temporal hiding, and liveness requirements remain the conclusion.
+Both named instances explicitly substitute these operators. `TraceSpec` starts
+with an empty history and otherwise uses the repaired protocol's full `Spec`.
+A response can always be recorded, but its actual delivery still requires a
+protocol step and the original fairness. The history records observable event
+order; it does not fix Alpha's hidden `beforeOrder` or impose sequential
+consistency on memory execution. Client programs, processor counts, address
+sets, request counts, and history/queue lengths are not fixed to a TLC instance.
 
-This corrects the original interface comment's claim that arbitrary environment
-operators need no extra assumptions: that claim is insufficient for the full
-liveness refinement. The new premise is part of the task statement and fixed
-context, not an assumption a submitted proof may add.
+This is a benchmark-defined instance of the official interface parameters,
+**not an upstream-endorsed correction or a proof for every possible callback
+implementation**. The wrapper extends `Wildfire` to retain its declarations and
+assumptions; the inherited abstract callback parameters are explicitly replaced
+in both scored instances. Tests set those unused parameters to `FALSE` and
+still exercise real request/response histories.
+
+The earlier unrestricted goal fails when `ResponseToEnv` permanently refuses
+responses: a fair concrete execution can queue a response and stutter forever,
+whereas Alpha requires its delivery. The interim repair at `0de5aac0` added
+`[]ResponseReceptive`. The current goal removes that premise and supplies a
+concrete recording interface instead. This makes the observable contract
+explicit rather than silently quantifying over hostile callback definitions.
+It does not claim equivalence to that interim theorem for arbitrary interfaces.
+A generalization to interfaces with backpressure would need a separate
+interface-abstraction/progress argument; no such result is assumed here.
 
 ## Validation and limits
 
@@ -110,12 +126,15 @@ pinned TLC toolchain:
 | Shadow entry | 4,432 | Three processors, two addresses, staged and pruned litmus |
 | Probe ordering | 20,405 | Two processors, two addresses, staged and pruned litmus |
 | Victim ack routing | 2 per case | Local transition checks for local/remote and shadowed/unshadowed cases |
-| Permanently blocked response environment | 9 | Reproduces the old goal's liveness failure and violates the new premise |
-| Receptive response environment | 13 | Completes the read under the original fairness; the premise holds throughout |
+| Permanently blocked abstract interface | 9 | Reproduces the old unrestricted goal's liveness failure |
+| Recorded local read | 13 | Records both the issued request and its delivered response |
 
-The response-environment checks run on the source and both generated layouts.
-Removing response-send fairness makes the receptive control violate liveness
-again. This verifies that the new premise alone does not guarantee progress.
+The recorded-interface controls run on the source and both generated layouts,
+with local/remote memory and read-only/LL-SC-MB client programs. They check legal
+history entries, request completion, and that the restricted test behaviors
+satisfy the actual `TraceSpec`. A separate reachability control witnesses a
+recorded response. Removing response-send fairness makes completion fail even
+though recording remains enabled. These controls do not add a progress premise.
 
 All three litmus checks use one-bit data. Sentinel overrides are confined to
 the TLC fixtures. Restoring old ordering reproduces each forbidden history.
@@ -130,17 +149,23 @@ programs. An additional unpruned two-processor exploration was stopped at its
 None of these checks proves the full parameterized refinement, temporal hiding,
 or liveness. No proof-generation experiment is required for inclusion.
 
-The first run at `ff2da4d77875389563c4b920df036a0b381594c4` stopped with this
-environment counterexample and 0/1 target proofs. Its inputs and results remain
-separate from reruns of the repaired statement; it is evidence of an invalid
-old goal, not evidence of the corrected goal's proof difficulty.
+The first run at `ff2da4d7` stopped with the interface counterexample and 0/1
+target proofs. The interim run at `0de5aac0` checked eight helper lemmas but
+remained 0/1, with temporal hiding unresolved. Those results belong to different
+statements and are not results for the recorded-interface task.
 
 Both SANY and TLAPM load the task and its exact context. The per-theorem
 `PROOF OBVIOUS` placeholder fails its obligation; the module task retains its
 unresolved proof region. TLAPM reports that the parameterized Alpha instance's
 axioms are hidden, so a future proof must derive any needed instantiated facts
-from the concrete assumptions. Loading is not evidence that all eventual
-temporal proof steps are supported by the current backends.
+from the concrete assumptions.
+
+**The full target is currently tool-blocked on the pinned TLAPM:** independent
+minimal probes could not establish even `\EE x : TRUE`; Zenon, SMT, and Isabelle
+reported unsupported expressions, and PTL did not discharge it. The interface
+instantiation does not remove this operator from Alpha. Loading and finite
+regressions are not a complete proof or evidence of supported temporal hiding.
+See [PROOF_PLAN.md](PROOF_PLAN.md) for the feasibility gate and proof milestones.
 
 ```sh
 uv run pytest -q tests/dataset/test_wildfire.py

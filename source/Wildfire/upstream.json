@@ -35,5 +35,16 @@
   },
   "local_target": "WildfireProof.tla",
   "repairs": "repairs.patch",
-  "license": "No upstream license declaration at the pinned revision; see NOTICE."
+  "license": "No upstream license declaration at the pinned revision; see NOTICE.",
+  "official_archive": {
+    "url": "https://lamport.azurewebsites.net/tla/wildfire-challenge.zip",
+    "sha256": "d169d5b1e541741bba275f40de4b68b1adf108579f8c0a4b8b5d94116153d69a",
+    "checked_on": "2026-09-26",
+    "specification_modules_match_pinned_upstream": true
+  },
+  "interface_instantiation": {
+    "file": "WildfireProof.tla",
+    "representation": "unbounded lossless sequence of request and response events",
+    "upstream_status": "benchmark-defined instance of the published interface parameters; not an upstream-endorsed repair"
+  }
 }

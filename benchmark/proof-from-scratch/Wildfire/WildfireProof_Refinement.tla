@@ -3,8 +3,7 @@ EXTENDS WildfireProof_RefinementDefs
 
 \* BEGIN AGENT HELPERS
 \* END AGENT HELPERS
-THEOREM Refinement ==
-    (Spec /\ []ResponseReceptive) => AlphaModel!Spec
+THEOREM Refinement == TraceSpec => AlphaModel!Spec
 \* BEGIN AGENT PROOF
 PROOF OBVIOUS
 \* END AGENT PROOF

@@ -715,11 +715,11 @@
       "spec": {
         "format_version": 1,
         "task_id": "Wildfire/WildfireProof.tla",
-        "source_sha256": "c47e415a5b717b910d3559f5c0f55e5d8903caf861cc0174bb0c72464604d80a",
+        "source_sha256": "405152126f2384ed616d7758d30f4ba9f17528577ab222adeb151e3aa59124cc",
         "proof_units": [
           {
             "task_id": "Wildfire/WildfireProof_Refinement.tla",
-            "statement_sha256": "db0525945401c8aeecd96f57bafaad9684c323f1648e69147dba979dac0f7823"
+            "statement_sha256": "8f2a6ae10d17cf72b0cfea97078a7b0f704c44f51685070943f622e037ba91cc"
           }
         ]
       },

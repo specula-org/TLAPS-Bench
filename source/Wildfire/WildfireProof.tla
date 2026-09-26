@@ -1,16 +1,23 @@
 -------------------------- MODULE WildfireProof ---------------------------
 EXTENDS Wildfire
 
+\* Instantiate the upstream interface with an unbounded observation history.
+\* These events record issue/delivery, not the hidden memory execution order.
+RecordRequest(old, new, p, r) ==
+    new = Append(old, [kind |-> "request", proc |-> p, value |-> r])
+
+RecordResponse(old, new, p, r) ==
+    new = Append(old, [kind |-> "response", proc |-> p, value |-> r])
+
+Protocol == INSTANCE Wildfire
+    WITH RequestFromEnv <- RecordRequest, ResponseToEnv <- RecordResponse
+
 AlphaModel == INSTANCE Alpha
+    WITH RequestFromEnv <- RecordRequest, ResponseToEnv <- RecordResponse
 
-\* The environment must not disable delivery of a legal memory response.
-\* This is an interface condition; protocol progress still needs a proof.
-ResponseReceptive ==
-    \A p \in Proc, r \in Response :
-        ENABLED ResponseToEnv(aInt, aInt', p, r)
+TraceSpec == Protocol!Spec /\ aInt = <<>>
 
-THEOREM Refinement ==
-    (Spec /\ []ResponseReceptive) => AlphaModel!Spec
+THEOREM Refinement == TraceSpec => AlphaModel!Spec
 PROOF OMITTED
 
 =============================================================================

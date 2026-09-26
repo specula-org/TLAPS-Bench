@@ -1,10 +1,18 @@
 -------------------------- MODULE WildfireProof_RefinementDefs ---------------------------
 EXTENDS Wildfire
 
-AlphaModel == INSTANCE Alpha
+RecordRequest(old, new, p, r) ==
+    new = Append(old, [kind |-> "request", proc |-> p, value |-> r])
 
-ResponseReceptive ==
-    \A p \in Proc, r \in Response :
-        ENABLED ResponseToEnv(aInt, aInt', p, r)
+RecordResponse(old, new, p, r) ==
+    new = Append(old, [kind |-> "response", proc |-> p, value |-> r])
+
+Protocol == INSTANCE Wildfire
+    WITH RequestFromEnv <- RecordRequest, ResponseToEnv <- RecordResponse
+
+AlphaModel == INSTANCE Alpha
+    WITH RequestFromEnv <- RecordRequest, ResponseToEnv <- RecordResponse
+
+TraceSpec == Protocol!Spec /\ aInt = <<>>
 
 =============================================================================

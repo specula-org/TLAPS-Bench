@@ -1,5 +1,5 @@
 ---- MODULE ResponseEnvironment ----
-EXTENDS WildfireProofDefs
+EXTENDS Wildfire
 CONSTANTS MemorySentinel, UnlockedSentinel, InvalidSentinel, AcceptResponses
 
 Home(x) == "ls"
@@ -16,6 +16,9 @@ Respond(old, new, p, r) ==
 
 AuditSpec == Spec /\ aInt = 0
 Completion == (aInt = 1) ~> (aInt = 2)
-ConditionalCompletion == ([]ResponseReceptive) => Completion
+AuditResponses == [type : {"Rd", "LL"}, adr : Adr, data : Data]
+                  \cup [type : {"Wr", "SC", "FailedSC"}, adr : Adr]
+ResponseReceptive ==
+    \A p \in Proc, r \in AuditResponses : ENABLED ResponseToEnv(aInt, aInt', p, r)
 NotReceptive == ~ResponseReceptive
 ====

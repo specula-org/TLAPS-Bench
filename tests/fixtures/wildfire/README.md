@@ -18,12 +18,17 @@ these choices is added to the proof task.
 - `VictimRouting`: four synthetic local transition checks assert the ack route
   for a local/remote sender with/without shadowing. These are routing checks,
   not reachable Alpha counterexamples.
-- `ResponseEnvironment`: one read on one processor/address, using the complete
-  concrete `Spec`, including its original fairness. With responses permanently
-  disabled, a fair stuttering suffix violates completion and the environment
-  fails the new `ResponseReceptive` premise. With responses enabled, the premise
-  holds throughout and the request completes. Removing response-send fairness
-  reproduces a liveness failure despite that premise. No pruning is used.
+- `ResponseEnvironment`: retains the historical one-read counterexample for
+  the abstract callbacks. A callback that refuses every response violates
+  completion despite the concrete weak fairness. This does not instantiate
+  the new recorded-interface goal.
+- `RecordedInterface`: exercises the canonical `Protocol` instance and its
+  actual recorders, for local/remote memory and a read or LL/SC/MB/read program.
+  Only client issue choices are restricted; internal processing and fairness
+  are the protocol's. It checks legal histories, completion, the actual
+  `TraceSpec`, and a reachable response. Original callback parameters are set
+  to `FALSE` to detect a missing `WITH` binding. Removing response-send fairness
+  must violate completion while recording is still enabled.
 
 `ShadowEntry` and `ProbeOrder` stage requests and conjoin a pruning predicate
 to `Next`. An observed violation is a concrete safety witness; exhaustion only

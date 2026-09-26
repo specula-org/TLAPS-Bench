@@ -30,8 +30,4 @@ Request ==
   \cup [type : {"Rd", "LL"}, adr : Adr]
   \cup [type : {"Wr", "SC"}, adr : Adr, mask : Data, data : Data]
 
-Response ==
-
-       [type : {"Rd", "LL"}, adr : Adr, data : Data]
-  \cup [type : {"Wr", "SC", "FailedSC"},  adr : Adr]
 =============================================================================
