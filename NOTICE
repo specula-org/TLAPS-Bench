@@ -30,7 +30,9 @@ Wildfire cache coherence — benchmark group Wildfire
     The original authors' attribution is retained in source/Wildfire/UPSTREAM-README.
     source/Wildfire/upstream.json pins the source hashes; README.md and
     repairs.patch document the protocol repairs and compatibility edits.
-    This is a repaired challenge model, with no reference TLAPS proof.
+    This is a repaired challenge model, with no reference TLAPS proof. The
+    theorem wrapper explicitly requires a response-receptive environment;
+    the full Alpha specification remains the refinement target.
     No upstream license declaration is present at this revision; the import
     does not relicense these materials under this repository's MIT license.
 

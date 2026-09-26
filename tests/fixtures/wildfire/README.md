@@ -18,6 +18,12 @@ these choices is added to the proof task.
 - `VictimRouting`: four synthetic local transition checks assert the ack route
   for a local/remote sender with/without shadowing. These are routing checks,
   not reachable Alpha counterexamples.
+- `ResponseEnvironment`: one read on one processor/address, using the complete
+  concrete `Spec`, including its original fairness. With responses permanently
+  disabled, a fair stuttering suffix violates completion and the environment
+  fails the new `ResponseReceptive` premise. With responses enabled, the premise
+  holds throughout and the request completes. Removing response-send fairness
+  reproduces a liveness failure despite that premise. No pruning is used.
 
 `ShadowEntry` and `ProbeOrder` stage requests and conjoin a pruning predicate
 to `Next`. An observed violation is a concrete safety witness; exhaustion only
@@ -26,4 +32,5 @@ because pruning intentionally creates terminal states.
 
 The Python tests restore old rules as negative controls, check all three task
 layouts, reject invalid switch mappings, and check that TLAPM loads the goal.
-No fixture checks the full refinement or its liveness component.
+The response fixture checks only this finite instance's request completion.
+No fixture checks the full parameterized refinement or its liveness component.

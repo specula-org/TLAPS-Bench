@@ -4,7 +4,8 @@ This adds one hard proof-from-scratch task for a **repaired** Wildfire
 cache-coherence protocol:
 
 ```tla
-THEOREM Refinement == Spec => AlphaModel!Spec
+THEOREM Refinement ==
+    (Spec /\ []ResponseReceptive) => AlphaModel!Spec
 ```
 
 `WildfireProof.tla` extends the concrete protocol and instantiates the original
@@ -29,6 +30,8 @@ separate data fills, memory barriers, LL/SC, evictions, shadow mode, and origina
 fairness conditions. Processor count is finite but unbounded; address count and
 queue lengths have no benchmark bound. `DataLen` remains any positive natural.
 The environment's request/response operators remain parameters of both models.
+The theorem requires an environment that remains able to accept every legal
+response, as specified below.
 
 ## Repairs
 
@@ -65,6 +68,37 @@ The two unproved upstream type/message-invariance theorems are removed from
 dependencies. Their predicate definitions remain available, but the task does
 not silently assume those theorems.
 
+## Response environment premise
+
+The original benchmark goal `Spec => AlphaModel!Spec` is false when the
+unspecified `ResponseToEnv` operator permanently refuses responses. A
+one-processor, one-address instance can accept a read, finish it internally,
+queue its response, and stutter forever. `ProcSendResponse` is disabled, so
+its weak fairness requirement is satisfied. Alpha must record the accepted
+request, but cannot set its `responded` field to `TRUE` because its own
+`SendResponse` also requires `ResponseToEnv`. This contradicts Alpha's
+unconditional per-request liveness requirement.
+
+The theorem wrapper now states an explicit interface premise:
+
+```tla
+ResponseReceptive ==
+    \A p \in Proc, r \in Response :
+        ENABLED ResponseToEnv(aInt, aInt', p, r)
+```
+
+`[]ResponseReceptive` means that at every state the environment permits some
+interface successor for each legal response. It says nothing about protocol
+queues, completed requests, or whether an enabled response is actually sent.
+Protocol progress must still follow from the concrete actions and fairness.
+Neither `Wildfire!Spec` nor `Alpha!Spec` is changed by this repair, and Alpha's
+safety, temporal hiding, and liveness requirements remain the conclusion.
+
+This corrects the original interface comment's claim that arbitrary environment
+operators need no extra assumptions: that claim is insufficient for the full
+liveness refinement. The new premise is part of the task statement and fixed
+context, not an assumption a submitted proof may add.
+
 ## Validation and limits
 
 The regression suite checks the source and both generated layouts with the
@@ -76,6 +110,12 @@ pinned TLC toolchain:
 | Shadow entry | 4,432 | Three processors, two addresses, staged and pruned litmus |
 | Probe ordering | 20,405 | Two processors, two addresses, staged and pruned litmus |
 | Victim ack routing | 2 per case | Local transition checks for local/remote and shadowed/unshadowed cases |
+| Permanently blocked response environment | 9 | Reproduces the old goal's liveness failure and violates the new premise |
+| Receptive response environment | 13 | Completes the read under the original fairness; the premise holds throughout |
+
+The response-environment checks run on the source and both generated layouts.
+Removing response-send fairness makes the receptive control violate liveness
+again. This verifies that the new premise alone does not guarantee progress.
 
 All three litmus checks use one-bit data. Sentinel overrides are confined to
 the TLC fixtures. Restoring old ordering reproduces each forbidden history.
@@ -89,6 +129,11 @@ programs. An additional unpruned two-processor exploration was stopped at its
 60-second budget without a reported violation; it did not exhaust the graph.
 None of these checks proves the full parameterized refinement, temporal hiding,
 or liveness. No proof-generation experiment is required for inclusion.
+
+The first run at `ff2da4d77875389563c4b920df036a0b381594c4` stopped with this
+environment counterexample and 0/1 target proofs. Its inputs and results remain
+separate from reruns of the repaired statement; it is evidence of an invalid
+old goal, not evidence of the corrected goal's proof difficulty.
 
 Both SANY and TLAPM load the task and its exact context. The per-theorem
 `PROOF OBVIOUS` placeholder fails its obligation; the module task retains its

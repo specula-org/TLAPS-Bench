@@ -171,9 +171,65 @@ def test_refinement_task_has_no_admitted_dependencies():
     manifest = json.loads((suite / "manifest.json").read_text())
     entry = next(e for e in manifest["module_tasks"] if e["spec"]["task_id"] == SPEC)
     assert [u["task_id"] for u in entry["spec"]["proof_units"]] == [TASK]
-    assert "THEOREM Refinement == Spec => AlphaModel!Spec" in (suite / SPEC).read_text()
+    assert "(Spec /\\ []ResponseReceptive) => AlphaModel!Spec" in (suite / SPEC).read_text()
     for rel in entry["context"]:
         text = (suite / rel).read_text()
         assert "THEOREM" not in text and "PROOF OMITTED" not in text, rel
     alpha = next(suite / p for p in entry["context"] if p.endswith("/Alpha.tla"))
     assert "\\EE reqSeq, beforeOrder" in alpha.read_text()
+
+
+def stage_response_environment(directory, layout):
+    stage(directory, layout)
+    definitions = {
+        "source": "WildfireProof",
+        "layered": "WildfireProof_RefinementDefs",
+        "module": "WildfireProofDefs",
+    }[layout]
+    path = directory / "ResponseEnvironment.tla"
+    path.write_text(path.read_text().replace("EXTENDS WildfireProofDefs", f"EXTENDS {definitions}"))
+    return (directory / "ResponseEnvironment.cfg").read_text()
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_blocked_environment_reproduces_old_liveness_failure(tmp_path, layout):
+    config = stage_response_environment(tmp_path, layout)
+    config = config.replace("AcceptResponses = TRUE", "AcceptResponses = FALSE")
+    config = config.replace("INVARIANT ResponseReceptive", "INVARIANT NotReceptive")
+    config = config.replace("PROPERTY ConditionalCompletion", "PROPERTY Completion")
+    code, out = run_tlc(tmp_path, "ResponseEnvironment", config)
+    assert code == 13, out
+    assert "Temporal property Completion was violated" in out, out
+    assert "Stuttering" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_blocked_environment_is_outside_the_repaired_premise(tmp_path, layout):
+    config = stage_response_environment(tmp_path, layout)
+    config = config.replace("AcceptResponses = TRUE", "AcceptResponses = FALSE")
+    config = config.replace("INVARIANT ResponseReceptive", "INVARIANT NotReceptive")
+    code, out = run_tlc(tmp_path, "ResponseEnvironment", config)
+    assert code == 0, out
+    assert "9 distinct states found" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_receptive_environment_completes_under_original_fairness(tmp_path, layout):
+    config = stage_response_environment(tmp_path, layout)
+    code, out = run_tlc(tmp_path, "ResponseEnvironment", config)
+    assert code == 0, out
+    assert "13 distinct states found" in out, out
+    assert "No error has been found" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_receptiveness_does_not_assume_protocol_progress(tmp_path, layout):
+    config = stage_response_environment(tmp_path, layout)
+    path = tmp_path / "Wildfire.tla"
+    text = path.read_text()
+    fairness = "      /\\ WF_wVars((respQ[p] # <<>>) /\\ ProcSendResponse(p, 1))\n"
+    assert text.count(fairness) == 1
+    path.write_text(text.replace(fairness, ""))
+    code, out = run_tlc(tmp_path, "ResponseEnvironment", config)
+    assert code == 13, out
+    assert "Temporal property ConditionalCompletion was violated" in out, out
