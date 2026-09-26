@@ -1414,12 +1414,13 @@ ProcReceiveMsg(p, idx) ==
             (* entry.version must be nonempty.  If there are multiple      *)
             (* versions, then the ForwardedGet is for the oldest one.  If  *)
             (* there is a single version, then the message can be          *)
-            (* processed now only if the Fill for this version has         *)
-            (* arrived.  (In this case, the state must be "Exclusive";     *)
-            (* there canot be a CTEAck pending.)                           *)
+            (* processed once its data is available.  A valid shared     *)
+            (* copy can serve the probe while its upgrade ack is pending; *)
+            (* that ack may be ordered behind this probe.                 *)
             (***************************************************************)
                /\ \/ Len(entry.version) > 1
                   \/ ~entry.fillOrCTEAckPending
+                  \/ entry.state # "Invalid"
 
                /\ cache' =
                   (*********************************************************)

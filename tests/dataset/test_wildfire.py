@@ -240,3 +240,54 @@ def test_recorded_interface_reaches_a_real_response(tmp_path, layout):
     assert code == 12, out
     assert "Invariant NeverCompletes is violated" in out, out
     assert 'kind |-> "response"' in out, out
+
+
+def stage_upgrade_forwarding(directory, layout):
+    stage(directory, layout)
+    definitions = {
+        "source": "WildfireProof",
+        "layered": "WildfireProof_RefinementDefs",
+        "module": "WildfireProofDefs",
+    }[layout]
+    path = directory / "UpgradeForwarding.tla"
+    path.write_text(path.read_text().replace("EXTENDS WildfireProofDefs", f"EXTENDS {definitions}"))
+    return (directory / "UpgradeForwarding.cfg").read_text()
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+@pytest.mark.parametrize("second_kind", ["Rd", "LL", "Wr"])
+@pytest.mark.parametrize("upgrade_sc", [False, True])
+def test_pending_upgrade_serves_earlier_probe(tmp_path, layout, second_kind, upgrade_sc):
+    config = stage_upgrade_forwarding(tmp_path, layout)
+    config = config.replace('SecondKind = "Rd"', f'SecondKind = "{second_kind}"')
+    config = config.replace("UpgradeSC = FALSE", f"UpgradeSC = {str(upgrade_sc).upper()}")
+    code, out = run_tlc(tmp_path, "UpgradeForwarding", config)
+    assert code == 0, out
+    assert "No error has been found" in out, out
+    assert "0 states left on queue" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_old_upgrade_guard_reproduces_fair_deadlock(tmp_path, layout):
+    config = stage_upgrade_forwarding(tmp_path, layout)
+    path = tmp_path / "Wildfire.tla"
+    text = path.read_text()
+    clause = '                  \\/ entry.state # "Invalid"'
+    start = text.index("CASE \\E m \\in msgset : m \\in ForwardedGet ->")
+    stop = text.index("/\\ cache' =", start)
+    guard = text[start:stop]
+    assert guard.count(clause) == 1
+    path.write_text(text[:start] + guard.replace(clause, "") + text[stop:])
+    code, out = run_tlc(tmp_path, "UpgradeForwarding", config)
+    assert code == 13, out
+    assert "MCReadCompletion" in out and "MCWriteCompletion" in out, out
+    assert "Stuttering" in out, out
+
+
+@pytest.mark.parametrize("layout", ["source", "layered", "module"])
+def test_upgrade_fixture_reaches_completed_responses(tmp_path, layout):
+    config = stage_upgrade_forwarding(tmp_path, layout)
+    config += "INVARIANT MCNeverCompletes\n"
+    code, out = run_tlc(tmp_path, "UpgradeForwarding", config)
+    assert code == 12, out
+    assert "Invariant MCNeverCompletes is violated" in out, out

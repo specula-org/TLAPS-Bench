@@ -400,6 +400,7 @@ ProcReceiveMsg(p, idx) ==
 
                /\ \/ Len(entry.version) > 1
                   \/ ~entry.fillOrCTEAckPending
+                  \/ entry.state # "Invalid"
 
                /\ cache' =
 

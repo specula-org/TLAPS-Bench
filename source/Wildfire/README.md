@@ -55,6 +55,14 @@ wrapper supplies the explicit observation interface described below.
    documented intent; it is not claimed as a fourth independently demonstrated
    violation of observable Alpha behavior.
 
+5. **Forwarded probes during upgrades.** A valid cached copy may serve a
+   `ForwardedGet` while `fillOrCTEAckPending` denotes a pending upgrade ack.
+   The original guard also blocked this case, allowing an earlier probe to
+   wait for an acknowledgement that cannot overtake it. Add
+   `entry.state # "Invalid"` to the guard, retaining queue order, version
+   updates, and fairness. The same fair deadlock reproduces in the official
+   original modules; this is not introduced by the preceding repairs.
+
 Additionally, `ProcessorHomes` and `AddressHomes` state the intended topology:
 each processor and address maps to a member of `LS`. Existing assumptions are
 named without changing their formulas. Tuple binders in `Wildfire` are rewritten
@@ -128,6 +136,7 @@ pinned TLC toolchain:
 | Victim ack routing | 2 per case | Local transition checks for local/remote and shadowed/unshadowed cases |
 | Permanently blocked abstract interface | 9 | Reproduces the old unrestricted goal's liveness failure |
 | Recorded local read | 13 | Records both the issued request and its delivered response |
+| Upgrade/probe completion | 65–183 per variant | Two processors, one address, fixed prefix then unrestricted internal processing; six client variants |
 
 The recorded-interface controls run on the source and both generated layouts,
 with local/remote memory and read-only/LL-SC-MB client programs. They check legal
@@ -146,6 +155,14 @@ The shadow/probe checks restrict the environment and transition relation. Their
 clean results cover those restricted state graphs, not all executions of the
 programs. An additional unpruned two-processor exploration was stopped at its
 60-second budget without a reported violation; it did not exhaust the graph.
+The upgrade/probe fixture fixes a reachable prefix, then explores all internal
+actions for two processors, one address, and one site. Six client variants
+combine a forwarded Rd/LL/Wr with an ordinary write or LL/SC upgrade. They
+check both clients' completion, the actual `TraceSpec`, data values, exclusive
+ownership, and SC success/failure. Restoring only the old guard reproduces a
+fair missing-response counterexample; separate controls witness actual
+completion. These are finite regressions, not a general data-validity invariant.
+
 None of these checks proves the full parameterized refinement, temporal hiding,
 or liveness. No proof-generation experiment is required for inclusion.
 
@@ -153,6 +170,11 @@ The first run at `ff2da4d7` stopped with the interface counterexample and 0/1
 target proofs. The interim run at `0de5aac0` checked eight helper lemmas but
 remained 0/1, with temporal hiding unresolved. Those results belong to different
 statements and are not results for the recorded-interface task.
+
+The recorded-interface run at `7b04b66c` and its continuations exposed the
+upgrade/probe deadlock. Its old-context terminal-disabledness lemmas must be
+rechecked or retired after this repair; their historical PASS is not evidence
+about the repaired context. The full Alpha conclusion remains unchanged.
 
 Both SANY and TLAPM load the task and its exact context. The per-theorem
 `PROOF OBVIOUS` placeholder fails its obligation; the module task retains its

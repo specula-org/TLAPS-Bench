@@ -30,6 +30,15 @@ these choices is added to the proof task.
   to `FALSE` to detect a missing `WITH` binding. Removing response-send fairness
   must violate completion while recording is still enabled.
 
+- `UpgradeForwarding`: reaches the pending-upgrade/forwarded-probe race and
+  then permits every internal protocol action, with original fairness. Six
+  variants cover shared/exclusive forwarding and ordinary/conditional writes,
+  including upgrade success/failure and reservation invalidation. Completion,
+  data values, exclusive ownership, and SC outcomes are checked in source and
+  both generated layouts. Reverting only the guard reproduces the fair
+  deadlock; a separate control witnesses completed responses. The fixed prefix
+  and finite clients limit coverage and are never included in the proof task.
+
 `ShadowEntry` and `ProbeOrder` stage requests and conjoin a pruning predicate
 to `Next`. An observed violation is a concrete safety witness; exhaustion only
 covers that restricted graph. Their configurations disable deadlock checking

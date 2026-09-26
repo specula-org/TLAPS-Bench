@@ -30,7 +30,7 @@
     "Wildfire.tla": {
       "path": "Wildfire.tla",
       "upstream_sha256": "735ef3f5e07f9a7c92171a4a493368ecb787663da717437fa3ca51bc6f53d4ae",
-      "local_sha256": "36e29d5481ba1d4a0b03bfbb6df309c14709be62b704e035b29de20ab55345a9"
+      "local_sha256": "d7cc85709cef76e028f1135a73eed795be5f56aa42185127b476861776e5bbff"
     }
   },
   "local_target": "WildfireProof.tla",

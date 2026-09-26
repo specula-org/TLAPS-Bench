@@ -58,10 +58,28 @@ is an explicit, reviewable benchmark choice while that question remains open.
 | 5. Full refinement | Combine the witnesses and progress argument; discharge initial-memory choice and temporal hiding. | The unchanged full target checks with no omitted obligations, additional axioms, altered context, or finite-instance restriction. |
 | 6. Independent replay | Freeze source, proof, toolchain, and all dependency hashes; run a cold authoritative check. | All target dependencies are trusted, canonical inputs match, and a reproducible complete result is saved. |
 
+## Upgrade/probe repair and continuation
+
+The `7b04b66c` recorded-interface attempt and its continuations found a fair
+upgrade/probe deadlock. The forwarded-get guard now permits a valid cache
+copy to serve the probe while awaiting an upgrade acknowledgement. The full
+Alpha target, interface, parameter domains, and fairness are retained.
+
+Resume the saved proof session against a separately pinned repaired context.
+Preserve the old artifacts and label the new run as a continuation across a
+specification repair, not a fresh benchmark attempt. Recheck all reusable
+helpers; old terminal-deadlock lemmas are expected to fail and must not be
+assumed. Prioritize the data-validity and request/message invariants needed
+by the newly enabled action, then continue stages 3 and 4. Keep the temporal
+hiding issue separate. A new suspected counterexample should end automated
+proof retries for review and independent replay.
+
 ## Tooling gate and budgets
 
-Stage 1 is currently blocked. Start with one bounded feasibility investigation,
-not another full eight-hour proof-generation attempt against unchanged tools.
+Stage 1 remains unresolved. A sustained proof continuation has been authorized
+while the tool boundary is investigated; useful work in stages 2-4 may proceed.
+Use the remaining approximately five hours of the existing agent budget for
+the repaired-context continuation, with a one-hour independent checker budget.
 Record the exact failing obligations and the proposed trusted rule or backend.
 If a sound route is not available, retain this as a Draft, tool-blocked challenge;
 do not turn repeated unsupported-operator failures into model-failure scores.
@@ -73,9 +91,8 @@ PASS. The current helper contract also disallows new top-level variables and
 non-catalog imports: settle the admissible witness construction in stage 1,
 before producing a large proof that cannot be submitted.
 
-Once stage 1 passes, start one `gpt-6-astra` / `max` attempt on the exact revised
-head, one module at a time, with an eight-hour agent budget and one-hour checker
-budget. Preserve the session and partial artifacts. Review the first checked
+Use `gpt-6-astra` / `max` on the exact revised head, one module at a time.
+Preserve the session and partial artifacts. Review the first checked
 vertical slice before allocating further rounds; report proof, tooling, model
 defect, and budget outcomes separately. Changed statements/toolchains get new
 run identities rather than resuming either historical result directory.
