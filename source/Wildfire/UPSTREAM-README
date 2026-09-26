@@ -1,0 +1,77 @@
+                   THE WILDFIRE VERIFICATION CHALLENGE
+
+These files contain two TLA+ specifications:
+
+   - A specification of the Alpha memory model.
+   
+   - A specification of the cache-coherence protocol used in 
+     an Alpha multiprocessor code-named Wildfire.
+
+The Wildfire protocol specification should implement the Alpha memory
+model.  It doesn't because we have introduced a bug into it.  The
+challenge problem is to find an execution that demonstrates the bug.
+All that we will reveal about the bug is that it is a safety bug, so
+it is demonstrated by a finite trace.  
+
+We recommend that you keep track of the amount of time you spend on
+the problem.  If you find the bug, or have any questions about the
+problem, please contact Leslie Lamport at lamport@pa.dec.com.
+
+The specifications files are all formal, machine-readable TLA+
+modules.  Comments have been added to explain the specs, and to
+explain the TLA+ constructs.  However, the explanations are brief and
+some constructs are probably not explained.  Further information
+about TLA+ is contained in the following two files:
+
+  specifying.ps
+  specifying.pdf
+    This is a leisurely (60-page) introduction to TLA+ titled 
+    "Specifying Concurrent Systems with TLA+".  It appeared in
+    Calculational System Design, Manfred Broy and Ralf Steinbreuggen, 
+    editors, IOS Press, pages 183-247.
+
+  summary.ps
+  summary.pdf
+    This is a 7-page summary of TLA+ constructs and the standard 
+    modules.
+
+The specification of the Alpha memory model consists of about 215 lines
+of TLA+ contained in the following files, which should be read in the
+indicated order.
+
+   AlphaInterface.tla 
+   AlphaConstants.tla 
+   InnerAlpha.tla 
+   Alpha.tla 
+
+The Wildfire protocol specification, which should be read after the
+memory model specification, consists of an additional 720 lines of
+TLA+.  It is in
+
+   Wildfire.tla 
+
+The specifications use the following standard TLA+ modules, which
+are included.  
+
+   Sequences.tla
+   FiniteSets.tla
+   Naturals.tla 
+   ProtoReals.tla   (used in the Naturals module)
+   Peano.tla        (used in the ProtoReals module)
+
+The Naturals module defines the standard arithmetic operations and
+also defines i..j to be the set of integers n with i \leq n \leq j
+(where \leq means "less than or equal to").  The formal definitions of
+these operators are not relevant to the challenge problem.
+
+-----------------------------------------------------------------------------
+
+The Wildfire protocol specification was written by Leslie Lamport,
+Madhu Sharma, and Mark Tuttle.  The Alpha memory specification and an
+earlier, more detailed Wildfire specification on which the current one
+is based, were written by Leslie Lamport, Mark Tuttle, and Yuan Yu.
+The Wildfire protocol was designed by Kourosh Gharachorloo, Madhu
+Sharma, Simon Steely, and Steve van Doren.
+  
+last modified on Tue Jun 13 10:06:26 PDT 2000 by lamport
+-----------------------------------------------------------------------------

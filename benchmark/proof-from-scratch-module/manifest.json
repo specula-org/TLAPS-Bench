@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "c494f334c92b30edf1db1b0a7ceb4edc750d28d2185dd7230fefe9898b822745",
+  "corpus_sha256": "d0be6d460d8589a1d1b18d35f526bfb13cb3ace7e72331f3f02bc14e97debd69",
   "complete": true,
   "module_tasks": [
     {
@@ -708,6 +708,28 @@
       "context": [
         "SumAndMax/SumAndMaxDefs.tla",
         "SumAndMax/SumAndMaxModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Wildfire/WildfireProof.tla",
+        "source_sha256": "405152126f2384ed616d7758d30f4ba9f17528577ab222adeb151e3aa59124cc",
+        "proof_units": [
+          {
+            "task_id": "Wildfire/WildfireProof_Refinement.tla",
+            "statement_sha256": "8f2a6ae10d17cf72b0cfea97078a7b0f704c44f51685070943f622e037ba91cc"
+          }
+        ]
+      },
+      "context": [
+        "Wildfire/WildfireProof/Alpha.tla",
+        "Wildfire/WildfireProof/AlphaConstants.tla",
+        "Wildfire/WildfireProof/AlphaInterface.tla",
+        "Wildfire/WildfireProof/InnerAlpha.tla",
+        "Wildfire/WildfireProof/Wildfire.tla",
+        "Wildfire/WildfireProofDefs.tla"
       ],
       "renamed_bindings": {}
     },

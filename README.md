@@ -32,6 +32,7 @@ We are currently focusing on a few hard problems (due to token shortage).
 | :---- | :---- | :---- | :---- |
 | Ivy protocols ([alternating bit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla), [reliable broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla), <br>[split queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla), [ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket/ivy_examples_ticket.tla), [nested ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla)) | Protocol | 5  | 10 |
 | Cache coherence ([German](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanControlBenchmarks.tla), [German Data](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanData.tla), [FLASH](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 3 | 22 |
+| [Wildfire challenge (repaired model)](benchmark/proof-from-scratch-module/Wildfire/WildfireProof.tla) | Protocol | 1 | 1 |
 | [ZooKeeper protocol](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper/Zab.tla) | Protocol | 1 | 9 |
 | [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
 | [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
@@ -42,7 +43,7 @@ We are currently focusing on a few hard problems (due to token shortage).
 | [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
 | [LLVM libomp (repaired model)](benchmark/proof-from-scratch-module/libomp/libomp.tla) | System | 1 | 4 |
-| **Total** |  | 18 | 82 |
+| **Total** |  | 19 | 83 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 

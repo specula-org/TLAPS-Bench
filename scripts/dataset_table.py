@@ -61,11 +61,14 @@ def source_label(group):
         return "LLVM libomp (Specula)"
     if group == "DiskStateQueue":
         return "TLC disk state queue"
+    if group == "Wildfire":
+        return "Wildfire cache coherence"
     return "TLAPS distribution examples"
 
 
 # Upstream provenance per source (see NOTICE for full attribution).
 SOURCE_URL = {
+    "Wildfire cache coherence": "https://github.com/pron/wildfire-challenge",
     "HashiCorp Raft (Specula)": "https://github.com/hashicorp/raft",
     "tlaplus/Examples": "https://github.com/tlaplus/Examples",
     "TLAPS distribution examples": "https://github.com/tlaplus/tlapm",
@@ -100,6 +103,7 @@ _APALACHE = "https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16
 _TLAPM_FILE = {"Allocator", "Bakery", "BubbleSort", "EWD840", "Peterson", "SimpleMutex", "SumAndMax"}
 _TLAPM_DIR = {"Cantor": "examples/cantor"}
 _GROUP_URL = {
+    "Wildfire": "https://github.com/pron/wildfire-challenge/tree/bf02363fa9bc3e9e81124d372ffd86bbd14ecbf8",
     "HashicorpRaft": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/hashicorp-raft",
     "libomp": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp",
     "Consensus": "https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus",
