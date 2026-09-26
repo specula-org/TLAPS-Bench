@@ -6,7 +6,8 @@ benchmark is built from TLA+ specifications written by third parties; this file
 records their provenance and the original copyright/license notices. Some
 generated benchmark tasks remove source comments and therefore may not carry the
 upstream in-file license headers. Third-party material remains under its
-applicable upstream license; the protocols and proof obligations are unchanged.
+applicable upstream license; benchmark repairs are identified below and in the
+corresponding source documentation.
 
 Benchmark groups live under benchmark/proof-completion/ (proof completion) and
 benchmark/proof-from-scratch/ (proof from scratch).
@@ -20,6 +21,18 @@ LICENSES/Apache-2.0.txt and LICENSES/BSD-2-Clause.txt, respectively.
 
 
 == Benchmark specifications ==
+
+Wildfire cache coherence — benchmark group Wildfire
+    The Wildfire Verification Challenge by Leslie Lamport, Madhu Sharma,
+    Mark Tuttle, and Yuan Yu (Compaq, 2000/2001), imported from
+    pron/wildfire-challenge at bf02363fa9bc3e9e81124d372ffd86bbd14ecbf8:
+    https://github.com/pron/wildfire-challenge/tree/bf02363fa9bc3e9e81124d372ffd86bbd14ecbf8
+    The original authors' attribution is retained in source/Wildfire/UPSTREAM-README.
+    source/Wildfire/upstream.json pins the source hashes; README.md and
+    repairs.patch document the protocol repairs and compatibility edits.
+    This is a repaired challenge model, with no reference TLAPS proof.
+    No upstream license declaration is present at this revision; the import
+    does not relicense these materials under this repository's MIT license.
 
 TLC disk state queue — benchmark group DiskStateQueue — MIT
     DiskStateQueue.tla and DiskStateQueueWorkload.tla are copied unchanged

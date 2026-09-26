@@ -1,0 +1,479 @@
+--- a/Alpha.tla
++++ b/Alpha.tla
+@@ -12,7 +12,7 @@
+   (* reqSeq <- rs, and beforeOrder <- bo.                                  *)
+   (*************************************************************************)
+ 
+-Spec == 
++Spec ==
+   (*************************************************************************)
+   (* This is the TLA formula that describes the legal behaviors of an      *)
+   (* Alpha memory.  It is a temporal formula whose only free variable is   *)
+@@ -29,7 +29,7 @@
+   (* The TLA+ operator \EE is temporal existential quantification over     *)
+   (* (flexible) variables.                                                 *)
+   (*************************************************************************)
+-  \E InitMem \in [Adr -> Data] : 
++  \E InitMem \in [Adr -> Data] :
+     \EE reqSeq, beforeOrder : Inner(InitMem, reqSeq, beforeOrder)!InnerSpec
+ =============================================================================
+ Last modified on Mon Jun 12 18:02:08 PDT 2000 by lamport
+--- a/AlphaConstants.tla
++++ b/AlphaConstants.tla
+@@ -64,4 +64,4 @@
+   [i \in 0..(DataLen-1) |-> IF mask[i]=1 THEN new[i] ELSE old[i]]
+ 
+ =============================================================================
+-Last modified on Mon Jun 12 17:24:12 PDT 2000 by lamport 
++Last modified on Mon Jun 12 17:24:12 PDT 2000 by lamport
+--- a/AlphaInterface.tla
++++ b/AlphaInterface.tla
+@@ -80,7 +80,7 @@
+     (* location contains DataLen bits of data.                             *)
+     (***********************************************************************)
+ 
+-ASSUME
++ASSUME InterfaceParameters ==
+   (*************************************************************************)
+   (* This ASSUME statement asserts an assumption that we make about the    *)
+   (* constant parameters declared above.                                   *)
+@@ -173,4 +173,4 @@
+        [type : {"Rd", "LL"}, adr : Adr, data : Data]
+   \cup [type : {"Wr", "SC", "FailedSC"},  adr : Adr]
+ =============================================================================
+-Last modified on Mon Jun 12 17:19:07 PDT 2000 by lamport 
++Last modified on Mon Jun 12 17:19:07 PDT 2000 by lamport
+--- a/InnerAlpha.tla
++++ b/InnerAlpha.tla
+@@ -13,7 +13,7 @@
+     (* The initial contents of memory.                                     *)
+     (***********************************************************************)
+ 
+-ASSUME
++ASSUME InitialMemory ==
+   (*************************************************************************)
+   (* We assume that InitMem has the right "type"--that is, it is a         *)
+   (* function from memory addresses to data values.                        *)
+@@ -182,7 +182,7 @@
+               (*************************************************************)
+               (* The set of types of the two requests.                     *)
+               (*************************************************************)
+-        IN  /\ r1.proc = r2.proc (* r1 and r2 come from the same processor *) 
++        IN  /\ r1.proc = r2.proc (* r1 and r2 come from the same processor *)
+             /\ r1.idx < r2.idx   (* r1 precedes r2 in reqSeq[processor]    *)
+             /\ \/ "MB" \in ReqTypes
+                \/ reqIdSeq[r1].req.adr = reqIdSeq[r2].req.adr
+@@ -284,7 +284,7 @@
+ (*                                                                         *)
+ (***************************************************************************)
+ 
+-Init == 
++Init ==
+   (*************************************************************************)
+   (* The state predicate that describes the initial state.  Initially,     *)
+   (* reqSeq[proc] is the empty sequence << >>, for every processor proc,   *)
+@@ -532,7 +532,7 @@
+   \/ ExtendBefore
+ 
+ 
+-Liveness == 
++Liveness ==
+   (*************************************************************************)
+   (* The liveness condition: every non-MB request must eventually receive a *)
+   (* response.                                                             *)
+@@ -561,9 +561,6 @@
+   (* The complete inner specification.                                     *)
+   (*************************************************************************)
+ -----------------------------------------------------------------------------
+-THEOREM  InnerSpec => []TypeInvariant
+-  (*************************************************************************)
+-  (* This theorem asserts that TypeInvariant is, indeed, an invariant.     *)
+-  (*************************************************************************)
++\* The benchmark does not import an unproved type-invariance theorem.
+ =============================================================================
+ Last modified on Tue Jun 13 08:56:38 PDT 2000 by lamport
+--- a/Wildfire.tla
++++ b/Wildfire.tla
+@@ -3,7 +3,7 @@
+ 
+ (***************************************************************************)
+ (*                                                                         *)
+-(* WARNING: A BUG HAS BEEN INSERTED INTO THIS SPECIFICATION.               *)
++(* Repaired benchmark version. See README.md and repairs.patch for changes. *)
+ (*                                                                         *)
+ (* FOR DETAILS, SEE                                                        *)
+ (*   http://www.research.digital.com/SRC/tla/wildfire-challenge.html       *)
+@@ -238,7 +238,7 @@
+ (* In all these cases, adding the data structures to make those decisions  *)
+ (* local is straightforward.                                               *)
+ (***************************************************************************)
+-       
++
+ 
+ EXTENDS AlphaInterface, AlphaConstants, Naturals, Sequences, FiniteSets
+ 
+@@ -294,7 +294,7 @@
+     (* The initial contents of memory.                                     *)
+     (***********************************************************************)
+ 
+-ASSUME Proc \cap LS = { }
++ASSUME DisjointNodes == Proc \cap LS = { }
+   (*************************************************************************)
+   (* We assume that the sets Proc and LS are disjoint.  This allows us to  *)
+   (* define the destination of a message to be a Proc or an LS, and to     *)
+@@ -302,9 +302,12 @@
+   (* destination is not an LS.                                             *)
+   (*************************************************************************)
+ 
+-ASSUME DataLen \in Nat
+-
+-ASSUME InitMem \in [Adr -> Data]
++ASSUME NaturalDataLen == DataLen \in Nat
++
++ASSUME InitialMemory == InitMem \in [Adr -> Data]
++
++ASSUME ProcessorHomes == \A p \in Proc : ProcLS(p) \in LS
++ASSUME AddressHomes == \A a \in Adr : AdrLS(a) \in LS
+ 
+ InMemory == CHOOSE m : m \notin Proc
+   (*************************************************************************)
+@@ -324,7 +327,7 @@
+   (* A value that is not in Data.  It is used when creating a new          *)
+   (* cache-line version with invalid data.                                 *)
+   (*************************************************************************)
+-  
++
+ CacheVersionEntry ==
+   (*************************************************************************)
+   (* A cache entry can record multiple versions of a data value for an     *)
+@@ -350,7 +353,7 @@
+       (* True iff the version was evicted and a Victim message was sent to *)
+       (* the directory, but the VictimAck has not returned.                *)
+       (*********************************************************************)
+-      
++
+ CacheEntry ==
+   (*************************************************************************)
+   (* The set of possible cache entries for a particular address in a       *)
+@@ -632,6 +635,11 @@
+      /\ m1 \in Q1Message \ Comsig
+      /\ m2 \in Q1Message \ Comsig
+      /\ (q = "LSToGS") => (m1.adr = m2.adr)
++
++  \/ (* A directory request cannot overtake an older probe from the GS. *)
++     /\ q = "GSToLS"
++     /\ m1 \in Q0Message
++     /\ m2 \in Inval \cup ForwardedGet
+ 
+ -----------------------------------------------------------------------------
+ 
+@@ -774,7 +782,7 @@
+   (* The set of all messages in transit.  In other words, the union of all *)
+   (* message sets in transit.                                              *)
+   (*************************************************************************)
+-  UNION {Q[q][pl][idx] : <<q, pl, idx>> \in allQLocations}
++  UNION {Q[loc[1]][loc[2]][loc[3]] : loc \in allQLocations}
+ 
+ msgsInQueue(q) ==
+   (*************************************************************************)
+@@ -1015,17 +1023,17 @@
+       (* Victims travel alone; they never belong to the same message set   *)
+       (* as another message.                                               *)
+       (*********************************************************************)
+-      \A <<q, pl, idx>> \in allQLocations:
+-        (\E m \in Q[q][pl][idx] : m \in Victim) =>
+-                 (Cardinality(Q[q][pl][idx]) = 1)
++      \A loc \in allQLocations:
++        (\E m \in Q[loc[1]][loc[2]][loc[3]] : m \in Victim) =>
++                 (Cardinality(Q[loc[1]][loc[2]][loc[3]]) = 1)
+ 
+    /\ (*********************************************************************)
+       (* There can be at most one Victim from any processor for any single *)
+       (* address.                                                          *)
+       (*********************************************************************)
+        \A p \in Proc, a \in Adr :
+-         1 \geq Cardinality({<<q, pl, idx>> \in allQLocations :
+-                               \E m \in Q[q][pl][idx] : /\ m.type = "Victim"
++         1 \geq Cardinality({loc \in allQLocations :
++                               \E m \in Q[loc[1]][loc[2]][loc[3]] : /\ m.type = "Victim"
+                                                         /\ m.cmdr = p
+                                                         /\ (m.adr = a)})
+ 
+@@ -1038,7 +1046,7 @@
+      (**********************************************************************)
+      \A p \in Proc:
+         (locked[p] # Unlocked) => (cache[p][locked[p]].state # "Invalid")
+-  
++
+ -----------------------------------------------------------------------------
+ (***************************************************************************)
+ (*                          THE INITIAL PREDICATE                          *)
+@@ -1081,7 +1089,7 @@
+   (* processed.  This is true iff there is a Fill or ForwardedGet or       *)
+   (* ChangeToExclusiveAck message for this proc and adr.                   *)
+   (*************************************************************************)
+-  \/ \E m \in msgsInTransit : 
++  \/ \E m \in msgsInTransit :
+           /\ m \in GetShared \cup GetExclusive \cup
+                    ChangeToExclusive \cup ForwardedGet \cup
+                    ChangeToExclusiveAck
+@@ -1103,12 +1111,13 @@
+          (******************************************************************)
+       /\ \A i \in 1..(idx-1) : /\ reqQ[p][i].type # "MB"
+                                /\ reqQ[p][i].adr # req.adr
+-                               /\ (req.type = "LL") => reqQ[p][i].type # "LL"
++                               /\ (req.type \in {"LL", "SC"}) =>
++                                     reqQ[p][i].type \notin {"LL", "SC"}
+          (******************************************************************)
+          (* There is no memory barrier or request for the same address in  *)
+-         (* front of this request.  Also, all LL's must be executed in     *)
+-         (* order.  (This is necessary to maintain the LLSCPair conjunct   *)
+-         (* of the LL/SC axiom in beforeOrderOK of module InnerAlpha of    *)
++         (* front of this request.  Also, all LL/SC operations must be     *)
++         (* executed in request order.  (This is necessary to maintain the *)
++         (* LLSCPair conjunct of the LL/SC axiom in beforeOrderOK of       *)
+          (* the Alpha memory spec.)                                        *)
+          (******************************************************************)
+ 
+@@ -1225,7 +1234,7 @@
+   /\ cache[p][adr].state # "Invalid"
+   /\ cache[p][adr].version # << >>
+   /\ ~cache[p][adr].fillOrCTEAckPending
+-	
++
+   /\ cache' =
+        (********************************************************************)
+        (* Invalidate the evicted cache line.  If this is the primary copy  *)
+@@ -1236,7 +1245,7 @@
+        (* deleting the version--which we can do iff it's the only version  *)
+        (* and its FillMarker has arrived.                                  *)
+        (********************************************************************)
+-       [cache EXCEPT 
++       [cache EXCEPT
+           ![p][adr].state = "Invalid",
+           ![p][adr].version =
+              IF cache[p][adr].state # "SharedClean"
+@@ -1259,7 +1268,7 @@
+        THEN [ locked EXCEPT ![p] = Unlocked ]
+        ELSE locked
+ 
+-  /\ Q' = 
++  /\ Q' =
+        (********************************************************************)
+        (* If the copy is the primary one, then a Victim is sent to the     *)
+        (* directory.                                                       *)
+@@ -1383,7 +1392,7 @@
+        (* This is the action's enabling condition, true iff the message    *)
+        (* can be received now.                                             *)
+        (********************************************************************)
+-       
++
+   /\ LET
+        msgset == Q.LSToProc[p][idx]
+          (******************************************************************)
+@@ -1444,7 +1453,7 @@
+                                 {[adr   |-> msg.adr,
+                                   data  |-> Oldest(version).data,
+                                   state |-> msg.state]}]
+-               /\ locked' = 
++               /\ locked' =
+                   (*********************************************************)
+                   (* If the address is locked and the version in question  *)
+                   (* is the current one (which is true iff there is only   *)
+@@ -1467,7 +1476,7 @@
+                       /\ msg.state = "Exclusive"
+                    THEN [locked EXCEPT ![p] = Unlocked]
+                    ELSE locked
+-               
++
+                /\ UNCHANGED <<reqQ, respQ>>
+ 
+        []   \E m \in msgset : m \in Inval ->
+@@ -1479,11 +1488,12 @@
+                      (* True iff the Inval is for an earlier version of    *)
+                      (* the data, and hence should be thrown away.         *)
+                      (******************************************************)
+-                     \/ Len(entry.version) = 0
++                     IF Len(entry.version) = 0
+                         (***************************************************)
+                         (* There is no current version.                    *)
+                         (***************************************************)
+-                     \/ Newest(entry.version).fillMarkerPending
++                     THEN TRUE
++                     ELSE Newest(entry.version).fillMarkerPending
+                         (***************************************************)
+                         (* An Inval for any version must follow that       *)
+                         (* version's FillMarker, so in this case the Inval *)
+@@ -1523,9 +1533,9 @@
+                         THEN
+                           cache
+                         ELSE
+-                          [cache EXCEPT 
+-                            ![p][msg.adr] = 
+-                              ReducedCacheEntry([@ EXCEPT 
++                          [cache EXCEPT
++                            ![p][msg.adr] =
++                              ReducedCacheEntry([@ EXCEPT
+                                                     !.state = "Invalid" ])]
+ 
+                    /\ locked' =
+@@ -1729,7 +1739,7 @@
+                     (* r is the ONLY request to this address ahead of the  *)
+                     (* MB.)                                                *)
+                     (*******************************************************)
+-            /\ ~\E m \in msgsInTransit : 
++            /\ ~\E m \in msgsInTransit :
+                     /\ m.type \in {"Comsig", "GetShared", "GetExclusive",
+                                    "ChangeToExclusive"}
+                     /\ m.cmdr = p
+@@ -1831,7 +1841,7 @@
+       (*********************************************************************)
+       [type  |-> "Comsig", cmdr  |-> msg.cmdr]
+ 
+-    writing == 
++    writing ==
+       (*********************************************************************)
+       (* True iff this request is a GetExclusive or a successful           *)
+       (* ChangeToExclusive.                                                *)
+@@ -1844,7 +1854,7 @@
+       (*********************************************************************)
+       (* The set of Inval messages that are generated.                     *)
+       (*********************************************************************)
+-      IF writing 
++      IF writing
+         THEN { [type  |-> "Inval",
+                 cmdr  |-> msg.cmdr,
+                 dest  |-> q,
+@@ -1865,7 +1875,7 @@
+         [ type |-> "ChangeToExclusiveAck",
+           cmdr |-> msg.cmdr,
+           adr  |-> msg.adr,
+-          success |-> writing ] 
++          success |-> writing ]
+       ELSE
+         [ type |-> "FillMarker",
+           cmdr |-> msg.cmdr,
+@@ -1911,11 +1921,11 @@
+     EnteringShadowMode ==
+       (*********************************************************************)
+       (* The address enters shadow mode if the commander is local          *)
+-      (* (attached to this local switch) and the command generates a       *)
+-      (* ForwardedGet to a nonlocal processor.                             *)
++      (* (attached to this local switch) and the command generates a Q1    *)
++      (* probe (a ForwardedGet or Inval) to a nonlocal processor.          *)
+       (*********************************************************************)
+       /\ ProcLS(msg.cmdr) = ls
+-      /\ \E m \in fgetSet : ProcLS(m.dest) # ls
++      /\ \E m \in fgetSet \cup invalSet : ProcLS(m.dest) # ls
+ 
+     ShadowClearRequired ==
+        (********************************************************************)
+@@ -1938,13 +1948,13 @@
+       (* is, a ComsigClear is required iff ComsigClearRequired \/          *)
+       (* ShadowClearRequired is true.                                      *)
+       (*********************************************************************)
+-      
++
+       \/  \E m \in fgetSet \cup invalSet : ProcLS(m.dest) # ls
+             (***************************************************************)
+             (* A ForwardedGet or an Inval is being sent to a nonlocal      *)
+             (* processor.                                                  *)
+             (***************************************************************)
+-            
++
+       \/ IF ProcLS(msg.cmdr) = ls
+            THEN msgsInLoop(adr, "ComsigClear") # {}
+                 (***********************************************************)
+@@ -1965,7 +1975,7 @@
+       (* The set of all messages being sent other than the ShadowClear and *)
+       (* ComsigClear messages.                                             *)
+       (*********************************************************************)
+-      
++
+     GlobalMessages ==
+       (*********************************************************************)
+       (* The set of all messages that are being sent to the global switch. *)
+@@ -1981,9 +1991,9 @@
+       (*********************************************************************)
+       (* The set of messages being sent directly to (local) processors.    *)
+       (*********************************************************************)
+-      
++
+   IN
+-    /\ Q' = [queues EXCEPT 
++    /\ Q' = [queues EXCEPT
+                !.LSToGS[ls] = IF GlobalMessages = {}
+                               THEN @
+                               ELSE Append(@,GlobalMessages),
+@@ -1998,7 +2008,7 @@
+     /\ memDir' =
+          CASE msg.type = "GetShared" ->
+                 [ memDir EXCEPT ![adr].readers = @ \cup {msg.cmdr} ]
+-         []   writing -> 
++         []   writing ->
+                 [ memDir EXCEPT ![adr].readers = {},
+                                 ![adr].writer = msg.cmdr ]
+          []   OTHER ->
+@@ -2074,31 +2084,31 @@
+       (*********************************************************************)
+       (* The VictimAck message sent to m.cmdr, the victim's sender.        *)
+       (*********************************************************************)
+-      
++
+     shadowClear == [ type |-> "ShadowClear",
+                      cmdr  |-> m.cmdr,
+                      adr   |-> m.adr ]
+       (*********************************************************************)
+-      (* If the address is in shadow mode and the victim's sender is not   *)
+-      (* local to ls, then the address must stay in shadow mode until the  *)
++      (* If the address is in shadow mode, a local or remote victim's ack *)
++      (* goes through the GS. The address must stay shadowed until the    *)
+       (* VictimAck reaches the GS, so a ShadowClear message is sent to the *)
+       (* GS with the VictimAck, from where it bounces back to ls.  In that *)
+-      (* case, this is the ShadowClear that is sent.                       *)
+-      (*********************************************************************)
+-      
++      (* case, this is the ShadowClear that is sent. Local acks must also *)
++      (* follow older probes that are still travelling through the GS.   *)
++      (*********************************************************************)
++
+   IN
+     /\ memDir' = IF memDir[m.adr].writer = m.cmdr
+                  THEN [memDir EXCEPT
+                         ![m.adr].writer = InMemory,
+                         ![m.adr].data   = m.data]
+                  ELSE memDir
+-    /\ Q' = IF ProcLS(m.cmdr) # ls
+-            THEN [queues EXCEPT !.LSToGS[ls] = Append(@,{victimAck})]
+-            ELSE
+-              IF InShadowMode(m.adr)
+-              THEN [queues EXCEPT !.LSToGS[ls] =
+-                                           Append(@,{victimAck,shadowClear})]
+-              ELSE [queues EXCEPT !.LSToProc[m.cmdr] = Append(@,{victimAck})]
++    /\ Q' = IF InShadowMode(m.adr)
++            THEN [queues EXCEPT !.LSToGS[ls] =
++                                            Append(@,{victimAck,shadowClear})]
++            ELSE IF ProcLS(m.cmdr) # ls
++                 THEN [queues EXCEPT !.LSToGS[ls] = Append(@,{victimAck})]
++                 ELSE [queues EXCEPT !.LSToProc[m.cmdr] = Append(@,{victimAck})]
+     /\ UNCHANGED <<procVars, fillQ, aInt>>
+ 
+ 
+@@ -2116,7 +2126,7 @@
+       (* a Victim message, in which case it is the only element in the     *)
+       (* message set.                                                      *)
+       (*********************************************************************)
+-  IN  
++  IN
+     /\ CanDequeueMsgSet("ProcToLS", p, idx)
+     /\ req \in Victim
+     /\ AdrLS(req.adr) = ProcLS(p)
+@@ -2287,7 +2297,7 @@
+         /\ [][Next]_wVars
+         /\ Liveness
+ -----------------------------------------------------------------------------
+-THEOREM Spec => [](TypeInvariant /\ MessageInvariant)
++\* The benchmark goal is stated in WildfireProof; no invariant is assumed here.
+ =============================================================================
+ 
+ Last modified on Sun Jun 18 09:38:33 PDT 2000 by lamport

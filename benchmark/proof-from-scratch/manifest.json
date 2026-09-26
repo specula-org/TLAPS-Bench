@@ -447,6 +447,17 @@
       "SumAndMax/SumAndMax_CorrectnessDefs.tla"
     ]
   },
+  "Wildfire/WildfireProof_Refinement.tla": {
+    "spec_id": "Wildfire/WildfireProof.tla",
+    "context": [
+      "Wildfire/WildfireProof_Refinement/Alpha.tla",
+      "Wildfire/WildfireProof_Refinement/AlphaConstants.tla",
+      "Wildfire/WildfireProof_Refinement/AlphaInterface.tla",
+      "Wildfire/WildfireProof_Refinement/InnerAlpha.tla",
+      "Wildfire/WildfireProof_Refinement/Wildfire.tla",
+      "Wildfire/WildfireProof_RefinementDefs.tla"
+    ]
+  },
   "ZooKeeper/Zab_Agreement.tla": {
     "spec_id": "ZooKeeper/Zab.tla",
     "context": [

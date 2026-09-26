@@ -1,0 +1,39 @@
+{
+  "repository": "https://github.com/pron/wildfire-challenge",
+  "commit": "bf02363fa9bc3e9e81124d372ffd86bbd14ecbf8",
+  "files": {
+    "Alpha.tla": {
+      "path": "Alpha.tla",
+      "upstream_sha256": "5bcac91e2a4ad671464202917c6e058a96b021eaea20cbb90666c5ede4965958",
+      "local_sha256": "5f05a091c452d235c5a55eae08ebe00bd0c469736f7a76eb33c1706c67a5f399"
+    },
+    "AlphaConstants.tla": {
+      "path": "AlphaConstants.tla",
+      "upstream_sha256": "9c243be7a1b1e20dbabc53d65e1e0d7985dadaa801a8dbb581173d995ca1c555",
+      "local_sha256": "b9a3a6393d59078d2ee4bfa8826466e8fc1cc58ff3dcc43cd3eb769de79b9029"
+    },
+    "AlphaInterface.tla": {
+      "path": "AlphaInterface.tla",
+      "upstream_sha256": "bde3af7b5ef89b6a8af75a2561bd9b45e0a86e0835a80189dc388f3ee8b549ad",
+      "local_sha256": "ef334f8b96d3561181c78bad0879ffa04858ef197fea16e07144d7f4e02ef425"
+    },
+    "InnerAlpha.tla": {
+      "path": "InnerAlpha.tla",
+      "upstream_sha256": "b6530fdf447b8d8d6b29d6a45b4231de7ad75bbdae6db5551417a3b3ec6f0277",
+      "local_sha256": "9254a552e946c644c3b39a4de8003ac14e40087a613ee2d73bf97b13d92c2ef6"
+    },
+    "UPSTREAM-README": {
+      "path": "README",
+      "upstream_sha256": "90373b4c17e6a9fc24b70fcdcc54c80b45a11a5d07e0da2deeb5de523a2fd562",
+      "local_sha256": "90373b4c17e6a9fc24b70fcdcc54c80b45a11a5d07e0da2deeb5de523a2fd562"
+    },
+    "Wildfire.tla": {
+      "path": "Wildfire.tla",
+      "upstream_sha256": "735ef3f5e07f9a7c92171a4a493368ecb787663da717437fa3ca51bc6f53d4ae",
+      "local_sha256": "36e29d5481ba1d4a0b03bfbb6df309c14709be62b704e035b29de20ab55345a9"
+    }
+  },
+  "local_target": "WildfireProof.tla",
+  "repairs": "repairs.patch",
+  "license": "No upstream license declaration at the pinned revision; see NOTICE."
+}
