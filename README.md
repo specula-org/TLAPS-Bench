@@ -14,7 +14,7 @@ Formally Proving the Correctness of Complex Protocols and Systems <br>using TLA+
 
 Check out [TLAPS-Bench Leaderboard](https://specula-org.github.io/tlaps-bench-website/#/leaderboard).
 
-**Our vision.** To prove the correctness of any given critical protocols and systems using [TLA+ Proof System (TLAPS)](https://proofs.tlaplus.net/doc/)
+**Our vision.** To prove the correctness of any given critical protocols and systems using [TLA+ Proof System (TLAPS)](https://proofs.tlapl.us/doc/web/content/Home.html)
 
 TLAPS-Bench evaluates whether AI agents can formally prove (or disprove) the correctness of complex protocols and systems using TLAPS. 
 
