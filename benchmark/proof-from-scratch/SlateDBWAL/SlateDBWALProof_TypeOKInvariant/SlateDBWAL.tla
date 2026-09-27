@@ -53,20 +53,22 @@ LastManifestId == Max(DOMAIN manifest)
 ReadLastManifest == manifest[LastManifestId]
 ReadSnapshot(id) == IF id \in DOMAIN snapshot THEN snapshot[id] ELSE NIL
 
+NeedsManifestLoad(w) ==
+    /\ wManifestLoad[w].loaded = FALSE
+    /\ wManifest[w] /= ReadLastManifest
+
 DoRefresh(w) ==
-    \/ /\ wManifestLoad[w].loaded = FALSE
-       /\ wManifest[w] /= ReadLastManifest
+    \/ NeedsManifestLoad(w)
     \/ wManifestLoad[w].checked = FALSE
 
 RefreshManifest(w) ==
-    CASE /\ wManifestLoad[w].loaded = FALSE
-         /\ wManifest[w] /= ReadLastManifest ->
+    CASE NeedsManifestLoad(w) ->
             /\ wManifest' = [wManifest EXCEPT ![w] = ReadLastManifest]
             /\ wManifestLoad' = [wManifestLoad EXCEPT ![w] = 
                                             [loaded   |-> TRUE,
                                              checked  |-> FALSE,
                                              valid    |-> FALSE]]
-      [] wManifestLoad[w].checked = FALSE -> 
+      [] ~NeedsManifestLoad(w) /\ wManifestLoad[w].checked = FALSE ->
             /\ wManifestLoad' = [wManifestLoad EXCEPT ![w] = 
                                     [loaded  |-> TRUE,
                                      checked |-> TRUE,
@@ -85,7 +87,7 @@ StartWriter(w) ==
     /\ CASE DoRefresh(w) -> 
                 /\ RefreshManifest(w)
                 /\ UNCHANGED wState
-         [] wManifestLoad[w].valid = FALSE ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid = FALSE ->
                 /\ wState' = [wState EXCEPT ![w] = IDLE]
                 /\ ManifestRefreshed(w)
          [] OTHER -> 
@@ -148,15 +150,15 @@ ValidateEpochBeforeWalFenceRetry(w) ==
     /\ CASE DoRefresh(w) -> 
                 /\ RefreshManifest(w)
                 /\ UNCHANGED <<wState, wNextWalId>>
-         [] wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ (wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch) ->
                 /\ wState' = [wState EXCEPT ![w] = FENCED]
                 /\ ManifestRefreshed(w)
                 /\ UNCHANGED wNextWalId
-         [] wEpoch[w] > wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] > wManifest[w].writerEpoch ->
                 /\ wState' = [wState EXCEPT ![w] = ILLEGAL_STATE]
                 /\ ManifestRefreshed(w)
                 /\ UNCHANGED wNextWalId
-         [] wEpoch[w] = wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] = wManifest[w].writerEpoch ->
                 /\ wNextWalId' = [wNextWalId EXCEPT ![w] = @ + 1]
                 /\ wState' = [wState EXCEPT ![w] = WRITE_FENCE]
                 /\ ManifestRefreshed(w)
@@ -167,15 +169,15 @@ ValidateEpochBeforeReplay(w) ==
     /\ CASE DoRefresh(w) -> 
                 /\ RefreshManifest(w)
                 /\ UNCHANGED <<wState, wNextWalId, wReplayId>>
-         [] wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ (wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch) ->
                 /\ wState' = [wState EXCEPT ![w] = FENCED]
                 /\ ManifestRefreshed(w)
                 /\ UNCHANGED <<wNextWalId, wReplayId>>
-         [] wEpoch[w] > wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] > wManifest[w].writerEpoch ->
                 /\ wState' = [wState EXCEPT ![w] = ILLEGAL_STATE]
                 /\ ManifestRefreshed(w)
                 /\ UNCHANGED <<wNextWalId, wReplayId>>
-         [] wEpoch[w] = wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] = wManifest[w].writerEpoch ->
                  /\ wNextWalId' = [wNextWalId EXCEPT ![w] = @ + 1]
                  /\ wReplayId' = [wReplayId EXCEPT ![w] = wManifest[w].replayAfterWalId]
                  /\ wState' = [wState EXCEPT ![w] = LOAD_SNAPSHOT]
@@ -207,14 +209,14 @@ ReplayWAL(w) ==
                     /\ wState' = [wState EXCEPT ![w] = READY]
                     /\ wReplayId' = [wReplayId EXCEPT ![w] = 0]
                     /\ UNCHANGED <<wMachineData>>
-            [] read = NIL ->
+            [] id /= wNextWalId[w] /\ read = NIL ->
                     /\ wState' = [wState EXCEPT ![w] = VALIDATE_BEFORE_NOT_FOUND]
                     /\ UNCHANGED <<wReplayId, wMachineData>>
-            [] read.kind = DATA ->
+            [] id /= wNextWalId[w] /\ read /= NIL /\ read.kind = DATA ->
                     /\ wMachineData' = [wMachineData EXCEPT ![w] = Append(@, read.value)]
                     /\ wReplayId' = [wReplayId EXCEPT ![w] = @ + 1]
                     /\ UNCHANGED <<wState>>
-            [] read.kind = FENCE ->
+            [] id /= wNextWalId[w] /\ read /= NIL /\ read.kind = FENCE ->
                     /\ wReplayId' = [wReplayId EXCEPT ![w] = @ + 1]
                     /\ UNCHANGED <<wState, wMachineData>>
     /\ UNCHANGED <<storeVars, gcVars, auxVars, wEpoch, wNextWalId, wManifest, wManifestLoad>>
@@ -224,13 +226,13 @@ ValidateBeforeNotFound(w) ==
     /\ CASE DoRefresh(w) -> 
                 /\ RefreshManifest(w)
                 /\ UNCHANGED wState
-         [] wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ (wManifestLoad[w].valid = FALSE \/ wEpoch[w] < wManifest[w].writerEpoch) ->
                 /\ wState' = [wState EXCEPT ![w] = FENCED]
                 /\ ManifestRefreshed(w)
-         [] wEpoch[w] > wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] > wManifest[w].writerEpoch ->
                 /\ wState' = [wState EXCEPT ![w] = ILLEGAL_STATE]
                 /\ ManifestRefreshed(w)
-         [] wEpoch[w] = wManifest[w].writerEpoch ->
+         [] ~DoRefresh(w) /\ wManifestLoad[w].valid /\ wEpoch[w] = wManifest[w].writerEpoch ->
                 /\ wState' = [wState EXCEPT ![w] = NOT_FOUND]
                 /\ ManifestRefreshed(w)
     /\ UNCHANGED <<storeVars, gcVars, auxVars, wEpoch, 

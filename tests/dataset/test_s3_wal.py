@@ -85,6 +85,69 @@ def test_selected_invariants_on_complete_small_instances(tmp_path, group, contex
     assert "0 states left on queue" in text, text
 
 
+def case_guards(text, operator, count):
+    """Read the guards of a single, non-nested CASE in these source actions."""
+    text = re.sub(r"\(\*.*?\*\)", "", text, flags=re.S)
+    text = re.sub(r"\\\*[^\n]*", "", text)
+    body = re.search(rf"(?ms)^{operator}\([wr]\) ==\n(.*?)(?=^\S|\Z)", text)[1]
+    case = body.split("CASE", 1)[1].split("\n    /\\ UNCHANGED", 1)[0]
+    arms = re.split(r"\n\s*\[\]\s*", case)
+    assert len(arms) == count, (operator, arms)
+    guards = [" ".join(arm.split("->", 1)[0].split()) for arm in arms]
+    return [guard for guard in guards if guard != "OTHER"]
+
+
+@pytest.mark.parametrize("group", ["Walgit", "SlateDBWAL"])
+@pytest.mark.parametrize("context", ["source", "module"])
+def test_case_guards_are_exclusive_in_reachable_states(tmp_path, group, context):
+    """TLC's first-match policy must not hide another enabled CASE arm."""
+    name, config = stage(tmp_path, group, context, values=2 if group == "Walgit" else 1)
+    text = (tmp_path / f"{name}.tla").read_text()
+    if group == "Walgit":
+        cases = [("ReplayWAL", 4), ("CheckSlot", 3)]
+        argument, domain, state = "r", "Replicas", "rState"
+        states = ["REPLAY_WAL", "CHECK_SLOT"]
+    else:
+        cases = [
+            ("RefreshManifest", 2),
+            ("StartWriter", 3),
+            ("ValidateEpochBeforeWalFenceRetry", 4),
+            ("ValidateEpochBeforeReplay", 4),
+            ("ValidateBeforeNotFound", 4),
+            ("ReplayWAL", 4),
+        ]
+        argument, domain, state = "w", "Writers", "wState"
+        states = [
+            None,
+            "IDLE",
+            "VALIDATE_BEFORE_RETRY",
+            "VALIDATE_BEFORE_REPLAY",
+            "VALIDATE_BEFORE_NOT_FOUND",
+            "REPLAY_WAL",
+        ]
+    checks = []
+    for (operator, count), enabled_state in zip(cases, states, strict=True):
+        guards = case_guards(text, operator, count)
+        scope = f"{state}[{argument}] = {enabled_state}" if enabled_state else "DoRefresh(w)"
+        bindings = ""
+        if group == "SlateDBWAL" and operator == "ReplayWAL":
+            bindings = "LET id == wReplayId[w] read == ReadWalEntry(id) IN "
+        alternatives = ", ".join(f"({guard})" for guard in guards)
+        checks.append(
+            f"    /\\ \\A {argument} \\in {domain} : ({scope}) =>\n"
+            f"        {bindings}LET guards == <<{alternatives}>>\n"
+            "        IN Cardinality({i \\in DOMAIN guards : guards[i]}) <= 1"
+        )
+    (tmp_path / "CasePriorityProbe.tla").write_text(
+        f"---- MODULE CasePriorityProbe ----\nEXTENDS {name}Proof\n"
+        "ExclusiveCaseGuards ==\n" + "\n".join(checks) + "\n====\n"
+    )
+    code, output = run_tlc(tmp_path, name, config + "\nINVARIANT ExclusiveCaseGuards\n", module="CasePriorityProbe")
+    assert code == 0, output
+    assert "Model checking completed. No error has been found." in output, output
+    assert "0 states left on queue" in output, output
+
+
 def replace_head_coverage(directory, replacement):
     path = directory / "Walgit.tla"
     text = path.read_text()

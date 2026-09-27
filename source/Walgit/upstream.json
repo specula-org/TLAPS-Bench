@@ -32,9 +32,10 @@
       "ManifestRepresentsCommittedState",
       "ConsistentReads"
     ],
-    "model_sha256": "2f140c8e3547ae57dcb5861afbede9e4fc9180a333ee1777143d1ab8b6bbf8c5",
+    "model_sha256": "db2e210b0e6b7f5301fc1159fa7f949c1887b1374423fab4d82a7db6249f692e",
     "repairs": [
-      "Correct ValidManifest head coverage for the empty log and for a checkpoint that covers headSeq; retain the other conjuncts and all protocol actions."
+      "Correct ValidManifest head coverage for the empty log and for a checkpoint that covers headSeq; retain the other predicate conjuncts.",
+      "Make overlapping CASE guards mutually exclusive so checkpoint recovery precedes segment replay and catch-up precedes log-slot retry; preserve the original first-match TLC behavior on reachable well-typed states."
     ],
     "formatting": "Ensure a final newline."
   },

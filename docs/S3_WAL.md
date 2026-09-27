@@ -48,7 +48,7 @@ end at `headSeq` when `cpSeq < headSeq`. Segment non-overlap, the existing
 segment-bound condition, and equality of the head with the maximum committed
 sequence remain unchanged. `ManifestRepresentsCommittedState` still requires
 reconstruction of all committed entries from the checkpoint and log segments.
-No protocol action is changed.
+This predicate correction does not change protocol actions.
 
 This corrects an overstrong false predicate; it is not a logically equivalent
 rewrite of that predicate. The change admits the legitimate empty and fully
@@ -57,6 +57,23 @@ checkpointed states while retaining the intended head-coverage requirement.
 OSWALD also has a stray `|` after its module terminator. Removing that trailing
 character makes the source compatible with the benchmark's module-boundary
 integrity check and changes no TLA+ definition.
+
+## Explicit action priority
+
+SlateDBWAL and Walgit use overlapping `CASE` guards in the upstream models.
+TLC chooses the first matching arm, but TLA+ does not give matching arms that
+priority. The proof contexts make the intended order explicit with mutually
+exclusive guards. Walgit restores a checkpoint before replaying later segments
+and catches up before retrying a log slot. SlateDB loads a manifest before
+checking its boundary, finishes refreshing before judging its validity or
+epoch, and finishes replay before inspecting another WAL entry.
+
+Without these guards, a fresh Walgit replica can omit checkpointed entries and
+SlateDB can fence its only writer before finishing a refresh. Choosing those
+overlapping arms violates the selected safety properties. The repair preserves
+the original first-match TLC behavior on well-typed reachable states; it narrows
+the under-specified TLA+ actions. The safety predicates and parameter assumptions
+are unchanged by this repair.
 
 ## Validation
 
@@ -68,13 +85,19 @@ reference and must still violate the corrected predicate. Parameter controls
 reject an empty process set, colliding state labels, and an OSWALD sentinel
 that aliases a payload.
 
+Four additional regressions extract the actual `CASE` guards from source and
+generated module contexts and check that at most one explicit arm is enabled
+in reachable states. They reject the models before the priority repair, even
+when the default TLC branch order passes the selected safety invariants.
+
 Larger upstream-configured checks are recorded in
 `tests/fixtures/s3_wal/validation.json`. Finite-state exploration is screening
 evidence, not a general proof of these parameterized statements. A budget-ended
 run is reported as incomplete exploration. No new model experiment accompanies
 this addition.
 
-The default configurations with three writers/replicas and three values produced:
+Before the action-priority repair, the default configurations with three
+writers/replicas and three values produced:
 
 | Model | Result | Distinct states |
 |---|---|---:|
@@ -83,10 +106,11 @@ The default configurations with three writers/replicas and three values produced
 | Walgit | No violation in 30 minutes; exploration incomplete | 63,298,973 |
 
 For budget-ended runs, counts are the last progress snapshot before timeout.
-The nineteen focused regression checks pass, and all fourteen `PROOF OBVIOUS`
-controls fail under the repository-locked TLAPM `7824dab`, with valid SANY
-inputs and no accepted target. The locked TLAPM was installed separately for
-these checks; the existing shared installation was not replaced.
+The original nineteen focused regression checks and fourteen `PROOF OBVIOUS`
+controls are recorded with those historical runs. The repaired contexts have
+twenty-three focused regression checks; the eleven affected flat tasks are
+regenerated with SANY and triviality gates under the repository-locked TLAPM
+`7824dab`. The locked TLAPM is installed separately for these checks.
 
 The recorded large TLC runs used revision `4260e47` and retain that build's
 hashes and state counts. Upstream replaced the `v1.8.0` download on September 25;

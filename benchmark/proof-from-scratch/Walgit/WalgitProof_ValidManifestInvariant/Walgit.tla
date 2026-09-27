@@ -152,8 +152,9 @@ CompleteReplay(r) ==
 ReplayWAL(r) ==
     /\ rState[r] = REPLAY_WAL
     /\ CASE ShouldCompleteReplay(r) -> CompleteReplay(r)
-         [] ShouldLoadCheckpoint(r) -> LoadCheckpoint(r)
-         [] ShouldLoadNextSegment(r) -> ReplayNextSegment(r)
+         [] ~ShouldCompleteReplay(r) /\ ShouldLoadCheckpoint(r) -> LoadCheckpoint(r)
+         [] ~ShouldCompleteReplay(r) /\ ~ShouldLoadCheckpoint(r)
+            /\ ShouldLoadNextSegment(r) -> ReplayNextSegment(r)
          [] OTHER -> IllegalState(r)
     /\ UNCHANGED <<storeVars, auxVars>>
 
@@ -223,12 +224,14 @@ CheckSlot(r) ==
                   /\ rCandidateSeq' = [rCandidateSeq EXCEPT ![r] = manifest.headSeq + 1]
                   /\ UNCHANGED <<rOperation, rPendingValue>> 
 
-         [] /\ rCandidateSeq[r] > manifest.headSeq
+         [] /\ ~(rAppliedSeq[r] < manifest.headSeq)
+            /\ rCandidateSeq[r] > manifest.headSeq
             /\ rCandidateSeq[r] \notin DOMAIN logSegments ->
                   /\ rState' = [rState EXCEPT ![r] = CLAIM_SLOT]
                   /\ UNCHANGED <<rOperation, rPendingValue, rCandidateSeq, rBurned>>
 
-         [] /\ rCandidateSeq[r] > manifest.headSeq
+         [] /\ ~(rAppliedSeq[r] < manifest.headSeq)
+            /\ rCandidateSeq[r] > manifest.headSeq
             /\ rCandidateSeq[r] \in DOMAIN logSegments ->
                   /\ LET id     == rCandidateSeq[r]
                          burned == [id |-> id, attemptKey |-> logSegments[id].attemptKey]

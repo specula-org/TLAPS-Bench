@@ -29,8 +29,10 @@
       "ConsistentMachineData",
       "ManifestRepresentsCommittedLog"
     ],
-    "model_sha256": "4d816b12ea5789730b5004026cfba7701ca0ae00de498306415abd2af96135cd",
-    "repairs": [],
+    "model_sha256": "809b5664e181c11d530ace81127774de5ba68ab4fe8b5ac2aac5bc7d1599e7e7",
+    "repairs": [
+      "Make overlapping CASE guards mutually exclusive in manifest loading, writer startup, epoch validation, and WAL replay; preserve the original first-match TLC behavior on reachable well-typed states."
+    ],
     "formatting": "Ensure a final newline."
   },
   "validation": "Finite TLC checks and source/generated-context regressions; no reference TLAPS proof or empirical model solve rate."
