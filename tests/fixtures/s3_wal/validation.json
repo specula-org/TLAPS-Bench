@@ -1,0 +1,139 @@
+{
+  "upstream_commit": "06d5cc60990cf8e5995dc56f28e5d56128eca227",
+  "benchmark_base_commit": "bc0a72cff718cfed3756e640dbbc0088c65980b1",
+  "evidence_scope": "Finite TLC screening and task integration checks. No general proof and no model experiment.",
+  "tools": {
+    "tlc_version": "TLC2 Version 2026.09.23.154203 (rev: 4260e47)",
+    "tla2tools_jar_sha256": "32d64fbbc464559fc7192341b27b885fa4eb6b92d1648d2b49fb9cdcb7aacf81",
+    "large_run_community_jar_sha256": "044e8ecdfbca92d51d7eb4469422c2a7da1fe25dc8ad39c4a90e6622d6da4d99",
+    "tlapm_version": "7824dab",
+    "tlapm_artifact_sha256": "a2860384bc89c4c5b2c73ec367e29f44d829e4d4a2698ab295139f829219331c",
+    "tlapm_executable_sha256": "d8debcba59db1bd5814d6693e3b25e3db1a8221e499bdf8b548594e2f857ede5",
+    "proof_libraries": {
+      "tlapm_commit": "80172c61842c8dd15524c6f01a70ba91029802f5",
+      "community_commit": "c2f2c77b1a399e56875d52afd92f4ffd1acb43f2"
+    }
+  },
+  "regression": {
+    "new_tests_passed": 19,
+    "existing_related_tests_passed": 82,
+    "module_suite_verification_errors": 0,
+    "existing_targets_unchanged": 287,
+    "existing_modules_unchanged": 120,
+    "test_log_sha256": "92a32996713831f860e0d8d14a3723f3a2a4805c9e0d4b6bd91dfebae5d5f9ee"
+  },
+  "small_complete_instances": [
+    {
+      "group": "SlateDBWAL",
+      "processes": 2,
+      "garbage_collectors": 1,
+      "values": 1,
+      "states_generated": 70606,
+      "distinct_states": 29502,
+      "depth": 44
+    },
+    {
+      "group": "OSWALD",
+      "processes": 2,
+      "garbage_collectors": 1,
+      "values": 1,
+      "states_generated": 239,
+      "distinct_states": 151,
+      "depth": 14
+    },
+    {
+      "group": "Walgit",
+      "processes": 2,
+      "values": 2,
+      "states_generated": 18565,
+      "distinct_states": 12702,
+      "depth": 32
+    }
+  ],
+  "small_instance_note": "No symmetry reduction; source and generated module contexts give identical counts and no violation.",
+  "nondegeneracy": {
+    "unchanged_module_targets": "14/14 UNRESOLVED",
+    "obvious_proof_targets": "14/14 FAIL with actual failed obligations under the locked TLAPM",
+    "proof_check_log_sha256": {
+      "slatedb": "713302fb89650891714d77085507ef3bcb73bdda6406a702d7a213dddad839ed",
+      "oswald": "2e1385e2a786ab977da61c08d9cd884929ed9dd9c06da9018981b8c49da67473",
+      "walgit": "4ca17175ff540736d673ee3e617fa12e7f1125d6ac0b421eb9f4f6a1a3cade3e"
+    }
+  },
+  "cases": [
+    {
+      "group": "SlateDBWAL",
+      "module": "SlateDBWAL",
+      "config": "source/SlateDBWAL/validation/SlateDBWAL.cfg",
+      "process_count": 3,
+      "value_count": 3,
+      "garbage_collectors": 2,
+      "mode": "BFS",
+      "symmetry": true,
+      "workers": 6,
+      "heap_gib": 8,
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-27T13:00:54Z",
+      "exit_code": 124,
+      "outcome": "no_violation_within_budget",
+      "exhaustive": false,
+      "states_generated": 425836033,
+      "distinct_states": 118332535,
+      "queued_states": 28152963,
+      "depth": 38,
+      "count_endpoint": "last_progress_before_timeout",
+      "last_progress": "Progress(38) at 2026-09-27 13:29:57: 425,836,033 states generated (14,955,274 s/min), 118,332,535 distinct states found (4,131,115 ds/min), 28,152,963 states left on queue.",
+      "log_sha256": "8153700f432bb1d634d5e7b456a6d0e9e8eb072aa6d94fb6170f92377ef0b556"
+    },
+    {
+      "group": "OSWALD",
+      "module": "Oswald",
+      "config": "source/OSWALD/validation/Oswald.cfg",
+      "process_count": 3,
+      "value_count": 3,
+      "garbage_collectors": 2,
+      "mode": "BFS",
+      "symmetry": true,
+      "workers": 4,
+      "heap_gib": 4,
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-27T13:00:54Z",
+      "exit_code": 0,
+      "outcome": "complete_no_violation",
+      "exhaustive": true,
+      "states_generated": 15930846,
+      "distinct_states": 3606090,
+      "queued_states": 0,
+      "depth": 56,
+      "count_endpoint": "completed_run",
+      "last_progress": "Progress(35) at 2026-09-27 13:01:57: 12,145,644 states generated (11,663,807 s/min), 2,913,940 distinct states found (2,744,585 ds/min), 208,426 states left on queue.",
+      "log_sha256": "23ddf67b1edfb7bffc2f23796b5b97bc56559228580d59f93a725937da8b977d"
+    },
+    {
+      "group": "Walgit",
+      "module": "Walgit",
+      "config": "source/Walgit/validation/Walgit.cfg",
+      "process_count": 3,
+      "value_count": 3,
+      "garbage_collectors": 0,
+      "mode": "BFS",
+      "symmetry": true,
+      "workers": 4,
+      "heap_gib": 4,
+      "time_budget_seconds": 1800,
+      "started_utc": "2026-09-27T13:00:54Z",
+      "exit_code": 124,
+      "outcome": "no_violation_within_budget",
+      "exhaustive": false,
+      "states_generated": 132153781,
+      "distinct_states": 63298973,
+      "queued_states": 12650122,
+      "depth": 43,
+      "count_endpoint": "last_progress_before_timeout",
+      "last_progress": "Progress(43) at 2026-09-27 13:29:57: 132,153,781 states generated (4,214,474 s/min), 63,298,973 distinct states found (2,030,287 ds/min), 12,650,122 states left on queue.",
+      "log_sha256": "bdae1a86f159955170269fbc117c9ba2926deb0f601ed16c98869540613126ef"
+    }
+  ],
+  "source_note": "Large runs use upstream models/configs with the approved Walgit predicate repair; proof wrappers add parameter assumptions. OSWALD's trailing module-terminator character is normalized for task generation. Original and local source hashes are in each group's upstream.json.",
+  "reproduction_note": "Run TLC with the recorded workers/heap and each source model's validation cfg, a separate -metadir, the recorded TLA tools/community jars on the classpath, and an outer timeout of 30m. Regression code stages manifest-declared task inputs with the pinned proof libraries."
+}

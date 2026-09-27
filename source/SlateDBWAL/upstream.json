@@ -1,0 +1,37 @@
+{
+  "repository": "https://github.com/Vanlightly/s3-wal-collection",
+  "commit": "06d5cc60990cf8e5995dc56f28e5d56128eca227",
+  "files": {
+    "SlateDBWAL.tla": {
+      "path": "slatedb/SlateDBWAL.tla",
+      "sha256": "4d816b12ea5789730b5004026cfba7701ca0ae00de498306415abd2af96135cd"
+    },
+    "validation/SlateDBWAL.cfg": {
+      "path": "slatedb/SlateDBWAL.cfg",
+      "sha256": "93b078e53160e68298f8b16651f08e8e137e6269af7faa974328d070ebfa61d0"
+    },
+    "UPSTREAM_NOTES.md": {
+      "path": "slatedb/SlateDBWAL_notes.md",
+      "sha256": "0f011c58984f7cb10753e456426ddc543684a5a625153bca55e522976e8d5964"
+    }
+  },
+  "license": {
+    "path": "LICENSE",
+    "local_path": "LICENSES/s3-wal-collection-MIT.txt",
+    "sha256": "19a004eec80f19e3f6db6ef65806a64c85b3befaed40e2c86c12772b2ce5c97c"
+  },
+  "local_adaptations": {
+    "proof_wrapper": "SlateDBWALProof.tla",
+    "assumptions": "Finite parameter sets, a nonempty process set, distinct control labels, and sentinel separation; no fixed process/value cardinality and no state-space constraint.",
+    "targets": [
+      "TypeOK",
+      "ValidWriters",
+      "ConsistentMachineData",
+      "ManifestRepresentsCommittedLog"
+    ],
+    "model_sha256": "4d816b12ea5789730b5004026cfba7701ca0ae00de498306415abd2af96135cd",
+    "repairs": [],
+    "formatting": "Ensure a final newline."
+  },
+  "validation": "Finite TLC checks and source/generated-context regressions; no reference TLAPS proof or empirical model solve rate."
+}

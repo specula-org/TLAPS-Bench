@@ -1,0 +1,42 @@
+{
+  "repository": "https://github.com/Vanlightly/s3-wal-collection",
+  "commit": "06d5cc60990cf8e5995dc56f28e5d56128eca227",
+  "files": {
+    "Walgit.tla": {
+      "path": "walgit/Walgit.tla",
+      "sha256": "4415415691de790503623b6acda9c839ddc7677364aee248b5885f1843edc039"
+    },
+    "validation/Walgit.cfg": {
+      "path": "walgit/Walgit.cfg",
+      "sha256": "d3592528f6365bc5ee56c9416ae6d462d58879b5d07ef266170d24d4988b9a63"
+    },
+    "UPSTREAM_NOTES.md": {
+      "path": "walgit/Walgit_notes.md",
+      "sha256": "3b7bc8b19e191275f6485a52b2a5e8445cc6789bef4c8e903a6418315410eee9"
+    }
+  },
+  "license": {
+    "path": "LICENSE",
+    "local_path": "LICENSES/s3-wal-collection-MIT.txt",
+    "sha256": "19a004eec80f19e3f6db6ef65806a64c85b3befaed40e2c86c12772b2ce5c97c"
+  },
+  "local_adaptations": {
+    "proof_wrapper": "WalgitProof.tla",
+    "assumptions": "Finite parameter sets, a nonempty process set, distinct control labels, and sentinel separation; no fixed process/value cardinality and no state-space constraint.",
+    "targets": [
+      "TypeOK",
+      "ValidReplicas",
+      "ValidManifest",
+      "ValidLogSegments",
+      "ReplicaStateIsCommittedPrefix",
+      "ManifestRepresentsCommittedState",
+      "ConsistentReads"
+    ],
+    "model_sha256": "2f140c8e3547ae57dcb5861afbede9e4fc9180a333ee1777143d1ab8b6bbf8c5",
+    "repairs": [
+      "Correct ValidManifest head coverage for the empty log and for a checkpoint that covers headSeq; retain the other conjuncts and all protocol actions."
+    ],
+    "formatting": "Ensure a final newline."
+  },
+  "validation": "Finite TLC checks and source/generated-context regressions; no reference TLAPS proof or empirical model solve rate."
+}

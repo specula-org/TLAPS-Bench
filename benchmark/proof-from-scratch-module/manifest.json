@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "c494f334c92b30edf1db1b0a7ceb4edc750d28d2185dd7230fefe9898b822745",
+  "corpus_sha256": "8f48d4807c3441b27971018f857dcf88a0af8093f2368a6a33de6ae5717d7cb5",
   "complete": true,
   "module_tasks": [
     {
@@ -532,6 +532,32 @@
     {
       "spec": {
         "format_version": 1,
+        "task_id": "OSWALD/OswaldProof.tla",
+        "source_sha256": "3a7ce98233bdc042e651dced46769406f4e4c54c44ac8fd9167a8f60f2759284",
+        "proof_units": [
+          {
+            "task_id": "OSWALD/OswaldProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "OSWALD/OswaldProof_ConsistentWriterSnapshotsInvariant.tla",
+            "statement_sha256": "e50b5f8e7e3bcb5c2be915ebf2c47c63fcd10bcffb1fd7fbfc17e8154c644451"
+          },
+          {
+            "task_id": "OSWALD/OswaldProof_ConsistentObservedSnapshotsInvariant.tla",
+            "statement_sha256": "eb03fcdf80ea41443c85d32fdc5efed6ef10a7c45bcd5f38b87c197427ced695"
+          }
+        ]
+      },
+      "context": [
+        "OSWALD/OswaldProof/Oswald.tla",
+        "OSWALD/OswaldProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
         "task_id": "OpenAddressing/OpenAddressing.tla",
         "source_sha256": "8334077bf3c82cf9a9184d3d710de642d9ab841863c54ac7dedeb813b861f015",
         "proof_units": [
@@ -696,6 +722,36 @@
     {
       "spec": {
         "format_version": 1,
+        "task_id": "SlateDBWAL/SlateDBWALProof.tla",
+        "source_sha256": "66dc040b3cc05886a4edd4cebfb1e82b3fb2566669cc769aa444e1e1b2075c6e",
+        "proof_units": [
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ValidWritersInvariant.tla",
+            "statement_sha256": "204e0f3d9a28db275b429616d1e94cf190deb246bb5ccaba75735d40458032ef"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ConsistentMachineDataInvariant.tla",
+            "statement_sha256": "a8ed77c80f032d9792a496bc40811b8fcae37d687f331dbabc724e4e2e2e8999"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ManifestRepresentsCommittedLogInvariant.tla",
+            "statement_sha256": "7146aea6d5cba2ee15a9e21987461261f1fc59daae9fa5dce2d1d8595a035a0e"
+          }
+        ]
+      },
+      "context": [
+        "SlateDBWAL/SlateDBWALProof/SlateDBWAL.tla",
+        "SlateDBWAL/SlateDBWALProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
         "task_id": "SumAndMax/SumAndMax.tla",
         "source_sha256": "88b3862f8467f2262f23f0a52c6be6a57a5dbc1ab6e70b60252dc8cc51a254fc",
         "proof_units": [
@@ -708,6 +764,48 @@
       "context": [
         "SumAndMax/SumAndMaxDefs.tla",
         "SumAndMax/SumAndMaxModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Walgit/WalgitProof.tla",
+        "source_sha256": "04de5ad535e09b68193d5b9902fa8711d96587a899d48afd17e90afa1a71396e",
+        "proof_units": [
+          {
+            "task_id": "Walgit/WalgitProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidReplicasInvariant.tla",
+            "statement_sha256": "178cab2fd70e209d1e7bcd5129094e57aa55d15a23951dc79c263f7730cff86e"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidManifestInvariant.tla",
+            "statement_sha256": "d45cee46f5a96895a9e00f6e14e6f21bde99d4b1ac032dd3593946914a077e7d"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidLogSegmentsInvariant.tla",
+            "statement_sha256": "3401b45d2a2770b56fe0ad1ac0d871b562209e1e1ea54abd177f50c596489bd1"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ReplicaStateIsCommittedPrefixInvariant.tla",
+            "statement_sha256": "09037f6e242e9735960ba4e9c6468ad377761c8daa0b837a53f838a29938464e"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ManifestRepresentsCommittedStateInvariant.tla",
+            "statement_sha256": "de9760795bbdcac85cac678fd40cb6253e7e32b8f7ec37e4fdde3437741faadd"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ConsistentReadsInvariant.tla",
+            "statement_sha256": "99c03e07f55b0b8af6e940dd279cef9a134f34dfc92eba287fb8f1e0d559a4d7"
+          }
+        ]
+      },
+      "context": [
+        "Walgit/WalgitProof/Walgit.tla",
+        "Walgit/WalgitProofDefs.tla"
       ],
       "renamed_bindings": {}
     },

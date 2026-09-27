@@ -357,6 +357,15 @@ HashiCorp Raft / Specula — benchmark group HashicorpRaft
     safety properties, validation limits, and source hashes are documented in
     source/HashicorpRaft/README.md and source/HashicorpRaft/upstream.json.
 
+WALs on S3 — benchmark groups SlateDBWAL, OSWALD, Walgit
+    From Jack Vanlightly's collection of WAL designs:
+    https://github.com/Vanlightly/s3-wal-collection/tree/06d5cc60990cf8e5995dc56f28e5d56128eca227
+    Copyright (c) 2026 Jack Vanlightly. Licensed under the MIT License;
+    see LICENSES/s3-wal-collection-MIT.txt.
+    These are the collection's simplified protocol models, not complete
+    implementations of the named systems. Source pins and local adaptations
+    are recorded in each group's upstream.json and docs/S3_WAL.md.
+
 == Bundled libraries ==
 
 TLA+ CommunityModules  —  MIT  —  https://github.com/tlaplus/CommunityModules

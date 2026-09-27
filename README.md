@@ -42,9 +42,16 @@ We are currently focusing on a few hard problems (due to token shortage).
 | [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
 | [LLVM libomp (repaired model)](benchmark/proof-from-scratch-module/libomp/libomp.tla) | System | 1 | 4 |
-| **Total** |  | 18 | 82 |
+| [SlateDB WAL](benchmark/proof-from-scratch-module/SlateDBWAL/SlateDBWALProof.tla) | Protocol | 1 | 4 |
+| [OSWALD](benchmark/proof-from-scratch-module/OSWALD/OswaldProof.tla) | Protocol | 1 | 3 |
+| [Walgit WAL](benchmark/proof-from-scratch-module/Walgit/WalgitProof.tla) | Protocol | 1 | 7 |
+| **Total** |  | 21 | 96 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
+
+The three WAL-on-S3 models retain their upstream safety targets, including type
+invariants. Their assumptions, Walgit manifest-property correction, and bounded
+validation are described in [the source notes](docs/S3_WAL.md).
 
 ## Running TLAPS-Bench
 
@@ -98,4 +105,3 @@ We are grateful to the generous support from
 
 * [MIT LICENSE](https://github.com/specula-org/tlaps-bench/blob/main/LICENSE)  
 * Third-party benchmark sources are attributed in [NOTICE](https://github.com/specula-org/tlaps-bench/blob/main/NOTICE)
-
