@@ -88,6 +88,12 @@ controls fail under the repository-locked TLAPM `7824dab`, with valid SANY
 inputs and no accepted target. The locked TLAPM was installed separately for
 these checks; the existing shared installation was not replaced.
 
+The recorded large TLC runs used revision `4260e47` and retain that build's
+hashes and state counts. Upstream replaced the `v1.8.0` download on September 25;
+the CI lock now uses revision `8f4bc8b`, whose SHA-256 matches release asset
+`588774920`. Compatibility checks against the updated build are separate from
+the original large-run evidence.
+
 Regenerate the selected flat tasks with:
 
 ```sh
