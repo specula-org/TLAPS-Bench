@@ -1,0 +1,10 @@
+---- MODULE SlateDBWALProof_TypeOKInvariant ----
+EXTENDS SlateDBWALProof_TypeOKInvariantDefs
+
+\* BEGIN AGENT HELPERS
+\* END AGENT HELPERS
+THEOREM TypeOKInvariant == Spec => []TypeOK
+\* BEGIN AGENT PROOF
+PROOF OBVIOUS
+\* END AGENT PROOF
+====

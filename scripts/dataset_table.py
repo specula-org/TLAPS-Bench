@@ -61,11 +61,14 @@ def source_label(group):
         return "LLVM libomp (Specula)"
     if group == "DiskStateQueue":
         return "TLC disk state queue"
+    if group in {"SlateDBWAL", "OSWALD", "Walgit"}:
+        return "WALs on S3 (Vanlightly)"
     return "TLAPS distribution examples"
 
 
 # Upstream provenance per source (see NOTICE for full attribution).
 SOURCE_URL = {
+    "WALs on S3 (Vanlightly)": "https://github.com/Vanlightly/s3-wal-collection",
     "HashiCorp Raft (Specula)": "https://github.com/hashicorp/raft",
     "tlaplus/Examples": "https://github.com/tlaplus/Examples",
     "TLAPS distribution examples": "https://github.com/tlaplus/tlapm",
@@ -100,6 +103,9 @@ _APALACHE = "https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16
 _TLAPM_FILE = {"Allocator", "Bakery", "BubbleSort", "EWD840", "Peterson", "SimpleMutex", "SumAndMax"}
 _TLAPM_DIR = {"Cantor": "examples/cantor"}
 _GROUP_URL = {
+    "SlateDBWAL": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/slatedb/SlateDBWAL.tla",
+    "OSWALD": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/oswald/Oswald.tla",
+    "Walgit": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/walgit/Walgit.tla",
     "HashicorpRaft": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/hashicorp-raft",
     "libomp": "https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp",
     "Consensus": "https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus",
