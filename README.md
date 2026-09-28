@@ -24,13 +24,13 @@ TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the gi
 
 Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks, which AI has to invent the entire proof structure, are still nontrivial and take long-horizon efforts.
 
-## Benchmark Problems
+## Current Problem Set
 
 We currently focus on a few hard problems (due to token shortage). 
 
 | Problems | Type | # Spec | # Invariants |
 | :---- | :---- | :---- | :---- |
-| [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 1 | 15 |
+| [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla) | Protocol | 1 | 15 |
 | [ZooKeeper protocol](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper/Zab.tla) | Protocol | 1 | 9 |
 | [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
 | [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
@@ -42,6 +42,10 @@ We currently focus on a few hard problems (due to token shortage).
 | **Total** |  | 9 | 55 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
+
+## Retired Problems
+
+
 
 The three WAL-on-S3 models retain their upstream safety targets, including type
 invariants. Their assumptions, Walgit manifest-property correction, and bounded
