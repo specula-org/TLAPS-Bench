@@ -26,26 +26,20 @@ Historically, we had two types of problems: `Proof-Completion` and `Proof-from-S
 
 ## Benchmark Problems
 
-We are currently focusing on a few hard problems (due to token shortage). 
+We currently focus on a few hard problems (due to token shortage). 
 
 | Problems | Type | # Spec | # Invariants |
 | :---- | :---- | :---- | :---- |
-| Ivy protocols ([alternating bit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla), [reliable broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla), <br>[split queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla), [ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket/ivy_examples_ticket.tla), [nested ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla)) | Protocol | 5  | 10 |
-| Cache coherence ([German](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanControlBenchmarks.tla), [German Data](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol/GermanData.tla), [FLASH](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 3 | 22 |
+| [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 1 | 15 |
 | [ZooKeeper protocol](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper/Zab.tla) | Protocol | 1 | 9 |
 | [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
 | [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
 | [OpenAddressing](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/OpenAddressing/OpenAddressing.tla) | System | 1 | 5 |
 | [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
 | [etcd Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/etcd_raft/etcd_raft.tla) | System | 1 | 8 |
-| [HashiCorp Raft](benchmark/proof-from-scratch-module/HashicorpRaft/HashicorpRaft.tla) | System | 1 | 6 |
 | [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
-| [LLVM libomp (repaired model)](benchmark/proof-from-scratch-module/libomp/libomp.tla) | System | 1 | 4 |
-| [SlateDB WAL](benchmark/proof-from-scratch-module/SlateDBWAL/SlateDBWALProof.tla) | Protocol | 1 | 4 |
-| [OSWALD](benchmark/proof-from-scratch-module/OSWALD/OswaldProof.tla) | Protocol | 1 | 3 |
-| [Walgit WAL](benchmark/proof-from-scratch-module/Walgit/WalgitProof.tla) | Protocol | 1 | 7 |
-| **Total** |  | 21 | 96 |
+| **Total** |  | 9 | 55 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
