@@ -37,6 +37,12 @@ Ack(from, to, n) ==
         /\ m.msuccess /\ m.mmatchIndex = n
         /\ HandleReplicateResponse(to, m)
 
+Nack(from, to) ==
+    \E m \in DOMAIN messages :
+        /\ m.mtype = AppendEntriesResponse /\ m.msubtype = "replicate"
+        /\ m.msource = from /\ m.mdest = to /\ m.mterm = currentTerm[to]
+        /\ ~m.msuccess /\ HandleReplicateResponse(to, m)
+
 DeliverHeartbeat(from, to) ==
     \E m \in DOMAIN messages :
         /\ m.mtype = AppendEntriesRequest /\ m.msubtype = "heartbeat"
@@ -261,6 +267,47 @@ Trace11 ==
       [] step = 9 -> DeliverHeartbeat(C, B)
       [] step = 10 -> CompletePersistVote(B)
 
+\* An entry created in term 1 is committed only in term 3, after a term-2
+\* leader was legitimately elected without it.
+Trace12 ==
+    CASE step = 0 -> Timeout(A)
+      [] step = 1 -> GrantNew(A, B)
+      [] step = 2 -> CompletePersistVote(B)
+      [] step = 3 -> CollectVote(B, A)
+      [] step = 4 -> BecomeLeader(A)
+      [] step = 5 -> ClientRequest(A, V)
+      [] step = 6 -> CheckLeaderLease(A)
+      [] step = 7 -> Timeout(B)
+      [] step = 8 -> GrantNew(B, C)
+      [] step = 9 -> CompletePersistVote(C)
+      [] step = 10 -> CollectVote(C, B)
+      [] step = 11 -> BecomeLeader(B)
+      [] step = 12 -> Timeout(A)
+      [] step = 13 -> Timeout(A)
+      [] step = 14 -> GrantNew(A, B)
+      [] step = 15 -> CompletePersistVote(B)
+      [] step = 16 -> CollectVote(B, A)
+      [] step = 17 -> BecomeLeader(A)
+      [] step = 18 -> ClientRequest(A, W)
+      [] step = 19 -> ReplicateEntries(A, B)
+      [] step = 20 -> Deliver(A, B, 2, 0)
+      [] step = 21 -> Nack(B, A)
+      [] step = 22 -> ReplicateEntries(A, B)
+      [] step = 23 -> Deliver(A, B, 2, 0)
+      [] step = 24 -> Ack(B, A, 2)
+      [] step = 25 -> AdvanceCommitIndex(A)
+
+\* Continue with a later election: the committed prefix must
+\* now be present in the election-time log.
+Trace13 ==
+    IF step < 26 THEN Trace12
+    ELSE CASE step = 26 -> Crash(A)
+           [] step = 27 -> Timeout(B)
+           [] step = 28 -> GrantNew(B, A)
+           [] step = 29 -> CompletePersistVote(A)
+           [] step = 30 -> CollectVote(A, B)
+           [] step = 31 -> BecomeLeader(B)
+
 TraceLength == CASE Scenario = 1 -> 50
                  [] Scenario = 2 -> 16
                  [] Scenario = 3 -> 10
@@ -272,6 +319,8 @@ TraceLength == CASE Scenario = 1 -> 50
                  [] Scenario = 9 -> 17
                  [] Scenario = 10 -> 12
                  [] Scenario = 11 -> 11
+                 [] Scenario = 12 -> 26
+                 [] Scenario = 13 -> 32
 
 StepAction == CASE Scenario = 1 -> Trace1
                 [] Scenario = 2 -> Trace2
@@ -284,6 +333,8 @@ StepAction == CASE Scenario = 1 -> Trace1
                 [] Scenario = 9 -> Trace9
                 [] Scenario = 10 -> Trace10
                 [] Scenario = 11 -> Trace11
+                [] Scenario = 12 -> Trace12
+                [] Scenario = 13 -> Trace13
 
 ExpectedFinal == CASE Scenario = 1 -> /\ Cardinality(electionHistory) = 2
           /\ latestConfig[A] = Server /\ latestConfig[B] = Server
@@ -314,6 +365,15 @@ ExpectedFinal == CASE Scenario = 1 -> /\ Cardinality(electionHistory) = 2
                    [] Scenario = 9 -> TRUE
                    [] Scenario = 10 -> TRUE
                    [] Scenario = 11 -> /\ currentTerm[B] = 2 /\ persistedVoteTerm[B] = 1 /\ votedFor[B] = Nil /\ pendingVote[B] = Nil
+                   [] Scenario = 12 -> /\ currentTerm[A] = 3 /\ commitIndex[A] = 2
+          /\ log[A][1].term = 1 /\ log[A][2].term = 3
+          /\ \E e \in electionHistory : e.server = B /\ e.term = 2 /\ e.entries = <<>>
+          /\ \E c \in commitHistory : c.term = 3 /\ Len(c.entries) = 2
+                   [] Scenario = 13 -> /\ state[B] = Leader /\ currentTerm[B] = 4
+          /\ \E c \in commitHistory : \E e \in electionHistory :
+                 /\ c.term = 3 /\ Len(c.entries) = 2
+                 /\ e.term = 4 /\ e.server = B
+                 /\ IsPrefix(c.entries, e.entries)
 
 TraceInit == Init /\ step = 0
 TraceNext == /\ step < TraceLength /\ StepAction /\ RecordEvents /\ step' = step + 1

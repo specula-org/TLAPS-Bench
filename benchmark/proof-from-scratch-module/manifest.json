@@ -2383,7 +2383,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_btree/btree.tla",
-        "source_sha256": "ec247d5d944643666fd5ec60c3c2b489b5560d67ccbc958ebd1710564fae23b2",
+        "source_sha256": "601c3a13b171cb477d44befbf4f3c39979074911d1d083f5ecbb00dfb4f89771",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_btree/btree_TypeOkCorrect.tla",

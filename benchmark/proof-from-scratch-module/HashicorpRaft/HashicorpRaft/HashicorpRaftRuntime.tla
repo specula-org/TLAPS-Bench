@@ -613,7 +613,8 @@ RecordEvents ==
          {[server |-> s, term |-> currentTerm'[s], entries |-> log'[s]] :
             s \in {i \in Server : state[i] # Leader /\ state'[i] = Leader}}
     /\ commitHistory' = commitHistory \cup
-         {[server |-> s, entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
+         {[server |-> s, term |-> currentTerm'[s],
+           entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
             s \in {i \in Server : commitIndex'[i] > commitIndex[i]}}
 
 Next == ProtocolNext /\ RecordEvents
@@ -633,7 +634,7 @@ LogMatching ==
 LeaderCompleteness ==
     \A c \in commitHistory, e \in electionHistory :
         \A k \in 1..Len(c.entries) :
-            c.entries[k].term < e.term =>
+            c.term < e.term =>
                 /\ k <= Len(e.entries)
                 /\ e.entries[k] = c.entries[k]
 

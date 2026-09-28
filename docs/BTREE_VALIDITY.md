@@ -41,8 +41,46 @@ A separate preceding commit rewrites five constructors from `[n \in Nodes, k \in
 
 `test_btree_function_encoding.py` checks initial table typing with TLAPS and compares initialization plus all three rewritten split constructors against the original expressions with TLC. The finite comparison covers seven states.
 
+## Comparison compatibility for abstract keys
+
+`KeysAreOrdered` specifies a strict total order on `Keys` using `<`. Three
+expressions formerly used `>=`: the branch in `ChildNodeFor` and the right
+partitions in `SplitRootLeaf` and `SplitLeaf`. TLAPM's arithmetic backends do
+not provide all standard comparison facts outside their numeric domains,
+so even the equal-separator branch can fail to unfold for an abstract key.
+
+`KeyAtLeast(key, bound)` uses `~(key < bound)` when both operands are in `Keys`,
+and retains `key >= bound` otherwise. The guard preserves the original
+out-of-domain expression, including an unspecified `Max` or `PivotOf` result;
+no assumption that every such result belongs to `Keys` is needed for this
+rewrite. No parameter restriction, transition guard, or target is added.
+
+In the standard definitions, `a >= b` is `b <= a`, `<` is `<=` plus inequality,
+and `a <= a` is true for every value. Together with strict total ordering on
+`Keys`, these imply `a >= b <=> ~(a < b)` for keys. The relevant definitions
+are [ProtoReals, Figure 18.5b, and Naturals, Figure 18.6 of Specifying Systems](https://lamport.azurewebsites.net/tla/book-02-02-27.pdf#page=363).
+A proposed interpretation making a key's comparison `k >= k` false therefore
+does not establish a counterexample under these standard definitions.
+
+`BTreeKeyOrderEquivalence.tla` extracts those standard comparison definitions
+and proves the guarded replacement equivalent in conditionals and set
+comprehensions, including arbitrary values outside `Keys`. Its real-order and
+infinity premises are properties of the standard definitions, not new
+benchmark assumptions. `test_btree_key_comparison.py` instantiates the check
+with the helper body read from the source, proves the actual singleton
+separator obligation without a numeric-key premise, and explores the union of
+the original and repaired transition relations while checking both directions
+of their equivalence and all five safety invariants. The finite transition
+check complements the comparison proof; it is not a proof of all five
+unbounded benchmark theorems.
+
 ## Dataset and result provenance
 
-Both generated B-tree contexts and the module manifest are synchronized with the repaired source. All five target statements and constant assumptions remain unchanged. The suite still contains 117 module tasks and 276 proof units. The source SHA-256 is `ec247d5d944643666fd5ec60c3c2b489b5560d67ccbc958ebd1710564fae23b2`.
+Both generated B-tree contexts and the module manifest are synchronized with
+the repaired source. All five target statements and constant assumptions remain
+unchanged. The suite contains 123 module tasks and 301 proof units. The earlier
+allocation-guard revision had source SHA-256
+`ec247d5d944643666fd5ec60c3c2b489b5560d67ccbc958ebd1710564fae23b2`;
+the current source hash is recorded by the generated module manifest.
 
 Existing results on the unguarded source remain historical observations. They should not be counted as model-capability failures on the repaired task or silently mixed with results from a fresh run of the new source. The constructor-only version has source SHA-256 `d0ffc162611b0b456c4291d3d41db38b88c7f6d8a4eec7b380b8eec0675a9d12` and still has the allocation defect.

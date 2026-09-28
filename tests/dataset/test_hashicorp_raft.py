@@ -105,7 +105,9 @@ def change_action(path, action, old, new):
 
 
 @pytest.mark.parametrize("layout", ["source", "module"])
-@pytest.mark.parametrize("scenario,states", [(1, 51), (2, 17), (3, 11), (4, 28), (5, 3), (6, 22), (11, 12)])
+@pytest.mark.parametrize(
+    "scenario,states", [(1, 51), (2, 17), (3, 11), (4, 28), (5, 3), (6, 22), (11, 12), (12, 27), (13, 33)]
+)
 def test_reachable_scenarios_preserve_all_goals(tmp_path, layout, scenario, states):
     stage(tmp_path, layout)
     code, output = run_tlc(tmp_path, scenario)
@@ -236,3 +238,32 @@ def test_exactly_six_top_level_goals_and_observer_separation():
     assert {u["task_id"] for u in task["spec"]["proof_units"]} == {
         f"HashicorpRaft/HashicorpRaft_{goal}Correct.tla" for goal in GOALS
     }
+
+
+@pytest.mark.parametrize("layout", ["source", "module"])
+def test_creation_term_rejects_a_legitimate_later_commit(tmp_path, layout):
+    stage(tmp_path, layout)
+    runtime = tmp_path / RUNTIME.name
+    text = runtime.read_text()
+    assert text.count("c.term < e.term") == 1
+    runtime.write_text(text.replace("c.term < e.term", "c.entries[k].term < e.term"))
+    code, output = run_tlc(tmp_path, 12, invariants=("LeaderCompleteness",))
+    assert code == 12, output
+    assert "Invariant LeaderCompleteness is violated" in output, output
+    assert "27 distinct states found" in output, output
+
+
+def test_delayed_commit_then_later_election_satisfies_the_original_protocol(tmp_path):
+    stage(tmp_path)
+    fixture = tmp_path / "HashicorpRaftScenarios.tla"
+    text = fixture.read_text()
+    text = text.replace(
+        "TraceInit /\\ [][TraceNext]_TraceVars", "TraceInit /\\ [][TraceNext]_TraceVars /\\ WF_TraceVars(TraceNext)"
+    )
+    text = text.replace("====", "EventuallyCompleted == <> (step = TraceLength)\n====")
+    fixture.write_text(text)
+    config = CONFIG.replace("{scenario}", "13").replace("{invariants}", " ".join((*GOALS, "Completed")))
+    config += "PROPERTY EventuallyCompleted\n"
+    code, output = run_tlc(tmp_path, 13, config=config)
+    assert code == 0, output
+    assert "33 distinct states found" in output, output

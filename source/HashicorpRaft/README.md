@@ -5,7 +5,7 @@ invariant, arithmetic fact, or internal bookkeeping lemma is scored separately.
 
 | Goal | Requirement | Selection |
 |---|---|---|
-| `LeaderCompleteness` | Every leader elected in a later term contains the complete entries of every recorded committed prefix. | Core Raft goal, strengthened to full entries and retained history. |
+| `LeaderCompleteness` | Every leader elected in a term later than a commit observation contains that recorded prefix. | Core Raft goal, strengthened to full entries and retained history. |
 | `StateMachineSafety` | Committed prefixes recorded at any two times or servers agree wherever they overlap. | New end-to-end agreement goal. |
 | `CommittedEntriesPreserved` | Each server retains every prefix it previously committed, including after restart. | New durability goal. |
 | `LogMatching` | Equal terms at an equal index imply equal complete log prefixes. | Existing goal strengthened beyond term-only equality. |
@@ -34,7 +34,12 @@ Client entries contain a symbolic `value`; configuration entries contain the
 complete voter set. Full-entry equality therefore observes more than terms.
 `electionHistory` and `commitHistory` are passive observers of actual protocol
 steps. No protocol action reads them, and no selected property is added to an
-action guard. Restart cannot erase a prior election or commit observation.
+action guard. Restart cannot erase a prior election or commit observation. Each commit
+observation records the observer's current term when its commit index advances,
+including when a follower learns the committed prefix. `LeaderCompleteness`
+compares that recorded term with the election term. An entry's creation term
+can be earlier than its commitment: using it here incorrectly constrains
+leaders elected before the entry was committed.
 
 The model abstracts successful log writes as durable atomic operations. It
 separates current-term persistence from completion of the vote record and the
@@ -85,8 +90,21 @@ configuration gate. Invalid parameter domains must be rejected before state
 exploration. The task generator retains all six goals after SANY and the
 nondegeneracy checks.
 
-Longer TLC checks are recorded in `tests/fixtures/hashicorp_raft/validation.json`.
-They are time-bounded exploration, not a full proof of these unbounded theorems.
+The commit-term regression first creates an uncommitted entry in term 1,
+elects an empty-log leader in term 2, then commits the entry in term 3. The old
+creation-term predicate rejects this legal 26-transition schedule. A second
+schedule elects a term-4 leader carrying the committed prefix, so the repaired
+condition is exercised with a true antecedent. Existing log-freshness fault
+controls still reject an election that loses an already committed prefix.
+Both schedules check the original `Spec`; the extended schedule also has a
+fair temporal completion check. Protocol actions and the other five safety
+predicates retain their definitions.
+
+Longer historical TLC checks are recorded in
+`tests/fixtures/hashicorp_raft/validation.json` against its original runtime
+hash. Its supersession entry distinguishes those checks from the commit-term
+regressions. They are time-bounded exploration, not a full proof of these
+unbounded theorems.
 No complete reference proof or model solve-rate claim accompanies this addition.
 
 Run the regression suite with:

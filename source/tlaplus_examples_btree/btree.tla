@@ -71,13 +71,20 @@ TypeOk == /\ root \in Nodes
 \* Max element in a set
 Max(xs) == CHOOSE x \in xs : (\A y \in xs \ {x} : x > y)
 
+\* Use the specified strict order for keys. Preserve the original comparison
+\* outside Keys, including unspecified results of an empty Max or PivotOf.
+KeyAtLeast(key, bound) ==
+    IF key \in Keys /\ bound \in Keys
+    THEN ~(key < bound)
+    ELSE key >= bound
+
 \* Find the appropriate child node associated with the key
 ChildNodeFor(node, key) ==
     LET keys == keysOf[node]
         maxKey == Max(keys)
         closestKey ==  CHOOSE k \in keys : /\ k>key
                                            /\ ~(\E j \in keys \ {k} : j>key /\ j<k)
-    IN IF keys = {} \/ key >= maxKey
+    IN IF keys = {} \/ KeyAtLeast(key, maxKey)
        THEN lastOf[node]
        \* smallest k that's bigger than key
        ELSE
@@ -223,7 +230,7 @@ SplitRootLeaf ==
         keys == keysOf[n1]
         pivot == PivotOf(keys)
         n1Keys == {x \in keys: x<pivot}
-        n2Keys == {x \in keys: x>=pivot} 
+        n2Keys == {x \in keys: KeyAtLeast(x, pivot)}
         keyToInsert == args[1] IN
     /\ state = SPLIT_ROOT_LEAF
     /\ HasTwoFreeNodes
@@ -284,7 +291,7 @@ SplitLeaf ==
         pivot == PivotOf(keys)
         parent == ParentOf(n1)
         n1Keys == {x \in keys: x<pivot}
-        n2Keys == {x \in keys: x>=pivot}
+        n2Keys == {x \in keys: KeyAtLeast(x, pivot)}
         keyToInsert == args[1]
     IN
     /\ state = SPLIT_LEAF
