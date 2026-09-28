@@ -74,6 +74,28 @@ of their equivalence and all five safety invariants. The finite transition
 check complements the comparison proof; it is not a proof of all five
 unbounded benchmark theorems.
 
+## Root split branch selection
+
+`WhichToSplit` now sets `splitParent` to `FALSE` when the current node is the
+root. The existing `CASE` arms are then mutually exclusive, and the root path
+does not depend on `ParentOf(root)` or a domain-external `keysOf` application.
+Non-root branch conditions and assignments are unchanged.
+
+The previous arms could both hold: with numeric keys `{1,2,3}`, occupancy 2,
+and three nodes, insert 1 and 2 and begin inserting 3. The root has no parent,
+so its empty choice may be `NIL`, and the unspecified `keysOf[NIL]` may have
+occupancy 2. A legal selection of the second CASE arm pushes `NIL` onto
+`toSplit`, violating `TypeOk` in state 10. This is independent of allocation
+exhaustion and abstract-key comparison.
+
+`test_btree_root_split.py` realizes these choices explicitly and puts the
+parent arm first. It checks the old TypeOk counterexample, a fair witness
+satisfying the old `Spec`, and the corrected path under the same choices.
+A TLAPS lemma checks that the actual root action preserves the split stack
+without assumptions about the parent's value. This repair removes erroneous
+root behavior; it is not an equivalent rewrite. It adds no parameter premise
+and preserves all five safety predicates.
+
 ## Dataset and result provenance
 
 Both generated B-tree contexts and the module manifest are synchronized with

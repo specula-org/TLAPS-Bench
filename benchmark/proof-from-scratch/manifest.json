@@ -322,6 +322,7 @@
     "spec_id": "MongoDB/MultiShardTxnSnapshot.tla",
     "context": [
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/ClientCentric.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/IdentitySnapshotIsolation.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/MultiShardTxn.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Storage.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Util.tla",

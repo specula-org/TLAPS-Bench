@@ -353,6 +353,10 @@ Spec == Init /\ [][Next]_vars
 
 -----------------------------------------
 
-SnapshotIsolation == CC!SnapshotIsolation(InitialState, Range(ops))
+SI == INSTANCE IdentitySnapshotIsolation WITH Keys <- Keys, Values <- TxId \union {NoValue}
+
+SnapshotTransactions ==
+    {[id |-> tid, ops |-> ops[tid]] : tid \in {t \in DOMAIN ops : ops[t] # <<>>}}
+SnapshotIsolation == SI!SnapshotIsolation(InitialState, SnapshotTransactions)
 
 ===========================================================================

@@ -2,8 +2,10 @@
 
 Source: [mongodb-labs/vldb25-dist-txns](https://github.com/mongodb-labs/vldb25-dist-txns/tree/74526c1201109405172eb845413154f547a815ee),
 the artifact for [Design and Modular Verification of Distributed Transactions in MongoDB](https://www.vldb.org/pvldb/vol18/p5045-schultz.pdf).
-`MultiShardTxn.tla`, `Storage.tla`, and `ClientCentric.tla` are copied
-unchanged. `Util.tla` inlines the inner set in `PermSeqs`: this preserves
+`Storage.tla` and `ClientCentric.tla` are copied unchanged.
+`MultiShardTxn.tla` retains its protocol actions and uses the local
+`IdentitySnapshotIsolation.tla` for the snapshot-isolation predicate.
+`Util.tla` inlines the inner set in `PermSeqs`: this preserves
 its permutation values and avoids an incorrect recursive binding when TLAPM
 expands it through `INSTANCE`. `upstream.json` records the upstream commit
 and hashes separately from the local repair hash.
@@ -26,8 +28,54 @@ The wrapper uses the upstream snapshot configuration:
 `IgnoreWriteConflicts = "false"`. It also requires `Timestamps \subseteq Nat`,
 consistent with the model's natural-number timestamp convention and its
 timestamp comparisons and arithmetic. Zero is allowed, with no upper bound
-on timestamp values or cardinality bound on any parameter set. There is no
-reference TLAPS proof and no proof-completion task.
+on timestamp values or cardinality bound on any parameter set.
+`NoValueIsNotTransaction` additionally requires `NoValue \notin TxId`: the
+initial-value sentinel cannot be a transaction's write identifier. This adds a
+parameter restriction, consistent with `Storage.TransactionWrite` using the
+transaction ID to identify a write's origin. There is no reference TLAPS proof
+and no proof-completion task.
+
+## Snapshot positions and transaction identity
+
+`SnapshotTransactions` retains `[id |-> tid, ops |-> ops[tid]]` for every
+nonempty observed history. Empty histories contribute no reads or writes and
+are omitted; distinct nonempty histories with equal contents retain their IDs.
+The parameter sets remain unbounded. The predicate requires the observed
+transaction set to be finite, which is a proof obligation for reachable finite
+prefixes, not a new finiteness assumption on `TxId`, `Router`, `Shard`, or `Keys`.
+
+`IdentitySnapshotIsolation` orders these records and indexes states by their
+execution positions. Equal payloads at two positions stay separate. Each
+transaction chooses one earlier snapshot, and its reads are evaluated in
+operation order with its preceding local writes. `NoConf` checks the write sets
+of intervening transactions, including writes that restore a previous value.
+This expresses the Complete and NoConflict requirements in
+[the protocol paper, section 2](https://www.vldb.org/pvldb/vol18/p5045-schultz.pdf#page=3).
+It does not replace snapshot isolation with serializability: write skew remains
+allowed.
+
+This is a substantive correction of the target's predicate, not an equivalent
+rewrite of the old `CC!SnapshotIsolation(InitialState, Range(ops))`. The old
+predicate loses transaction identity and locates repeated state contents with
+an arbitrary `Index` choice. A four-transaction, 42-step protocol trace with
+`NoValue = 100` and `100 \in TxId` passes `Spec` and `SingleWritePerKey`, but the
+old predicate fails under a consistent last-occurrence choice. The positional
+predicate accepts that history. The wrapper separately excludes this sentinel
+collision; the predicate regression exercises the base protocol without that
+wrapper premise so the premise cannot hide a defective predicate.
+
+`tests/dataset/test_mongodb_snapshot_semantics.py` checks source and generated
+contexts, 19 positive/negative semantic controls, the reachable 43-state
+witness and old-predicate failure, and sentinel acceptance/rejection. A TLAPS
+check covers the initial empty-history mapping and preservation of distinct
+IDs without bounding the parameter sets. These are regression checks, not a
+complete proof of `SnapshotIsolationCorrect`. Historical results retain their
+original input definitions.
+
+## Earlier bounded validation
+
+The following checks predate the positional-predicate correction and are
+retained as historical evidence for the original input.
 
 Bounded TLC checks enforce the premise using `Init /\ SingleWritePerKey`
 and `Next /\ SingleWritePerKey'`. A two-router, two-shard, two-key,

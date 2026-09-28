@@ -7,6 +7,9 @@ ASSUME SnapshotConfiguration ==
     /\ IgnoreWriteConflicts = "false"
     /\ Timestamps \subseteq Nat
 
+\* A transaction's write identifier must differ from the initial-value sentinel.
+ASSUME NoValueIsNotTransaction == NoValue \notin TxId
+
 WritesEachKeyAtMostOnce(transaction) ==
     \A i, j \in DOMAIN transaction :
         (/\ transaction[i].op = "write"
