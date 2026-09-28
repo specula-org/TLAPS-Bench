@@ -51,27 +51,27 @@ If you need the TLA+ proofs of these protocols, contact us and we can share them
 
 | Problems | Type | \# Spec | \# Invariants |
 | :---- | :---- | :---- | :---- |
-| TCP state machine | Protocol | 1 | 3 |
+| [TCP state machine](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_tcp/tcp_proof.tla) | Protocol | 1 | 3 |
 | Ivy protocols ([alternating bit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla), [reliable broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla), <br> [split queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla), [ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket/ivy_examples_ticket.tla), [nested ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla)) | Protocol | 5  | 10 |
-| The German cache coherence protocols | Protocol | 2 | 7 |
-| Replicated counter convergence (CRDT) | Protocol  | 1 | 3 |
-| SlateDB WAL ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 4 |
-| OSWALD WAL ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 3 |
-| Byzantine Paxos (Consensus, VoteProof, <br> PConProof, BPConProof) | Protocol | 4 | 11 |
-| Byzantine broadcast | Protocol | 1 | 5 |
-| Bosco asynchronous Byzantine consensus | Protocol | 1 | 5 |
-| Sailfish BFT consensus | Protocol | 1 | 3 |
-| Nano cryptocurrency transaction | Protocol | 1 | 1 |
-| Misra graph reachability algorithm | Protocol | 2 | 2 |
-| Spanning tree (abstract model) | Protocol | 1 | 1 |
-| Spanning tree (message passing) | Protocol | 1 | 1 |
-| Dijkstra-Scholten termination detection | Protocol | 1 | 3 |
-| Dijkstra ring termination detection | Protocol | 3 | 6 |
-| Termination detection | Protocol | 3 | 7 |
-| Kumar termination detection | Protocol | 1 | 1 |
-| Paxos (voting, consensus, commit, etc) | Protocol | 12 | 27 |
-| Two-phase commit  | Protocol | 3 | 4 |
-| Gray-Lamport transaction commit | Protocol | 1 | 1 |
+| [The German cache coherence protocols](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_GermanProtocol) | Protocol | 2 | 7 |
+| [Replicated counter convergence (CRDT)](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FiniteMonotonic/CRDT_proof.tla) | Protocol  | 1 | 3 |
+| [SlateDB WAL](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/SlateDBWAL/SlateDBWALProof.tla) ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 4 |
+| [OSWALD WAL](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/OSWALD/OswaldProof.tla) ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 3 |
+| Byzantine Paxos ([Consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/Consensus.tla), [VoteProof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/VoteProof.tla), <br> [PConProof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/PConProof.tla), [BPConProof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_byzpaxos/BPConProof.tla)) | Protocol | 4 | 11 |
+| [Byzantine broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_bcastByz/bcastByz.tla) | Protocol | 1 | 5 |
+| [Bosco asynchronous Byzantine consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_bosco/bosco.tla) | Protocol | 1 | 5 |
+| [Sailfish BFT consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_dag-consensus/Sailfish.tla) | Protocol | 1 | 3 |
+| [Nano cryptocurrency transaction](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_NanoBlockchain/Nano.tla) | Protocol | 1 | 1 |
+| [Misra graph reachability algorithm](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_MisraReachability) | Protocol | 2 | 2 |
+| [Spanning tree (abstract model)](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_SpanningTree/SpanTree_proof.tla) | Protocol | 1 | 1 |
+| [Spanning tree (message passing)](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_spanning/spanning_proof.tla) | Protocol | 1 | 1 |
+| [Dijkstra-Scholten termination detection](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_ewd687a/EWD687a_proof.tla) | Protocol | 1 | 3 |
+| [Dijkstra ring termination detection](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/EWD840/EWD840.tla) ([EWD840_proof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_ewd840/EWD840_proof.tla), [SyncTerminationDetection_proof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_ewd840/SyncTerminationDetection_proof.tla)) | Protocol | 3 | 6 |
+| [Termination detection](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_ewd998) | Protocol | 3 | 7 |
+| [Kumar termination detection](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_Termination/Termination_proof.tla) | Protocol | 1 | 1 |
+| [Paxos](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/Paxos) ([voting](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_Paxos), [consensus](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/Consensus), [commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/PaxosCommit_proof.tla), [etc](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_PaxosHowToWinATuringAward)) | Protocol | 12 | 27 |
+| [Two-phase commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla) ([TwoPhase_proof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase_proof.tla), [transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TwoPhase_proof.tla))  | Protocol | 3 | 4 |
+| [Gray-Lamport transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TCommit_proof.tla) | Protocol | 1 | 1 |
 
 ## Running TLAPS-Bench
 
