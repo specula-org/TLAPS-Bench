@@ -35,11 +35,11 @@ We currently focus on a few hard problems (due to token shortage).
 | [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
 | [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
 | [OpenAddressing](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/OpenAddressing/OpenAddressing.tla) | System | 1 | 5 |
-| [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
 | [etcd Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/etcd_raft/etcd_raft.tla) | System | 1 | 8 |
+| [HashiCorp Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/HashicorpRaft/HashicorpRaft.tla) | System | 1 | 6 |
 | [ZooKeeper implementation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper_LowLevel/ZkV3_7_0.tla) | System | 1 | 9 |
 | [MongoDB distributed transactions](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/MongoDB/MultiShardTxnSnapshot.tla) | System | 1 | 1 |
-| **Total** |  | 9 | 55 |
+| **Total** |  | 9 | 56 |
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
@@ -47,7 +47,7 @@ For more problems, check out [the full problem set](https://github.com/specula-o
 
 We have retired the following problems from TLAP-Bench, because they are well proved (or disproved) by frontier AI models and thus are no longer capable of measuring the frontier. The problems can all be found in the repository, but we no longer run them for [our leaderboard](https://specula-org.github.io/tlaps-bench-website/#/leaderboard). 
 
-If you need the TLA+ proofs of these protocols, contact us and we can share them. 
+If you need the TLA+ proofs of these problems, contact us and we can share them.
 
 | Problems | Type | \# Spec | \# Invariants |
 | :---- | :---- | :---- | :---- |
@@ -72,6 +72,7 @@ If you need the TLA+ proofs of these protocols, contact us and we can share them
 | [Paxos](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/Paxos) ([voting](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_Paxos), [consensus](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/Consensus), [commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/PaxosCommit_proof.tla), [etc](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module/tlaplus_examples_PaxosHowToWinATuringAward)) | Protocol | 12 | 27 |
 | [Two-phase commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla) ([TwoPhase_proof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase_proof.tla), [transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TwoPhase_proof.tla))  | Protocol | 3 | 4 |
 | [Gray-Lamport transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TCommit_proof.tla) | Protocol | 1 | 1 |
+| [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
 
 ## Running TLAPS-Bench
 
