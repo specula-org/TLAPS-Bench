@@ -112,6 +112,8 @@ def detect_firewall_hosts(model: str) -> list[str]:
         "AZURE_OPENAI_ENDPOINT",
         "OPENAI_API_BASE",
         "OPENAI_BASE_URL",
+        "ANTHROPIC_API_BASE",
+        "ANTHROPIC_VERTEX_BASE_URL",
     )
     return ALL_API_HOSTS + dynamic_hosts
 
