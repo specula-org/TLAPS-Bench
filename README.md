@@ -24,13 +24,13 @@ TLAS-Bench includes a sandboxed runtime for AI agents to faithfully prove the gi
 
 Historically, we had two types of problems: `Proof-Completion` and `Proof-from-Scratch`. We retired `Proof-Completion` as completing a well-structured proof is no longer a challenge for frontier AI. However, `Proof-from-Scratch` tasks, which AI has to invent the entire proof structure, are still nontrivial and take long-horizon efforts.
 
-## Benchmark Problems
+## Current Problem Set
 
 We currently focus on a few hard problems (due to token shortage). 
 
 | Problems | Type | # Spec | # Invariants |
 | :---- | :---- | :---- | :---- |
-| [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla)) | Protocol | 1 | 15 |
+| [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla) | Protocol | 1 | 15 |
 | [ZooKeeper protocol](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ZooKeeper/Zab.tla) | Protocol | 1 | 9 |
 | [Cahill’s serializable snapshot isolation](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CahillSSI/CahillSerializability.tla) | Protocol | 1  | 1 |
 | [Ivy TLB](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_tlb/ivy_examples_tlb.tla) | System | 1  | 2 |
@@ -43,9 +43,35 @@ We currently focus on a few hard problems (due to token shortage).
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
-The three WAL-on-S3 models retain their upstream safety targets, including type
-invariants. Their assumptions, Walgit manifest-property correction, and bounded
-validation are described in [the source notes](docs/S3_WAL.md).
+## Retired Problems (Proofs Available)
+
+We have retired the following problems from TLAP-Bench, because they are well proved (or disproved) by frontier AI models and thus are no longer capable of measuring the frontier. The problems can all be found in the repository, but we no longer run them for [our leaderboard](https://specula-org.github.io/tlaps-bench-website/#/leaderboard). 
+
+If you need the TLA+ proofs of these protocols, contact us and we can share them. 
+
+| Problems | Type | \# Spec | \# Invariants |
+| :---- | :---- | :---- | :---- |
+| TCP state machine | Protocol | 1 | 3 |
+| Ivy protocols ([alternating bit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_alternating_bit_protocol/ivy_examples_alternating_bit_protocol.tla), [reliable broadcast](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_hybrid_reliable_broadcast_cisa/ivy_examples_hybrid_reliable_broadcast_cisa.tla), <br> [split queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_split_queue_2_new/ivy_examples_split_queue_2_new.tla), [ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket/ivy_examples_ticket.tla), [nested ticket](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/ivy_examples_ticket_nested/ivy_examples_ticket_nested.tla)) | Protocol | 5  | 10 |
+| The German cache coherence protocols | Protocol | 2 | 7 |
+| Replicated counter convergence (CRDT) | Protocol  | 1 | 3 |
+| SlateDB WAL ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 4 |
+| OSWALD WAL ([s3-wal-collection](https://github.com/Vanlightly/s3-wal-collection)) | Protocol | 1 | 3 |
+| Byzantine Paxos (Consensus, VoteProof, <br> PConProof, BPConProof) | Protocol | 4 | 11 |
+| Byzantine broadcast | Protocol | 1 | 5 |
+| Bosco asynchronous Byzantine consensus | Protocol | 1 | 5 |
+| Sailfish BFT consensus | Protocol | 1 | 3 |
+| Nano cryptocurrency transaction | Protocol | 1 | 1 |
+| Misra graph reachability algorithm | Protocol | 2 | 2 |
+| Spanning tree (abstract model) | Protocol | 1 | 1 |
+| Spanning tree (message passing) | Protocol | 1 | 1 |
+| Dijkstra-Scholten termination detection | Protocol | 1 | 3 |
+| Dijkstra ring termination detection | Protocol | 3 | 6 |
+| Termination detection | Protocol | 3 | 7 |
+| Kumar termination detection | Protocol | 1 | 1 |
+| Paxos (voting, consensus, commit, etc) | Protocol | 12 | 27 |
+| Two-phase commit  | Protocol | 3 | 4 |
+| Gray-Lamport transaction commit | Protocol | 1 | 1 |
 
 ## Running TLAPS-Bench
 
