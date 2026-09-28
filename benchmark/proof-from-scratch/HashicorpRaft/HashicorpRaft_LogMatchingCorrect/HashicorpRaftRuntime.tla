@@ -613,7 +613,8 @@ RecordEvents ==
          {[server |-> s, term |-> currentTerm'[s], entries |-> log'[s]] :
             s \in {i \in Server : state[i] # Leader /\ state'[i] = Leader}}
     /\ commitHistory' = commitHistory \cup
-         {[server |-> s, entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
+         {[server |-> s, term |-> currentTerm'[s],
+           entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
             s \in {i \in Server : commitIndex'[i] > commitIndex[i]}}
 
 Next == ProtocolNext /\ RecordEvents

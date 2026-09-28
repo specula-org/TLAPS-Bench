@@ -16,6 +16,8 @@ CONSTANTS   Person,     \* The set of all people using the elevator system
             Elevator,   \* The set of all elevators
             FloorCount  \* The number of floors serviced by the elevator system
 
+ASSUME FloorCountIsInteger == FloorCount \in Int
+
 VARIABLES   PersonState,            \* The state of each person
             ActiveElevatorCalls,    \* The set of all active elevator calls
             ElevatorState           \* The state of each elevator
@@ -35,22 +37,30 @@ ElevatorCall == \* The set of all elevator calls
 ElevatorDirectionState ==   \* Elevator movement state; it is either moving in a direction or stationary
     Direction \cup {"Stationary"}
 
-GetDistance[f1, f2 \in Floor] ==    \* The distance between two floors
+\* The distance between two floors
+GetDistance[floors \in Floor \X Floor] ==
+    LET f1 == floors[1] f2 == floors[2] IN
     IF f1 > f2 THEN f1 - f2 ELSE f2 - f1
     
-GetDirection[current, destination \in Floor] == \* Direction of travel required to move between current and destination floors
+\* Direction of travel between floors
+GetDirection[floors \in Floor \X Floor] ==
+    LET current == floors[1] destination == floors[2] IN
     IF destination > current THEN "Up" ELSE "Down"
 
-CanServiceCall[e \in Elevator, c \in ElevatorCall] ==   \* Whether elevator is in position to immediately service call
-    LET eState == ElevatorState[e] IN
+\* Whether the elevator can service the call
+CanServiceCall[service \in Elevator \X ElevatorCall] ==
+    LET e == service[1] c == service[2]
+        eState == ElevatorState[e] IN
     /\ c.floor = eState.floor
     /\ c.direction = eState.direction
 
-PeopleWaiting[f \in Floor, d \in Direction] ==  \* The set of all people waiting on an elevator call
+\* People waiting on an elevator call
+PeopleWaiting[call \in Floor \X Direction] ==
+    LET f == call[1] d == call[2] IN
     {p \in Person :
         /\ PersonState[p].location = f
         /\ PersonState[p].waiting
-        /\ GetDirection[PersonState[p].location, PersonState[p].destination] = d}
+        /\ GetDirection[<<PersonState[p].location, PersonState[p].destination>>] = d}
 
 TypeInvariant ==    \* Statements about the variables which we expect to hold in every system state
     /\ PersonState \in [Person -> [location : Floor \cup Elevator, destination : Floor, waiting : BOOLEAN]]
@@ -66,12 +76,13 @@ SafetyInvariant ==   \* Some more comprehensive checks beyond the type invariant
     /\ \A p \in Person :    \* A person is in an elevator only if the elevator is moving toward their destination floor
         /\ \A e \in Elevator :
             /\ (PersonState[p].location = e /\ ElevatorState[e].floor /= PersonState[p].destination) => 
-                /\ ElevatorState[e].direction = GetDirection[ElevatorState[e].floor, PersonState[p].destination]
-    /\ \A c \in ActiveElevatorCalls : PeopleWaiting[c.floor, c.direction] /= {} \* No ghost calls
+                /\ ElevatorState[e].direction = GetDirection[<<ElevatorState[e].floor, PersonState[p].destination>>]
+\* No ghost calls
+    /\ \A c \in ActiveElevatorCalls : PeopleWaiting[<<c.floor, c.direction>>] /= {}
 
 TemporalInvariant ==  \* Expectations about elevator system capabilities
     /\ \A c \in ElevatorCall :  \* Every call is eventually serviced by an elevator
-        /\ c \in ActiveElevatorCalls ~> \E e \in Elevator : CanServiceCall[e, c]
+        /\ c \in ActiveElevatorCalls ~> \E e \in Elevator : CanServiceCall[<<e, c>>]
     /\ \A p \in Person :    \* If a person waits for their elevator, they'll eventually arrive at their floor
         /\ PersonState[p].waiting ~> PersonState[p].location = PersonState[p].destination
 
@@ -87,13 +98,13 @@ PickNewDestination(p) ==    \* Person decides they need to go to a different flo
 CallElevator(p) ==  \* Person calls the elevator to go in a certain direction from their floor
     LET
       pState == PersonState[p]
-      call == [floor |-> pState.location, direction |-> GetDirection[pState.location, pState.destination]]
+      call == [floor |-> pState.location, direction |-> GetDirection[<<pState.location, pState.destination>>]]
     IN
     /\ ~pState.waiting
     /\ pState.location /= pState.destination
     /\ ActiveElevatorCalls' =
         IF \E e \in Elevator :
-            /\ CanServiceCall[e, call]
+            /\ CanServiceCall[<<e, call>>]
             /\ ElevatorState[e].doorsOpen
         THEN ActiveElevatorCalls
         ELSE ActiveElevatorCalls \cup {call}
@@ -103,7 +114,7 @@ CallElevator(p) ==  \* Person calls the elevator to go in a certain direction fr
 OpenElevatorDoors(e) == \* Open the elevator doors if there is a call on this floor or the button for this floor was pressed.
     LET eState == ElevatorState[e] IN
     /\ ~eState.doorsOpen
-    /\  \/ \E call \in ActiveElevatorCalls : CanServiceCall[e, call]
+    /\  \/ \E call \in ActiveElevatorCalls : CanServiceCall[<<e, call>>]
         \/ eState.floor \in eState.buttonsPressed
     /\ ElevatorState' = [ElevatorState EXCEPT ![e] = [@ EXCEPT !.doorsOpen = TRUE, !.buttonsPressed = @ \ {eState.floor}]]
     /\ ActiveElevatorCalls' = ActiveElevatorCalls \ {[floor |-> eState.floor, direction |-> eState.direction]}
@@ -112,7 +123,7 @@ OpenElevatorDoors(e) == \* Open the elevator doors if there is a call on this fl
 EnterElevator(e) == \* All people on this floor who are waiting for the elevator and travelling the same direction enter the elevator.
     LET
       eState == ElevatorState[e]
-      gettingOn == PeopleWaiting[eState.floor, eState.direction]
+      gettingOn == PeopleWaiting[<<eState.floor, eState.direction>>]
       destinations == {PersonState[p].destination : p \in gettingOn}
     IN
     /\ eState.doorsOpen
@@ -155,10 +166,10 @@ MoveElevator(e) ==  \* Move the elevator to the next floor unless we have to ope
     /\ ~eState.doorsOpen
     /\ eState.floor \notin eState.buttonsPressed
     /\ \A call \in ActiveElevatorCalls : \* Can move only if other elevator servicing call
-        /\ CanServiceCall[e, call] =>
+        /\ CanServiceCall[<<e, call>>] =>
             /\ \E e2 \in Elevator :
                 /\ e /= e2
-                /\ CanServiceCall[e2, call]
+                /\ CanServiceCall[<<e2, call>>]
     /\ nextFloor \in Floor
     /\ ElevatorState' = [ElevatorState EXCEPT ![e] = [@ EXCEPT !.floor = nextFloor]]
     /\ UNCHANGED <<PersonState, ActiveElevatorCalls>>
@@ -188,14 +199,14 @@ DispatchElevator(c) ==
       approaching == {e \in Elevator :
         /\ ElevatorState[e].direction = c.direction
         /\  \/ ElevatorState[e].floor = c.floor
-            \/ GetDirection[ElevatorState[e].floor, c.floor] = c.direction }
+            \/ GetDirection[<<ElevatorState[e].floor, c.floor>>] = c.direction }
     IN
     /\ c \in ActiveElevatorCalls
     /\ stationary \cup approaching /= {}
     /\ ElevatorState' = 
         LET closest == CHOOSE e \in stationary \cup approaching :
             /\ \A e2 \in stationary \cup approaching :
-                /\ GetDistance[ElevatorState[e].floor, c.floor] <= GetDistance[ElevatorState[e2].floor, c.floor] IN
+                /\ GetDistance[<<ElevatorState[e].floor, c.floor>>] <= GetDistance[<<ElevatorState[e2].floor, c.floor>>] IN
         IF closest \in stationary
         THEN [ElevatorState EXCEPT ![closest] = [@ EXCEPT !.floor = c.floor, !.direction = c.direction]]
         ELSE ElevatorState

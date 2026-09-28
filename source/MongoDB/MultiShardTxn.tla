@@ -582,7 +582,11 @@ Spec == Init /\ [][Next]_vars
 ReadUncommittedIsolation == CC!ReadUncommitted(InitialState, Range(ops))
 ReadCommittedIsolation == CC!ReadCommitted(InitialState, Range(ops))
 RepeatableReadIsolation == CC!RepeatableRead(InitialState, Range(ops))
-SnapshotIsolation == CC!SnapshotIsolation(InitialState, Range(ops))
+SI == INSTANCE IdentitySnapshotIsolation WITH Keys <- Keys, Values <- TxId \union {NoValue}
+\* Empty histories contain no observed operations; retain IDs for all others.
+SnapshotTransactions ==
+    {[id |-> tid, ops |-> ops[tid]] : tid \in {t \in DOMAIN ops : ops[t] # <<>>}}
+SnapshotIsolation == SI!SnapshotIsolation(InitialState, SnapshotTransactions)
 SerializableIsolation == CC!Serializability(InitialState, Range(ops))
 
 \* Predicate that should hold true for a non-serializable execution that 

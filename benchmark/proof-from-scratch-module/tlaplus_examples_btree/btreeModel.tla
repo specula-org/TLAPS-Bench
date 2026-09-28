@@ -44,12 +44,17 @@ VARIABLES root,
 
 Max(xs) == CHOOSE x \in xs : (\A y \in xs \ {x} : x > y)
 
+KeyAtLeast(key, bound) ==
+    IF key \in Keys /\ bound \in Keys
+    THEN ~(key < bound)
+    ELSE key >= bound
+
 ChildNodeFor(node, key) ==
     LET keys == keysOf[node]
         maxKey == Max(keys)
         closestKey ==  CHOOSE k \in keys : /\ k>key
                                            /\ ~(\E j \in keys \ {k} : j>key /\ j<k)
-    IN IF keys = {} \/ key >= maxKey
+    IN IF keys = {} \/ KeyAtLeast(key, maxKey)
        THEN lastOf[node]
        
        ELSE
@@ -141,7 +146,7 @@ ParentOf(n) == CHOOSE p \in Nodes: \/ \E k \in Keys: n = childOf[p, k]
 WhichToSplit ==
     LET  node == Head(toSplit)
          parent == ParentOf(node)
-         splitParent == AtMaxOccupancy(parent)
+         splitParent == IF node = root THEN FALSE ELSE AtMaxOccupancy(parent)
          noMoreSplits == ~splitParent  
     IN /\ state = WHICH_TO_SPLIT
        /\ toSplit' =
@@ -179,7 +184,7 @@ SplitRootLeaf ==
         keys == keysOf[n1]
         pivot == PivotOf(keys)
         n1Keys == {x \in keys: x<pivot}
-        n2Keys == {x \in keys: x>=pivot} 
+        n2Keys == {x \in keys: KeyAtLeast(x, pivot)}
         keyToInsert == args[1] IN
     /\ state = SPLIT_ROOT_LEAF
     /\ HasTwoFreeNodes
@@ -239,7 +244,7 @@ SplitLeaf ==
         pivot == PivotOf(keys)
         parent == ParentOf(n1)
         n1Keys == {x \in keys: x<pivot}
-        n2Keys == {x \in keys: x>=pivot}
+        n2Keys == {x \in keys: KeyAtLeast(x, pivot)}
         keyToInsert == args[1]
     IN
     /\ state = SPLIT_LEAF

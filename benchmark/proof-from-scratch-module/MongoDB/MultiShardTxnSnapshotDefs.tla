@@ -7,6 +7,8 @@ ASSUME SnapshotConfiguration ==
     /\ IgnoreWriteConflicts = "false"
     /\ Timestamps \subseteq Nat
 
+ASSUME NoValueIsNotTransaction == NoValue \notin TxId
+
 WritesEachKeyAtMostOnce(transaction) ==
     \A i, j \in DOMAIN transaction :
         (/\ transaction[i].op = "write"

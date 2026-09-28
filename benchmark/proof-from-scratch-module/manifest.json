@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "8f48d4807c3441b27971018f857dcf88a0af8093f2368a6a33de6ae5717d7cb5",
+  "corpus_sha256": "862872f8145acc14472ff4a5f070793c210ab048031043a4019c2a518443e3de",
   "complete": true,
   "module_tasks": [
     {
@@ -512,7 +512,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
-        "source_sha256": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
+        "source_sha256": "cfb408c5e3065c636204b28931f334850ae7cbbbd4329f07bab27d88a421e12c",
         "proof_units": [
           {
             "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",
@@ -522,6 +522,7 @@
       },
       "context": [
         "MongoDB/MultiShardTxnSnapshot/ClientCentric.tla",
+        "MongoDB/MultiShardTxnSnapshot/IdentitySnapshotIsolation.tla",
         "MongoDB/MultiShardTxnSnapshot/MultiShardTxn.tla",
         "MongoDB/MultiShardTxnSnapshot/Storage.tla",
         "MongoDB/MultiShardTxnSnapshot/Util.tla",
@@ -1676,7 +1677,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof.tla",
-        "source_sha256": "8fe413184e0150167ddb7009563af31bdb151219d7156796bce4dd4551bfed21",
+        "source_sha256": "fadd44c503acc59c15e66403ea1b267ec040c4301142ffa6a1d69f754b8d0963",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof_TypeCorrect.tla",
@@ -2145,7 +2146,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof.tla",
-        "source_sha256": "90e197d259730d495108449362d5a7efea47c6c80ab23b34d9712048c075b932",
+        "source_sha256": "bb94b8cb7a721e80bce96f9c5c0d9a4510082d0c8effc22ba61aa96fde7c6937",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof_TypeCorrect.tla",
@@ -2164,7 +2165,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof.tla",
-        "source_sha256": "11402242872c6bc07418a9fde6241b91bcb56c8f34d954188e5e25815edffae2",
+        "source_sha256": "5f05d6b75af786612e5f5600a8ab54e6ee4e1fc8c1e4ed1fd41d741b08734868",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof_TypeCorrect.tla",
@@ -2383,7 +2384,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_btree/btree.tla",
-        "source_sha256": "ec247d5d944643666fd5ec60c3c2b489b5560d67ccbc958ebd1710564fae23b2",
+        "source_sha256": "3d2a7c343cc6f8033185357c4205de081071157b610ba72286d7dfaeae04dbf7",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_btree/btree_TypeOkCorrect.tla",

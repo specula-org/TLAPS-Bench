@@ -26,8 +26,9 @@ The pinned TLAPM cannot parse recursive operator definitions or tuple binders.
 - `BuildAbortOpSeq` becomes a recursive function over subsets of its input.
 - `extendPath` becomes a recursive function over nonempty sequences of active
   transactions.
-- `findCycleNodes` becomes a recursive function over graph nodes and visited
-  node sets.
+- `findCycleNodes` becomes a curried recursive function over graph nodes,
+  returning a function over visited node sets. Each application takes one
+  argument so TLAPM can unfold it.
 - Tuple binders become scalar binders with tuple projections on their
   pair-valued domains.
 
@@ -57,6 +58,12 @@ For TLC, `NoLock` is instantiated with a fresh model value outside `Key` and
 `TxnId`, matching its source definition. The proof task retains the original
 `CHOOSE` definition. These checks provide bounded evidence for the task and
 its compatibility adaptation, not complete proofs.
+
+The curried cycle-search regression in
+`tests/dataset/test_proof_context_compatibility.py` checks the visited-node
+branch with TLAPS and compares all 512 three-node graphs against an independent
+bounded-path definition with TLC. It also checks that the rendering matches
+the pinned source and compatibility rules.
 
 Regenerate with:
 

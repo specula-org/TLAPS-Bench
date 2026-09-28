@@ -32,9 +32,7 @@ INTERSECTION(setOfSets) == ReduceSet(\intersect, setOfSets, UNION setOfSets)
 PermSeqs(S) ==
   LET perms[ss \in SUBSET S] ==
        IF ss = {} THEN { << >> }
-       ELSE LET ps == [ x \in ss |-> 
-                        { Append(sq,x) : sq \in perms[ss \ {x}] } ]
-            IN  UNION { ps[x] : x \in ss }
+       ELSE UNION {{Append(sq, x) : sq \in perms[ss \ {x}]} : x \in ss}
   IN  perms[S]
 
 \* Helper to write "unit test" ASSUMES which print when false

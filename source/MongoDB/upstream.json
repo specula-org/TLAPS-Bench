@@ -6,5 +6,24 @@
     "Storage.tla": "dfab057d1647dd5ccb951a3e7fb0d0dd4af68f29857ae79450d857e6f2aba6e5",
     "ClientCentric.tla": "07c5d434a7bb3401168fe0cf3d7a793f37e2d2fef04d3a76dbe5855383158ff1",
     "Util.tla": "5c44cc019dd1682eda92d72a450ee55f1859af84f532dee586771067066fdc95"
-  }
+  },
+  "local_repairs": [
+    {
+      "file": "Util.tla",
+      "description": "Inline the non-recursive ps binding inside PermSeqs to avoid incorrect nested LET expansion through INSTANCE. The recursive function and its domain are unchanged.",
+      "local_sha256": "593242b36198d545e033602f81e1434535bf1044d3298a5f1813cb5e82ea42c6"
+    },
+    {
+      "file": "MultiShardTxn.tla",
+      "description": "Preserve transaction IDs and state/operation positions in the snapshot-isolation predicate; check intervening write sets. Protocol actions and other isolation predicates are unchanged.",
+      "local_sha256": "0e18cb9aaa387a424e5f73f6957d80c7c99032ccbbb5eaebfb84d40efc314629"
+    }
+  ],
+  "local_additions": [
+    {
+      "file": "IdentitySnapshotIsolation.tla",
+      "description": "Position-based snapshot-isolation definition with transaction identity, read-your-writes, and intervening write conflicts.",
+      "sha256": "246c6232b6ef81a0fb8a5eaad093f74b938ee2acbecc5e608873e193bf8810e9"
+    }
+  ]
 }

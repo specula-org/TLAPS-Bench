@@ -67,9 +67,7 @@ LEMMA DropType ==
 (***************************************************************************)
 PermsRec(g, ss) ==
   IF ss = {} THEN { << >> }
-  ELSE LET ps == [ x \in ss |->
-                   { Append(sq, x) : sq \in g[ss \ {x}] } ]
-       IN  UNION { ps[x] : x \in ss }
+  ELSE UNION {{Append(sq, x) : sq \in g[ss \ {x}]} : x \in ss}
 
 PermsFn(S) == CHOOSE g : g = [ss \in SUBSET S |-> PermsRec(g, ss)]
 
@@ -146,13 +144,9 @@ LEMMA PermsFnRec ==
   <1>. QED  BY <1>2, <1>3, Zenon
 
 (***************************************************************************)
-(* PermSeqs unfolds to a LET-bound CHOOSE'd recursive function whose body  *)
-(* matches PermsRec.  Through TLAPS' INSTANCE expansion of Sched!PermSeqs, *)
-(* the inner LET-bound non-recursive function `ps` is currently rendered   *)
-(* as a self-recursive CHOOSE, so we cannot discharge the equality below   *)
-(* by unfolding `Sched!PermSeqs` directly.  Leaving it as a narrowly       *)
-(* scoped OMITTED fact, equivalent to the syntactic equality between the   *)
-(* same recursive function written two ways.                               *)
+(* The original reference leaves this equality unproved.  The model and  *)
+(* PermsRec now inline the inner permutation set so INSTANCE expansion    *)
+(* preserves the recursive binding.                                      *)
 (***************************************************************************)
 LEMMA PermSeqsIsPermsFn ==
   ASSUME NEW S

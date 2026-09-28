@@ -629,7 +629,8 @@ RecordEvents ==
          {[server |-> s, term |-> currentTerm'[s], entries |-> log'[s]] :
             s \in {i \in Server : state[i] # Leader /\ state'[i] = Leader}}
     /\ commitHistory' = commitHistory \cup
-         {[server |-> s, entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
+         {[server |-> s, term |-> currentTerm'[s],
+           entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
             s \in {i \in Server : commitIndex'[i] > commitIndex[i]}}
 
 Next == ProtocolNext /\ RecordEvents
@@ -648,11 +649,13 @@ LogMatching ==
             log[a][k].term = log[b][k].term =>
                 SubSeq(log[a], 1, k) = SubSeq(log[b], 1, k)
 
-\* Leaders elected in later terms contain every previously committed entry.
+\* A commit observation records the current term, including when a follower
+\* learns a committed prefix. Entry creation terms can predate commitment.
+\* Only elections in a later term must already contain that recorded prefix.
 LeaderCompleteness ==
     \A c \in commitHistory, e \in electionHistory :
         \A k \in 1..Len(c.entries) :
-            c.entries[k].term < e.term =>
+            c.term < e.term =>
                 /\ k <= Len(e.entries)
                 /\ e.entries[k] = c.entries[k]
 
