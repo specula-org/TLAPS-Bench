@@ -2,8 +2,11 @@
 
 Source: [mongodb-labs/vldb25-dist-txns](https://github.com/mongodb-labs/vldb25-dist-txns/tree/74526c1201109405172eb845413154f547a815ee),
 the artifact for [Design and Modular Verification of Distributed Transactions in MongoDB](https://www.vldb.org/pvldb/vol18/p5045-schultz.pdf).
-`MultiShardTxn.tla`, `Storage.tla`, `ClientCentric.tla`, and `Util.tla` are
-copied unchanged; `upstream.json` records their commit and SHA-256 hashes.
+`MultiShardTxn.tla`, `Storage.tla`, and `ClientCentric.tla` are copied
+unchanged. `Util.tla` inlines the inner set in `PermSeqs`: this preserves
+its permutation values and avoids an incorrect recursive binding when TLAPM
+expands it through `INSTANCE`. `upstream.json` records the upstream commit
+and hashes separately from the local repair hash.
 
 `MultiShardTxnSnapshot.tla` adds this proof-from-scratch target:
 
@@ -43,6 +46,10 @@ Timestamp-domain controls reject Boolean and negative values during assumption
 evaluation and accept zero, large natural numbers, and the empty set. A local
 TLAPS check also derives `ts + 1 \in Nat` for every `ts \in Timestamps` from
 the generated context's assumptions.
+
+The `PermSeqs` regression in `tests/dataset/test_proof_context_compatibility.py`
+checks the recursive-function identity through `INSTANCE` with TLAPS and compares
+its values to all bijections for every subset of a four-element set with TLC.
 
 Regenerate the task and module suite with:
 

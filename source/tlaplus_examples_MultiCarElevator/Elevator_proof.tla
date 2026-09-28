@@ -24,46 +24,31 @@ EXTENDS Elevator, TLAPS
 ASSUME ElevatorFloorDisjoint == Floor \cap Elevator = {}
 
 (***************************************************************************)
-(* Function-evaluation primitives.                                         *)
-(*                                                                         *)
-(* TLAPS does not currently unfold multi-arg function applications         *)
-(* `f[a, b]` for definitions `f[x, y \in S] == E` via `BY DEF f`.  We     *)
-(* state the unfolding explicitly here as primitive axioms.  These are    *)
-(* trivially true by the function-application sugar in TLA+.              *)
-(*                                                                         *)
-(* This is a known TLAPS backend limitation (SMT, Zenon, Isabelle all     *)
-(* reject the unfolding); see Stephan Merz's reply on the tlaplus list:   *)
-(*   https://discuss.tlapl.us/msg01519.html                               *)
-(* The recommended workaround there is to use either a curried form       *)
-(*   f[x \in S] == [y \in S |-> E]                                        *)
-(* or a single-argument form over a Cartesian product                     *)
-(*   f[t \in S \X S] == E[x \ t[1], y \ t[2]]                             *)
-(* both of which TLAPS handles via `BY DEF f`.  We deliberately do not    *)
-(* apply those workarounds here because we want to leave the actual spec  *)
-(* in Elevator.tla unchanged.                                             *)
+(* Function-evaluation lemmas for the single-tuple-argument definitions.   *)
+(* The statements retain their original domains.                          *)
 (***************************************************************************)
 LEMMA GetDirectionEval ==
   ASSUME NEW c \in Floor, NEW d \in Floor
-  PROVE  GetDirection[c, d] = IF d > c THEN "Up" ELSE "Down"
+  PROVE  GetDirection[<<c, d>>] = IF d > c THEN "Up" ELSE "Down"
   OMITTED
 
 LEMMA GetDistanceEval ==
   ASSUME NEW f1 \in Floor, NEW f2 \in Floor
-  PROVE  GetDistance[f1, f2] = IF f1 > f2 THEN f1 - f2 ELSE f2 - f1
+  PROVE  GetDistance[<<f1, f2>>] = IF f1 > f2 THEN f1 - f2 ELSE f2 - f1
   OMITTED
 
 LEMMA CanServiceCallEval ==
   ASSUME NEW e \in Elevator, NEW c \in ElevatorCall
-  PROVE  CanServiceCall[e, c] <=>
+  PROVE  CanServiceCall[<<e, c>>] <=>
            (c.floor = ElevatorState[e].floor /\ c.direction = ElevatorState[e].direction)
   OMITTED
 
 LEMMA PeopleWaitingEval ==
   ASSUME NEW f \in Floor, NEW d \in Direction
-  PROVE  PeopleWaiting[f, d] =
+  PROVE  PeopleWaiting[<<f, d>>] =
            {p \in Person : /\ PersonState[p].location = f
                             /\ PersonState[p].waiting
-                            /\ GetDirection[PersonState[p].location, PersonState[p].destination] = d}
+                            /\ GetDirection[<<PersonState[p].location, PersonState[p].destination>>] = d}
   OMITTED
 
 (***************************************************************************)
@@ -80,8 +65,8 @@ LEMMA StationaryInElevatorDirectionState ==
 
 LEMMA GetDirectionType ==
   ASSUME NEW c \in Floor, NEW d \in Floor
-  PROVE  GetDirection[c, d] \in Direction
-  <1>1. GetDirection[c, d] = IF d > c THEN "Up" ELSE "Down"
+  PROVE  GetDirection[<<c, d>>] \in Direction
+  <1>1. GetDirection[<<c, d>>] = IF d > c THEN "Up" ELSE "Down"
     BY GetDirectionEval
   <1>. QED  BY <1>1 DEF Direction
 
@@ -158,14 +143,14 @@ LEMMA Inv1Next == Inv1 /\ [Next]_Vars => Inv1'
       OBVIOUS
     <2>2. ActiveElevatorCalls' \subseteq ElevatorCall
       <3>. DEFINE call == [floor |-> PersonState[p].location,
-                            direction |-> GetDirection[PersonState[p].location,
-                                                        PersonState[p].destination]]
+                            direction |-> GetDirection[<<PersonState[p].location,
+                                                        PersonState[p].destination>>]]
       <3>1. PersonState[p].location \in Floor
         \* From WaitingFloor + ~waiting precondition.
         OBVIOUS
       <3>2. PersonState[p].destination \in Floor
         OBVIOUS
-      <3>3. GetDirection[PersonState[p].location, PersonState[p].destination] \in Direction
+      <3>3. GetDirection[<<PersonState[p].location, PersonState[p].destination>>] \in Direction
         BY <3>1, <3>2, GetDirectionType
       <3>4. call \in ElevatorCall
         BY <3>1, <3>3 DEF ElevatorCall
@@ -205,7 +190,7 @@ LEMMA Inv1Next == Inv1 /\ [Next]_Vars => Inv1'
                                             doorsOpen : BOOLEAN,
                                             buttonsPressed : SUBSET Floor]]
       <3>. DEFINE eState == ElevatorState[e]
-                  gettingOn == PeopleWaiting[eState.floor, eState.direction]
+                  gettingOn == PeopleWaiting[<<eState.floor, eState.direction>>]
                   destinations == {PersonState[p1].destination : p1 \in gettingOn}
       <3>0. \A p1 \in Person : PersonState[p1].destination \in Floor
         BY DEF TypeInvariant
@@ -214,7 +199,7 @@ LEMMA Inv1Next == Inv1 /\ [Next]_Vars => Inv1'
       <3>0b. gettingOn \subseteq Person
         <4>1. gettingOn = {p2 \in Person : /\ PersonState[p2].location = eState.floor
                                             /\ PersonState[p2].waiting
-                                            /\ GetDirection[PersonState[p2].location, PersonState[p2].destination] = eState.direction}
+                                            /\ GetDirection[<<PersonState[p2].location, PersonState[p2].destination>>] = eState.direction}
           BY <3>0a, PeopleWaitingEval
         <4>. QED  BY <4>1
       <3>1. destinations \subseteq Floor
@@ -230,7 +215,7 @@ LEMMA Inv1Next == Inv1 /\ [Next]_Vars => Inv1'
                     PROVE  PersonState'[p1].location \in Floor
         BY DEF WaitingFloor
       <3>. DEFINE eState == ElevatorState[e]
-                  gettingOn == PeopleWaiting[eState.floor, eState.direction]
+                  gettingOn == PeopleWaiting[<<eState.floor, eState.direction>>]
       <3>1. PersonState'[p1].waiting = PersonState[p1].waiting
         OBVIOUS
       <3>2. ~PersonState[p1].waiting

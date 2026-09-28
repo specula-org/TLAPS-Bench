@@ -24,9 +24,7 @@ TypeInvariant ==
 PermSeqs(S) ==
   LET perms[ss \in SUBSET S] ==
        IF ss = {} THEN { << >> }
-       ELSE LET ps == [ x \in ss |-> 
-                        { Append(sq,x) : sq \in perms[ss \ {x}] } ]
-            IN  UNION { ps[x] : x \in ss }
+       ELSE UNION {{Append(sq, x) : sq \in perms[ss \ {x}]} : x \in ss}
   IN  perms[S]
 
 Drop(seq,i) == SubSeq(seq, 1, i-1) \circ SubSeq(seq, i+1, Len(seq))
@@ -42,11 +40,6 @@ Init ==
   /\ alloc = [c \in Clients |-> {}]
   /\ sched = << >>
 
-Request(c,S) ==
-  /\ unsat[c] = {} /\ alloc[c] = {}
-  /\ S # {} /\ unsat' = [unsat EXCEPT ![c] = S]
-  /\ UNCHANGED <<alloc,sched>>
-
 Allocate(c,S) ==
   /\ S # {} /\ S \subseteq available \cap unsat[c]
   /\ \E i \in DOMAIN sched :
@@ -56,29 +49,12 @@ Allocate(c,S) ==
   /\ alloc' = [alloc EXCEPT ![c] = @ \cup S]
   /\ unsat' = [unsat EXCEPT ![c] = @ \ S]
 
-Return(c,S) ==
-  /\ S # {} /\ S \subseteq alloc[c]
-  /\ alloc' = [alloc EXCEPT ![c] = @ \ S]
-  /\ UNCHANGED <<unsat,sched>>
-
 Schedule == 
   /\ toSchedule # {}
   /\ \E sq \in PermSeqs(toSchedule) : sched' = sched \circ sq
   /\ UNCHANGED <<unsat,alloc>>
 
-Next ==
-  \/ \E c \in Clients, S \in SUBSET Resources :
-        Request(c,S) \/ Allocate(c,S) \/ Return(c,S)
-  \/ Schedule
-
-vars == <<unsat,alloc,sched>>
-
 -------------------------------------------------------------------------
-
-Liveness ==
-  /\ \A c \in Clients : WF_vars(unsat[c]={} /\ Return(c,alloc[c]))
-  /\ \A c \in Clients : WF_vars(\E S \in SUBSET Resources : Allocate(c, S))
-  /\ WF_vars(Schedule)
 
 -------------------------------------------------------------------------
 

@@ -1043,18 +1043,19 @@ FindAllNodesInAnyCycle(edges) ==
         (* Returns a set containing all elements of some cycle starting at startNode,
            or an empty set if no cycle is found. 
          *)
-        findCycleNodes[node \in nodes, visitedSet \in SUBSET nodes] ==
+        findCycleNodes[node \in nodes] ==
+            [visitedSet \in SUBSET nodes |->
             IF node \in visitedSet THEN
                 {node}  (* found a cycle, which includes node *)
             ELSE
                 LET newVisited == visitedSet \union {node}
                     neighbors == {link[2] : link \in {outgoing \in edges : outgoing[1] = node}}
                 IN  (* Explore neighbors *)
-                    UNION {findCycleNodes[neighbor, newVisited] : neighbor \in neighbors}
+                    UNION {findCycleNodes[neighbor][newVisited] : neighbor \in neighbors}]
                     
         startPoints == {link[1] : link \in edges}  (* All nodes with an outgoing edge *)
     IN 
-        UNION {findCycleNodes[node, {}] : node \in startPoints}
+        UNION {findCycleNodes[node][{}] : node \in startPoints}
        
 IsCycle(edges) == FindAllNodesInAnyCycle(edges) /= {}
 

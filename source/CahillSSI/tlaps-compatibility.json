@@ -33,15 +33,15 @@
   },
   {
     "before": "findCycleNodes(node, visitedSet) ==",
-    "after": "findCycleNodes[node \\in nodes, visitedSet \\in SUBSET nodes] =="
+    "after": "findCycleNodes[node \\in nodes] ==\n            [visitedSet \\in SUBSET nodes |->"
   },
   {
-    "before": "findCycleNodes(neighbor, newVisited)",
-    "after": "findCycleNodes[neighbor, newVisited]"
+    "before": "UNION {findCycleNodes(neighbor, newVisited) : neighbor \\in neighbors}",
+    "after": "UNION {findCycleNodes[neighbor][newVisited] : neighbor \\in neighbors}]"
   },
   {
     "before": "findCycleNodes(node, {})",
-    "after": "findCycleNodes[node, {}]"
+    "after": "findCycleNodes[node][{}]"
   },
   {
     "before": "{<<from, to>> \\in activeTxns \\X activeTxns :",

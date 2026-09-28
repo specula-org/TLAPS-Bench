@@ -61,9 +61,7 @@ PROOF OMITTED
 (***************************************************************************)
 PermsRec(g, ss) ==
   IF ss = {} THEN { << >> }
-  ELSE LET ps == [ x \in ss |->
-                   { Append(sq, x) : sq \in g[ss \ {x}] } ]
-       IN  UNION { ps[x] : x \in ss }
+  ELSE UNION {{Append(sq, x) : sq \in g[ss \ {x}]} : x \in ss}
 
 PermsFn(S) == CHOOSE g : g = [ss \in SUBSET S |-> PermsRec(g, ss)]
 
