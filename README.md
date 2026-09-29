@@ -74,9 +74,9 @@ If you need the TLA+ proofs of these problems, contact us and we can share them.
 | [TencentPaxos](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TencentPaxos/TPaxosWithProof.tla) | Protocol | 1 | 2 |
 | [Two-phase commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase.tla) ([TwoPhase_proof](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_TwoPhase/TwoPhase_proof.tla), [transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TwoPhase_proof.tla))  | Protocol | 3 | 4 |
 | [Gray-Lamport transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TCommit_proof.tla) | Protocol | 1 | 1 |
-| [Barriers](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_barriers/Barriers.tla) | Protocol | 1 | 5 |
+| [Reusable synchronization barriers](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_barriers/Barriers.tla) | Protocol | 1 | 5 |
 | [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
-| [DiskStateQueue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/DiskStateQueue/DiskStateQueueProof.tla) | System | 1 | 1 |
+| [TLC disk-backed state queue](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/DiskStateQueue/DiskStateQueueProof.tla) | System | 1 | 1 |
 
 ## Running TLAPS-Bench
 
