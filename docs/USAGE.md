@@ -288,46 +288,17 @@ For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * mi
 
 #### Selecting problems
 
-With neither `--filter` nor `--task-list`, PFS runs **Current**. The three PFS
-collections are maintained in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json):
+Proof-from-scratch defaults to the `current` benchmark task set; `--task-list` also accepts `retired` (solved problems) and `next` (problems for the next stage), as defined in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json). `--filter` searches the mode's full suite and is mutually exclusive with `--task-list`; use `--dry-run` to preview the selection.
 
-- `current`: the benchmark's current task set, listed in the README.
-- `retired`: solved problems listed in the README's Retired table.
-- `next`: problems planned for the next stage; pending entries are not yet runnable.
-
-```bash
-uv run tlaps-bench run --task-list current --dry-run
-uv run tlaps-bench run --task-list retired --dry-run
-uv run tlaps-bench run --task-list my-tasks.txt --dry-run
-```
-
-`--filter` searches the **complete suite for the selected mode**, including retired
-and unclassified PFS tasks. It is independent of the collections and cannot be
-combined with `--task-list`. For example, `--filter tcp` finds the retired TCP
-module, and `--filter Walgit` finds an unclassified module. Empty or unmatched
-filters are errors.
-
-Proof Completion has no Current/Retired/Next classification. Select it explicitly;
-without a filter or task list it still runs its full suite. Its existing Core
-collection selects 190 tasks across 56 specifications:
+For Proof Completion, the default remains the complete suite. To run the committed 190-task Proof Completion Core:
 
 ```bash
 uv run tlaps-bench run --mode proof-completion --task-list core
 ```
 
-`core` resolves to Proof Completion's committed `core.txt`. Custom task lists
-contain one exact mode-relative task ID per line; blank lines are ignored.
-Unavailable collections, missing files, unknown IDs, duplicates, and empty
-selections fail before authentication, image setup, or model preflight. All PFS
-runs, and explicit task-list runs in Proof Completion, record their resolved
-selection in `task-list.json` inside the output directory.
+The current Core selects 190 tasks across 56 specifications. Full remains the default when `--task-list` is omitted.
 
-When maintaining PFS collections, add or move exact module IDs in
-`benchmark/problem-sets.json` and update the matching README table. Tests verify
-that the collections are disjoint, refer to real tasks, and match every README
-member and count. Unlisted tasks are not automatically added to any collection.
-For a pending Next entry, merge its task first, then add the runnable ID to
-`next.tasks` and remove its pending entry.
+`core` is a registered name for the current mode's committed `core.txt`; Proof Completion provides it today. Explicit file paths remain supported. Task lists use exact manifest IDs rather than substring matching. Unavailable cohorts, missing files, unknown IDs, duplicates, and empty lists fail before authentication, image setup, or model preflight. A task-list run records its resolved cohort in `task-list.json` inside the output directory.
 
 ### `tlaps-bench check`
 
