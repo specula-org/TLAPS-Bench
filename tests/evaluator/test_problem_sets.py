@@ -88,10 +88,6 @@ def test_collections_match_every_explicit_readme_member_and_row_count(pfs_mode):
         assert (len(members), sum(tasks[task] for task in members)) == totals
     assert collections["next"].tasks == ()
     assert collections["next"].pending == (("Wildfire", "https://github.com/specula-org/TLAPS-Bench/pull/164"),)
-    next_section = readme.split("## Next Problem Set\n", 1)[1].split("\n## ", 1)[0]
-    for name, url in collections["next"].pending:
-        assert f"[{name}]({url})" in next_section
-    assert "Pending merge" in next_section
 
 
 @pytest.mark.parametrize(

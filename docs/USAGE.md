@@ -12,7 +12,7 @@ uv run tlaps-bench run --dry-run
 uv run tlaps-bench run --backend codex --model gpt-5.5 --jobs 1
 ```
 
-`run` defaults to proof-from-scratch and the Current problem set (9 specifications, 56 proof targets). `--dry-run` lists the selection without setting up Docker or calling a model.
+`run` defaults to proof-from-scratch and the Current benchmark task set. `--dry-run` lists the selection without setting up Docker or calling a model.
 
 On the first proof run, the tool builds a Docker image that includes tlapm, SANY, and the proof checker. Subsequent runs reuse the cached image.
 
@@ -291,9 +291,9 @@ For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * mi
 With neither `--filter` nor `--task-list`, PFS runs **Current**. The three PFS
 collections are maintained in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json):
 
-- `current`: the 9 specifications / 56 proof targets in the README's Current table.
-- `retired`: the 48 specifications / 113 proof targets explicitly listed in its Retired table.
-- `next`: the next planned stage. Wildfire is pending merge in [PR #164](https://github.com/specula-org/TLAPS-Bench/pull/164), so this collection currently has no runnable tasks. Selecting it exits before setup or model calls.
+- `current`: the benchmark's current task set, listed in the README.
+- `retired`: solved problems listed in the README's Retired table.
+- `next`: problems planned for the next stage; pending entries are not yet runnable.
 
 ```bash
 uv run tlaps-bench run --task-list current --dry-run
