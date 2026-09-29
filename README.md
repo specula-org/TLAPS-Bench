@@ -101,18 +101,21 @@ On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor 
 
 ### Run the benchmark
 
+`Proof-from-Scratch` provides three task sets via `--task-list`: `current` (the default benchmark task set), `retired` (archived problems), and `next` (problems for the next stage).
+
 ```
 git clone https://github.com/specula-org/tlaps-bench.git  
 cd tlaps-bench  
 export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the default backend if no OpenAI key is provided.  
-uv run tlaps-bench run --mode proof-from-scratch --filter Euclid/Euclid-Hyperbook/GCD.tla --jobs 1 # A small proof-from-scratch example
+uv run tlaps-bench run --dry-run    # Preview the current benchmark task set
+uv run tlaps-bench run --jobs 1
 ```
 
-The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it 
+The run command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the tasks inside it
 (a firewall allows only the LLM API hosts and the benchmarks are mounted read-only). Later runs reuse this image. Results are stored in `results/<mode>/<backend>/<timestamp>/`.
 
 ```  
-uv run tlaps-bench run --mode proof-from-scratch --jobs 4  
+uv run tlaps-bench run --jobs 4
 ```
 
 How to set up an agent (`--backend` and `--model`) and its credentials, the full CLI reference, and native (`--no-container`) setup are described in our [usage guide](https://github.com/specula-org/tlaps-bench/blob/main/docs/USAGE.md).

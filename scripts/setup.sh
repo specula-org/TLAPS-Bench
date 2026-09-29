@@ -133,8 +133,8 @@ main() {
     die "the SANY smoke test could not run successfully."
   fi
 
-  log "setup complete. Run a benchmark with:"
-  echo "  uv run tlaps-bench run --filter GCD_GCD3"
+  log "setup complete. Preview the Current problem set with:"
+  echo "  uv run tlaps-bench run --dry-run"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

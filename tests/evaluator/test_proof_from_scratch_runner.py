@@ -126,6 +126,16 @@ def _write_fixture(tmp_path):
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_bytes(task_source.encode("utf-8"))
     _write_module_manifests(benchmark_root, task_source)
+    (benchmark_root / "problem-sets.json").write_text(
+        json.dumps(
+            {
+                "format_version": 1,
+                "current": {"tasks": [MODULE_TASK_ID]},
+                "retired": {"tasks": []},
+                "next": {"tasks": []},
+            }
+        )
+    )
     return benchmark_root, suite, task, model, task_source, model_source
 
 
@@ -411,6 +421,10 @@ def test_cli_captures_all_replay_inputs_before_backend_setup(tmp_path, monkeypat
     runner.main()
 
     assert len(captured_items) == 1
+    assert json.loads((tmp_path / "results" / "task-list.json").read_text()) == {
+        "mode": "proof-from-scratch",
+        "tasks": [MODULE_TASK_ID],
+    }
     canonical_inputs = captured_items[0].canonical_inputs
     assert canonical_inputs is not None
     assert canonical_inputs.target_bytes == task_source.encode()
