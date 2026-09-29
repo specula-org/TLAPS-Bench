@@ -97,7 +97,7 @@ On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor 
 
 ### Run the benchmark
 
-`Proof-from-Scratch` provides three task sets via `--task-list`: `current` (the default benchmark task set), `retired` (solved problems), and `next` (problems for the next stage).
+`Proof-from-Scratch` provides three task sets via `--task-list`: `current` (the default benchmark task set), `retired` (archived problems), and `next` (problems for the next stage).
 
 ```
 git clone https://github.com/specula-org/tlaps-bench.git  

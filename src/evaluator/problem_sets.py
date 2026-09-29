@@ -35,7 +35,7 @@ def _unique_keys(pairs):
 def load_problem_sets(path: Path, known_task_ids: Collection[str]) -> dict[str, ProblemSet]:
     """Validate explicit, disjoint collections against the complete PFS manifest.
 
-    Unclassified tasks remain available to searches and custom task lists.
+    Every shipped task must belong to exactly one collection.
     Pending entries describe proposed additions; they never name runnable tasks.
     """
     try:
@@ -79,4 +79,7 @@ def load_problem_sets(path: Path, known_task_ids: Collection[str]) -> dict[str, 
             ):
                 raise ValueError(f"invalid pending entry in PFS problem set {name!r}")
         collections[name] = ProblemSet(tuple(tasks), tuple((p["name"], p["pull_request"]) for p in pending))
+    missing = known - seen
+    if missing:
+        raise ValueError(f"unclassified task ID(s) in PFS problem sets: {', '.join(sorted(missing))}")
     return collections

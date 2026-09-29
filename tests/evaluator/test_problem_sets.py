@@ -2,6 +2,7 @@
 
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -62,13 +63,22 @@ def test_current_has_exact_proof_unit_counts(pfs_mode):
     assert actual == CURRENT
 
 
-def test_collections_match_every_explicit_readme_member_and_row_count(pfs_mode):
+def test_collections_cover_every_task_exactly_once(pfs_mode):
+    known_tasks = set(pfs_mode.specification_ids())
+    collections = load_problem_sets(CATALOG, known_tasks)
+    membership = Counter(task for collection in collections.values() for task in collection.tasks)
+
+    assert set(membership) == known_tasks
+    assert all(count == 1 for count in membership.values())
+
+
+def test_readme_current_matches_collection_and_retired_showcases_a_subset(pfs_mode):
     tasks = {e.spec.task_id: len(e.spec.proof_units) for e in pfs_mode._manifest.entries}
     collections = load_problem_sets(CATALOG, tasks)
     readme = (ROOT / "README.md").read_text()
-    for name, heading, totals in (
-        ("current", "Current Problem Set", (9, 56)),
-        ("retired", "Retired Problems (Proofs Available)", (48, 113)),
+    for name, heading in (
+        ("current", "Current Problem Set"),
+        ("retired", "Retired Problems (Proofs Available)"),
     ):
         section = readme.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
         members = set()
@@ -84,8 +94,11 @@ def test_collections_match_every_explicit_readme_member_and_row_count(pfs_mode):
             counts = [int(value.strip()) for value in row.split("|")[-3:-1]]
             assert counts == [len(row_members), sum(tasks[task] for task in row_members)]
             members.update(row_members)
-        assert members == set(collections[name].tasks)
-        assert (len(members), sum(tasks[task] for task in members)) == totals
+        if name == "current":
+            assert members == set(collections[name].tasks)
+        else:
+            assert members
+            assert members <= set(collections[name].tasks)
     assert collections["next"].tasks == ()
     assert collections["next"].pending == (("Wildfire", "https://github.com/specula-org/TLAPS-Bench/pull/164"),)
 
@@ -93,12 +106,12 @@ def test_collections_match_every_explicit_readme_member_and_row_count(pfs_mode):
 @pytest.mark.parametrize(
     "task", ["tlaplus_examples_tcp/tcp_proof.tla", "Walgit/WalgitProof.tla", "Euclid/Euclid-Hyperbook/GCD.tla"]
 )
-def test_filter_searches_retired_and_unclassified_tasks(task, preview_only, capsys):
+def test_filter_searches_tasks_outside_current(task, preview_only, capsys):
     assert cli.main(["run", "--filter", task, "--dry-run"]) == 0
     assert _selected(capsys.readouterr().out) == [task]
 
 
-def test_custom_task_list_can_select_unclassified_tasks(preview_only, tmp_path, capsys):
+def test_custom_task_list_can_select_retired_tasks(preview_only, tmp_path, capsys):
     task = "Walgit/WalgitProof.tla"
     path = tmp_path / "tasks.txt"
     path.write_text(task + "\n")
@@ -106,15 +119,17 @@ def test_custom_task_list_can_select_unclassified_tasks(preview_only, tmp_path, 
     assert _selected(capsys.readouterr().out) == [task]
 
 
-def test_retired_is_pfs_only_and_excludes_unclassified_tasks(preview_only, capsys):
+def test_retired_contains_every_task_outside_current_and_next(pfs_mode, preview_only, capsys):
     assert cli.main(["run", "--task-list", "retired", "--dry-run"]) == 0
     output = capsys.readouterr().out
     tasks = set(_selected(output))
-    assert "48 specifications, 113 proof units" in output
+    collections = load_problem_sets(CATALOG, pfs_mode.specification_ids())
+    expected = set(pfs_mode.specification_ids()) - set(CURRENT) - set(collections["next"].tasks)
+    assert tasks == expected
     assert "tlaplus_examples_btree/btree.tla" in tasks
     assert not tasks.intersection(CURRENT)
-    assert "libomp/libomp.tla" not in tasks
-    assert "Walgit/WalgitProof.tla" not in tasks
+    assert "libomp/libomp.tla" in tasks
+    assert "Walgit/WalgitProof.tla" in tasks
 
 
 @pytest.mark.parametrize("collection", ["current", "retired", "next"])
@@ -169,6 +184,7 @@ def test_default_selection_is_recorded_and_compared_on_resume(pfs_mode, preview_
         (lambda data: data["current"]["tasks"].append("Missing/Task.tla"), "unknown task ID"),
         (lambda data: data["current"]["tasks"].append(data["current"]["tasks"][0]), "duplicate task ID"),
         (lambda data: data["retired"]["tasks"].append(data["current"]["tasks"][0]), "duplicate task ID"),
+        (lambda data: data["retired"]["tasks"].pop(), "unclassified task ID"),
         (lambda data: data.update(format_version=2), "format_version"),
         (lambda data: data.update(current={"tasks": "not-a-list"}), "list of task IDs"),
         (lambda data: data.update(next={"tasks": [], "pending": [{"name": "Wildfire"}]}), "invalid pending"),

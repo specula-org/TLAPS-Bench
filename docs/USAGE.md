@@ -288,7 +288,7 @@ For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * mi
 
 #### Selecting problems
 
-Proof-from-scratch defaults to the `current` benchmark task set; `--task-list` also accepts `retired` (solved problems) and `next` (problems for the next stage), as defined in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json). `--filter` searches the mode's full suite and is mutually exclusive with `--task-list`; use `--dry-run` to preview the selection.
+Proof-from-scratch defaults to the `current` benchmark task set; `--task-list` also accepts `retired` (archived problems) and `next` (problems for the next stage), as defined in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json). `--filter` searches the mode's full suite and is mutually exclusive with `--task-list`; use `--dry-run` to preview the selection.
 
 For Proof Completion, the default remains the complete suite. To run the committed 190-task Proof Completion Core:
 
