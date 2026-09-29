@@ -28,6 +28,9 @@ Historically, we had two types of problems: `Proof-Completion` and `Proof-from-S
 
 We currently focus on a few hard problems (due to token shortage). 
 
+`tlaps-bench run` runs this Current set by default. The PFS collections are
+maintained in [`benchmark/problem-sets.json`](benchmark/problem-sets.json).
+
 | Problems | Type | # Spec | # Invariants |
 | :---- | :---- | :---- | :---- |
 | [FLASH Cache coherence](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_FlashProtocol/FlashWithMutex.tla) | Protocol | 1 | 15 |
@@ -74,6 +77,18 @@ If you need the TLA+ proofs of these problems, contact us and we can share them.
 | [Gray-Lamport transaction commit](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_transaction_commit/TCommit_proof.tla) | Protocol | 1 | 1 |
 | [B-tree](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/tlaplus_examples_btree/btree.tla) | System | 1 | 5 |
 
+Run these PFS problems explicitly with `--task-list retired`. Proof Completion
+is a separate mode and does not use the Current/Retired/Next classification.
+
+## Next Problem Set
+
+| Problem | Status |
+| :---- | :---- |
+| [Wildfire](https://github.com/specula-org/TLAPS-Bench/pull/164) | Pending merge |
+
+Next currently has no runnable tasks. Other problems remain in the full corpus
+and can be selected with `--filter` or a custom task list.
+
 ## Running TLAPS-Bench
 
 ### Requirements 
@@ -101,15 +116,24 @@ On a wimpy machine, start with `--jobs 1`. Increase the value after you monitor 
 git clone https://github.com/specula-org/tlaps-bench.git  
 cd tlaps-bench  
 export OPENAI_API_KEY=sk-...        # This step is optional: Codex is the default backend if no OpenAI key is provided.  
-uv run tlaps-bench run --mode proof-from-scratch --filter Euclid/Euclid-Hyperbook/GCD.tla --jobs 1 # A small proof-from-scratch example
+uv run tlaps-bench run --dry-run    # Preview Current: 9 specifications, 56 proof targets
+uv run tlaps-bench run --jobs 1
 ```
 
-The above command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the task inside it 
+The run command builds a sandbox Docker image, with `tlapm`, `SANY`, and the proof checker bundled in and runs the tasks inside it
 (a firewall allows only the LLM API hosts and the benchmarks are mounted read-only). Later runs reuse this image. Results are stored in `results/<mode>/<backend>/<timestamp>/`.
 
 ```  
-uv run tlaps-bench run --mode proof-from-scratch --jobs 4  
+uv run tlaps-bench run --jobs 4     # Run Current with four parallel jobs
 ```
+
+`--filter` searches the full suite for the selected mode, including retired and
+unclassified problems. For a small PFS example, use
+`uv run tlaps-bench run --filter Euclid/Euclid-Hyperbook/GCD.tla --jobs 1`.
+`--task-list` selects a collection or a file of exact task IDs; it cannot be
+combined with `--filter`. Add `--dry-run` to preview either selection without
+building an image or calling a model. To run Proof Completion, pass
+`--mode proof-completion` explicitly.
 
 How to set up an agent (`--backend` and `--model`) and its credentials, the full CLI reference, and native (`--no-container`) setup are described in our [usage guide](https://github.com/specula-org/tlaps-bench/blob/main/docs/USAGE.md).
 

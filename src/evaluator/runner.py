@@ -79,6 +79,7 @@ from evaluator.backends.base import Backend, SubmissionDisposition
 from evaluator.cost import calculate_equivalent_cost_usd, public_price_error
 from evaluator.modes import get_mode, list_modes
 from evaluator.modes.base import Mode
+from evaluator.problem_sets import PROBLEM_SET_NAMES, load_problem_sets
 from evaluator.proof_module_artifact import (
     ModuleArtifactError,
     publish_module_artifact,
@@ -1685,6 +1686,33 @@ def _select_exact_tasks(mode: Mode, task_ids: list[str]) -> list[str]:
         rendered = ", ".join(repr(task_id) for task_id in unknown)
         raise ValueError(f"unknown task ID(s) for mode {mode.name!r}: {rendered}")
     return [tasks_by_id[task_id] for task_id in task_ids]
+
+
+def _collection_task_ids(mode: Mode, value: str) -> list[str]:
+    if value not in PROBLEM_SET_NAMES:
+        return _load_task_list(_resolve_task_list(value, mode))
+    if mode.name != "proof-from-scratch":
+        raise ValueError(f"named task list {value!r} is only available for mode 'proof-from-scratch'")
+    task_ids = [os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/") for path in mode.get_benchmark_files()]
+    collections = load_problem_sets(Path(mode.benchmark_dir()).parent / "problem-sets.json", task_ids)
+    return collections[value].runnable_tasks(value)
+
+
+def _print_task_selection(mode: Mode, files: list[str], label: str, *, list_tasks: bool) -> None:
+    print(f"Mode: {mode.name}")
+    print(f"Selection: {label}")
+    module_spec_loader = getattr(mode, "module_task_spec", None)
+    if module_spec_loader is not None:
+        counts = [len(module_spec_loader(path).proof_unit_ids) for path in files]
+        print(f"Selected: {len(files)} specifications, {sum(counts)} proof units")
+    else:
+        counts = [1] * len(files)
+        print(f"Selected: {len(files)} tasks")
+    if list_tasks:
+        for path, count in zip(files, counts, strict=True):
+            task_id = os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/")
+            suffix = f" ({count} proof units)" if module_spec_loader is not None else ""
+            print(f"  {task_id}{suffix}")
 
 
 def _task_list_record_payload(mode_name: str, task_ids: list[str]) -> dict:
@@ -3953,7 +3981,10 @@ def main():
         "--backend", default="codex", choices=list_backends(), help="Evaluator backend (default: codex)"
     )
     parser.add_argument(
-        "--mode", default="proof-completion", choices=list_modes(), help="Benchmark mode (default: proof-completion)"
+        "--mode",
+        default="proof-from-scratch",
+        choices=list_modes(),
+        help="Benchmark mode (default: proof-from-scratch)",
     )
     parser.add_argument("--model", default=None, help="Override the backend default model")
     parser.add_argument(
@@ -3970,12 +4001,18 @@ def main():
     )
     parser.add_argument("--jobs", type=int, default=1, help="Parallel backend runs")
     selection = parser.add_mutually_exclusive_group()
-    selection.add_argument("--filter", default=None, help="Only run benchmarks matching pattern")
+    selection.add_argument(
+        "--filter", default=None, help="Search the mode's complete suite by path substring, comma-separated"
+    )
     selection.add_argument(
         "--task-list",
         default=None,
         metavar="NAME_OR_FILE",
-        help="Run exact mode-relative task IDs from a file or registered name such as 'core'",
+        help="Exact task IDs from a file or named collection: current/retired/next (PFS), core (Proof Completion). "
+        "PFS defaults to current when neither --filter nor --task-list is supplied",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="List the selected tasks and exit without toolchain setup or model calls"
     )
     parser.add_argument(
         "--timeout",
@@ -4094,7 +4131,6 @@ def main():
     )
     args = parser.parse_args()
 
-    backend = get_backend(args.backend, model=args.model)
     # Container mode is default; --no-container disables it
     use_container = not args.no_container
 
@@ -4110,11 +4146,19 @@ def main():
     mode = get_mode(args.mode, benchmark_root, checker_binary)
     task_ids = None
     try:
-        if args.task_list is not None:
-            task_ids = _load_task_list(_resolve_task_list(args.task_list, mode))
-            benchmark_files = _select_exact_tasks(mode, task_ids)
-        else:
+        if args.filter is not None:
+            if not any(pattern.strip() for pattern in args.filter.split(",")):
+                raise ValueError("--filter requires at least one non-empty pattern")
             benchmark_files = mode.get_benchmark_files(args.filter)
+            selection_label = f"filter {args.filter!r} (complete suite)"
+        elif args.task_list is not None or mode.name == "proof-from-scratch":
+            collection = args.task_list if args.task_list is not None else "current"
+            task_ids = _collection_task_ids(mode, collection)
+            benchmark_files = _select_exact_tasks(mode, task_ids)
+            selection_label = f"task-list {collection!r}" + (" (default)" if args.task_list is None else "")
+        else:
+            benchmark_files = mode.get_benchmark_files()
+            selection_label = "complete suite"
         identity_loader = getattr(mode, "specification_ids", None)
         task_specification_ids = identity_loader() if identity_loader is not None else None
     except (TaskContractError, ValueError) as exc:
@@ -4132,6 +4176,43 @@ def main():
             2, f"{parser.prog}: error: no benchmarks found for mode {mode.name!r} under {mode.benchmark_dir()}\n"
         )
 
+    # Module runs always persist the exact selected cohort, including Full and
+    # --filter runs. A resume must select the same physical module tasks.
+    recorded_task_ids = task_ids
+    if getattr(mode, "module_task_spec", None) is not None:
+        recorded_task_ids = [
+            os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/") for path in benchmark_files
+        ]
+
+    # Resolve and validate the selected cohort before Docker or native
+    # verification-toolchain setup. A bad resume should remain a cheap CLI
+    # error and must not build an image.
+    if args.output_dir:
+        output_dir = args.output_dir
+    else:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        if os.path.isdir("/result"):
+            output_dir = os.path.join("/result", mode.name, args.backend, timestamp)
+        else:
+            output_dir = os.path.join(REPO_ROOT, "results", mode.name, args.backend, timestamp)
+    output_dir = os.path.abspath(output_dir)
+    if args.resume:
+        try:
+            _validate_resume_task_list(output_dir, mode.name, recorded_task_ids)
+        except ValueError as exc:
+            parser.exit(2, f"{parser.prog}: error: {exc}\n")
+
+    _print_task_selection(mode, benchmark_files, selection_label, list_tasks=args.dry_run)
+    if args.dry_run:
+        return 0
+
+    backend = get_backend(args.backend, model=args.model)
+    if getattr(mode, "requires_workspace_tools", False) and not backend.capabilities.workspace_tools:
+        parser.exit(
+            2,
+            f"{parser.prog}: error: backend {backend.name!r} is tool-free and does not support mode {mode.name!r}\n",
+        )
+
     verification_policies = {}
     module_spec_loader = getattr(mode, "module_task_spec", None)
     if module_spec_loader is not None:
@@ -4146,39 +4227,7 @@ def main():
         except ValueError as exc:
             parser.error(str(exc))
 
-    # Module runs always persist the exact selected cohort, including Full and
-    # --filter runs. A resume must select the same physical module tasks.
-    recorded_task_ids = task_ids
-    if getattr(mode, "module_task_spec", None) is not None:
-        recorded_task_ids = [
-            os.path.relpath(path, mode.benchmark_dir()).replace(os.sep, "/") for path in benchmark_files
-        ]
-
-    if getattr(mode, "requires_workspace_tools", False) and not backend.capabilities.workspace_tools:
-        parser.exit(
-            2,
-            f"{parser.prog}: error: backend {backend.name!r} is tool-free and does not support mode {mode.name!r}\n",
-        )
-
-    # Resolve and validate the selected cohort before Docker or native
-    # verification-toolchain setup. A bad resume should remain a cheap CLI
-    # error and must not build an image.
-    if args.output_dir:
-        output_dir = args.output_dir
-    else:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        if os.path.isdir("/result"):
-            output_dir = os.path.join("/result", mode.name, backend.name, timestamp)
-        else:
-            output_dir = os.path.join(REPO_ROOT, "results", mode.name, backend.name, timestamp)
-    output_dir = os.path.abspath(output_dir)
     session_dir = _resolve_session_dir(args.session_dir, args.keep_container, use_container)
-    if args.resume:
-        try:
-            _validate_resume_task_list(output_dir, mode.name, recorded_task_ids)
-        except ValueError as exc:
-            parser.exit(2, f"{parser.prog}: error: {exc}\n")
-
     proof_library_catalog = None
     run_identity = None
     container_ready = False

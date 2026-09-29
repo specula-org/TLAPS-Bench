@@ -8,14 +8,17 @@ Requirements: [uv](https://docs.astral.sh/uv/) and [Docker](https://docs.docker.
 git clone https://github.com/specula-org/tlaps-bench.git
 cd tlaps-bench
 export OPENAI_API_KEY=sk-...
-uv run tlaps-bench run --backend codex --model gpt-5.5 --filter GCD_GCD3
+uv run tlaps-bench run --dry-run
+uv run tlaps-bench run --backend codex --model gpt-5.5 --jobs 1
 ```
 
-On the first run, the tool builds a Docker image that includes tlapm, SANY, and the proof checker. Subsequent runs reuse the cached image.
+`run` defaults to proof-from-scratch and the Current problem set (9 specifications, 56 proof targets). `--dry-run` lists the selection without setting up Docker or calling a model.
 
-Results are saved to `results/proof-completion/codex/<timestamp>/`. Nothing else to install.
+On the first proof run, the tool builds a Docker image that includes tlapm, SANY, and the proof checker. Subsequent runs reuse the cached image.
 
-### Full benchmark suite
+Results are saved to `results/proof-from-scratch/codex/<timestamp>/`. Nothing else to install.
+
+### Current problem set
 
 ```bash
 uv run tlaps-bench run --backend codex --model gpt-5.5 --jobs 10 --timeout 7200
@@ -28,11 +31,13 @@ export ANTHROPIC_API_KEY=sk-ant-...
 uv run tlaps-bench run --backend claude_code --model claude-opus-4-8 --jobs 10
 ```
 
-### Proof-from-scratch mode
+### Small example from the full PFS corpus
 
 ```bash
-uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-from-scratch --jobs 10
+uv run tlaps-bench run --filter Euclid/Euclid-Hyperbook/GCD.tla --jobs 1
 ```
+
+An explicit `--filter` searches the complete suite for the selected mode, including problems outside Current.
 
 ---
 
@@ -58,8 +63,8 @@ Select a backend with `--backend`:
 uv run tlaps-bench run --backend claude_code --model claude-opus-4-8
 uv run tlaps-bench run --backend pi --model anthropic/claude-sonnet-4-6
 uv run tlaps-bench run --backend litellm --model claude-sonnet-4-6
-uv run tlaps-bench run --backend litellm_oneshot --model claude-sonnet-4-6
-uv run tlaps-bench run --backend codex_single_turn --model gpt-5.6-sol
+uv run tlaps-bench run --mode proof-completion --backend litellm_oneshot --model claude-sonnet-4-6
+uv run tlaps-bench run --mode proof-completion --backend codex_single_turn --model gpt-5.6-sol
 ```
 
 ### Agent skills
@@ -111,7 +116,7 @@ set, the wire guard replaces the Copilot runtime's output limit and records
 both values in the result audit:
 
 ```bash
-uv run tlaps-bench run --backend copilot_oneshot --model claude-opus-4.8 --max-output-tokens 64000
+uv run tlaps-bench run --mode proof-completion --backend copilot_oneshot --model claude-opus-4.8 --max-output-tokens 64000
 ```
 
 Omit `--max-output-tokens` to preserve the runtime's default. Other backends
@@ -150,10 +155,10 @@ agentic backend for proof-from-scratch.
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
-uv run tlaps-bench run --backend litellm_oneshot --model claude-sonnet-4-6 --filter GCD_GCD3
+uv run tlaps-bench run --mode proof-completion --backend litellm_oneshot --model claude-sonnet-4-6 --filter GCD_GCD3
 
 export COPILOT_GITHUB_TOKEN=github_pat_...
-uv run tlaps-bench run --backend copilot_oneshot --model claude-opus-4.8 --max-output-tokens 64000 --filter GCD_GCD3
+uv run tlaps-bench run --mode proof-completion --backend copilot_oneshot --model claude-opus-4.8 --max-output-tokens 64000 --filter GCD_GCD3
 ```
 
 LiteLLM makes one completion call per outer attempt and disables adapter retries. Copilot makes one logical `send_and_wait` call; before a complete response, its native runtime may retry an identical transient request up to six total wire attempts. A complete response, permanent error, changed request, or deadline stops further requests. Native retries currently apply only to `copilot_oneshot`.
@@ -176,7 +181,7 @@ as the agentic `codex` backend, including ChatGPT subscription authentication:
 
 ```bash
 codex login
-uv run tlaps-bench run --backend codex_single_turn --model gpt-5.6-sol --reasoning-effort medium --task-list core
+uv run tlaps-bench run --mode proof-completion --backend codex_single_turn --model gpt-5.6-sol --reasoning-effort medium --task-list core
 ```
 
 OpenAI, ChatGPT, and Azure Codex authentication are supported. Amazon Bedrock
@@ -220,14 +225,14 @@ A mode defines what the agent is asked to do.
 | `proof-completion` | A fixed target theorem plus its exact read-only model and scaffold context. Scaffold lemmas marked `PROOF OMITTED` are trusted givens. | Replace the marked target proof without changing the theorem, scaffold, imports, or context. |
 | `proof-from-scratch` | An editable target theorem plus only its declared read-only model/definition context. | Invent the proof structure, including fresh helper definitions and proved lemmas. |
 
-Select a mode with `--mode`:
+Proof from scratch is the default. Select a mode explicitly with `--mode`:
 
 ```bash
 uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-completion
 uv run tlaps-bench run --backend codex --model gpt-5.5 --mode proof-from-scratch
 ```
 
-Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch-module/` respectively. The 276-task tree under `benchmark/proof-from-scratch/` is the module generator's read-only target-selection source, not the suite `run` loads.
+Benchmark files live in `benchmark/proof-completion/` and `benchmark/proof-from-scratch-module/` respectively. The theorem-level tree under `benchmark/proof-from-scratch/` is the module generator's read-only target-selection source, not the suite `run` loads.
 
 ### Layered-task trust boundary
 
@@ -256,12 +261,13 @@ uv run tlaps-bench run [flags]
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--backend` | `codex` | Evaluator backend to use |
-| `--mode` | `proof-completion` | Benchmark mode |
+| `--mode` | `proof-from-scratch` | Benchmark mode |
 | `--model` | (backend default) | Override the model |
 | `--reasoning-effort` | (backend behavior) | Pass a backend/model-specific reasoning effort |
 | `--max-output-tokens` | (backend behavior) | Positive per-request output limit; currently supported by `copilot_oneshot` |
-| `--filter` | (all benchmarks) | Substring match on path, comma-separated |
-| `--task-list` | (all benchmarks) | Registered cohort name or file of exact mode-relative task IDs; mutually exclusive with `--filter` |
+| `--filter` | unset | Search the complete suite for the selected mode by path substring, comma-separated |
+| `--task-list` | `current` for PFS without a filter | Named collection or file of exact mode-relative task IDs; mutually exclusive with `--filter` |
+| `--dry-run` | off | Print the selected tasks and counts, then exit without toolchain setup or model calls |
 | `--jobs` | `1` | Number of parallel backend runs |
 | `--timeout` | `28800` | Per-benchmark backend timeout in seconds; `0` disables the limit |
 | `--check-timeout` | `600` | Checker timeout in seconds; PFS scales this base by the module's target count |
@@ -280,15 +286,48 @@ Run `uv run tlaps-bench run --help` for the full flag list.
 
 For PFS, `--check-timeout x` must be positive and gives each module `ceil(x * min(1 + 0.25 * (N - 1), 3))` seconds, where `N` is its selected original target count. Self-checking and grading each receive this budget. Native PFS runs require Linux and `taskset`; use Docker on other platforms.
 
-The default remains the complete suite. To run the committed 190-task Proof Completion Core:
+#### Selecting problems
+
+With neither `--filter` nor `--task-list`, PFS runs **Current**. The three PFS
+collections are maintained in [`benchmark/problem-sets.json`](../benchmark/problem-sets.json):
+
+- `current`: the 9 specifications / 56 proof targets in the README's Current table.
+- `retired`: the 48 specifications / 113 proof targets explicitly listed in its Retired table.
+- `next`: the next planned stage. Wildfire is pending merge in [PR #164](https://github.com/specula-org/TLAPS-Bench/pull/164), so this collection currently has no runnable tasks. Selecting it exits before setup or model calls.
+
+```bash
+uv run tlaps-bench run --task-list current --dry-run
+uv run tlaps-bench run --task-list retired --dry-run
+uv run tlaps-bench run --task-list my-tasks.txt --dry-run
+```
+
+`--filter` searches the **complete suite for the selected mode**, including retired
+and unclassified PFS tasks. It is independent of the collections and cannot be
+combined with `--task-list`. For example, `--filter tcp` finds the retired TCP
+module, and `--filter Walgit` finds an unclassified module. Empty or unmatched
+filters are errors.
+
+Proof Completion has no Current/Retired/Next classification. Select it explicitly;
+without a filter or task list it still runs its full suite. Its existing Core
+collection selects 190 tasks across 56 specifications:
 
 ```bash
 uv run tlaps-bench run --mode proof-completion --task-list core
 ```
 
-The current Core selects 190 tasks across 56 specifications. Full remains the default when `--task-list` is omitted.
+`core` resolves to Proof Completion's committed `core.txt`. Custom task lists
+contain one exact mode-relative task ID per line; blank lines are ignored.
+Unavailable collections, missing files, unknown IDs, duplicates, and empty
+selections fail before authentication, image setup, or model preflight. All PFS
+runs, and explicit task-list runs in Proof Completion, record their resolved
+selection in `task-list.json` inside the output directory.
 
-`core` is a registered name for the current mode's committed `core.txt`; Proof Completion provides it today. Explicit file paths remain supported. Task lists use exact manifest IDs rather than substring matching. Unavailable cohorts, missing files, unknown IDs, duplicates, and empty lists fail before authentication, image setup, or model preflight. A task-list run records its resolved cohort in `task-list.json` inside the output directory.
+When maintaining PFS collections, add or move exact module IDs in
+`benchmark/problem-sets.json` and update the matching README table. Tests verify
+that the collections are disjoint, refer to real tasks, and match every README
+member and count. Unlisted tasks are not automatically added to any collection.
+For a pending Next entry, merge its task first, then add the runnable ID to
+`next.tasks` and remove its pending entry.
 
 ### `tlaps-bench check`
 
@@ -359,7 +398,7 @@ uv run tlaps-bench generate --mode proof-from-scratch
 uv run tlaps-bench generate --mode proof-from-scratch --verify
 ```
 
-Proof-from-scratch generation emits the module suite under `benchmark/proof-from-scratch-module/`: one task per source `spec_id`, with the existing 276 theorem IDs as proof units. It reads `benchmark/proof-from-scratch/` and will not write into that tree. `--verify` regenerates into a scratch directory and compares the shipped suite. To rebuild the frozen 276-task selection corpus itself, invoke `uv run python -m dataset.proof_from_scratch.generate --layered` directly.
+Proof-from-scratch generation emits the module suite under `benchmark/proof-from-scratch-module/`: one task per source `spec_id`, with the existing theorem IDs as proof units. It reads `benchmark/proof-from-scratch/` and will not write into that tree. `--verify` regenerates into a scratch directory and compares the shipped suite. To rebuild the frozen theorem-level selection corpus itself, invoke `uv run python -m dataset.proof_from_scratch.generate --layered` directly.
 
 Proof-completion generation emits the layered suite described in [Layered-task trust boundary](#layered-task-trust-boundary): one read-only `<base>Model.tla` per source, one read-only `<task>Scaffold.tla` per target, an editable `<task>.tla` holding the fixed theorem statement and the marked proof region, and a `manifest.json` naming every task's source specification and exact context. Use `--legacy` only for the old generators.
 
@@ -424,12 +463,14 @@ Agent-reported USD is preferred; otherwise complete token usage is priced with `
 If a run is interrupted or you want to retry only the failures:
 
 ```bash
-uv run tlaps-bench run --backend codex --model gpt-5.5 --output-dir results/proof-completion/codex/20260626_120000 --resume
+uv run tlaps-bench run --mode proof-completion --backend codex --model gpt-5.5 --output-dir results/proof-completion/codex/20260626_120000 --resume
 ```
 
 The runner skips benchmarks already recorded as `SKIP` or as a genuine `PASS` in that directory (first-attempt or via a continuation round), and reruns the rest.
 
-When resuming a task-list run, pass the same `--task-list` again. The runner rejects a different list, a different mode, or an output directory whose prior results were not recorded with a task list. Proof-from-scratch runs also record `run-manifest.json` and reject resume when the canonical corpus, execution sources, pinned official proof-library digest, content-locked verification toolchain, execution limits, or persistent-session policy changed. If the original run used `--session-dir` or the implicit session directory from `--keep-container`, resume with the same resolved session path.
+For PFS, resume must select the same module tasks as the original run. A default run can resume without selection flags only while Current still resolves to the same tasks. To resume an older full-PFS run, supply a task-list file containing its original module IDs. For an explicit task-list run in either mode, pass the same list again.
+
+`--dry-run --resume --output-dir DIR` checks the selected cohort against `task-list.json` without starting a run. Full PFS resume also checks `run-manifest.json`: the canonical corpus, execution sources, pinned proof libraries, verification toolchain, execution limits, and persistent-session policy must still match. If the original run used `--session-dir` or the implicit directory from `--keep-container`, retain that session path. Keep the original checkout and inputs when continuing a historical run.
 
 Inline infra retries are intentionally short: the default `--infra-retries 3` gives the original attempt plus three retries with brief backoff. If a longer provider or network outage leaves `INFRA_ERROR` / `QUOTA_EXHAUSTED` results, rerun later with the same `--output-dir --resume`; those non-genuine results are not skipped.
 
