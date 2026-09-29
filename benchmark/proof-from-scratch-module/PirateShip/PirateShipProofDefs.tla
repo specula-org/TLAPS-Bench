@@ -1,0 +1,4 @@
+---- MODULE PirateShipProofDefs ----
+EXTENDS PirateShip
+
+====

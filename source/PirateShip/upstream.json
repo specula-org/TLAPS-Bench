@@ -1,0 +1,25 @@
+{
+  "repository": "https://github.com/PirateshipOrg/pirateship-tla",
+  "commit": "19096c1de2f87c68a21311c9100a5bab423caa0e",
+  "files": {
+    "upstream/pirateship.tla": {
+      "path": "pirateship.tla",
+      "sha256": "7b84c8b53e7ba9909ed41dfd6f64a367e3be2f789a38b084054f1887b346912d"
+    }
+  },
+  "proof_model": {
+    "file": "PirateShip.tla",
+    "sha256": "89683b3f89223247831f3e8f087fc95d54e1c257498a6329f0710b8d854a23ff",
+    "rules": "tlaps-compatibility.json",
+    "renderer": "prepare.py"
+  },
+  "license": {
+    "status": "pending",
+    "note": "No license file or source-level grant in the pinned TLA+ repository. Licensing clarification is required before merge."
+  },
+  "adaptations": [
+    "Rename the module to PirateShip.",
+    "Make finite replicas, natural Byzantine action budget, and transaction 1 membership explicit.",
+    "Replace two recursive operators with recursive functions; keep FIFO reliable channels and all protocol actions and properties."
+  ]
+}

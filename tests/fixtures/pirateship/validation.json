@@ -1,0 +1,102 @@
+{
+  "upstream_commit": "19096c1de2f87c68a21311c9100a5bab423caa0e",
+  "benchmark_base_commit": "ef53d032e3d263a7e425c13bbc20e5eba5e3eabf",
+  "model_sha256": "89683b3f89223247831f3e8f087fc95d54e1c257498a6329f0710b8d854a23ff",
+  "fixtures_sha256": {
+    "RecursionComparison.tla": "d40ee359480fe99ab9b4b9dfd61cfd0eea65caa9aac9c11cf002cb8244155978",
+    "RecursionProof.tla": "2c8ffd0dfa6d97e2708bcc3de8d7d9c76a0ed9aba33d6bdfbe10cb313a295b15",
+    "PirateShipScenarios.tla": "044d982153bbca98d75f00530c5521599b37bc27f86873c47a6a149c6c1254ac"
+  },
+  "toolchain": {
+    "tla2tools_jar_sha256": "ab4694601923fd5ac06452abbf847c366a5054a3d739552085edd6ed986c29ec",
+    "tlapm_version": "7824dab",
+    "tlapm_executable_sha256": "d8debcba59db1bd5814d6693e3b25e3db1a8221e499bdf8b548594e2f857ede5",
+    "tlapm_artifact_sha256": "a2860384bc89c4c5b2c73ec367e29f44d829e4d4a2698ab295139f829219331c",
+    "proof_libraries_lock_sha256": "37c7b6b1a1d78cbee9788286f4dd1460871799c7aa5574d65f1268d6cfb856b8"
+  },
+  "recursion_tlaps": {
+    "source_obligations_proved": 20,
+    "module_context_obligations_proved": 20,
+    "strict": true,
+    "fingerprints_disabled": true,
+    "scope": "Unfolding equations, boundary values, and voter-set closure; not protocol correctness."
+  },
+  "differential": {
+    "max_branch_length": 3,
+    "replicas": 3,
+    "unanimity_comparisons": 6771,
+    "quorum_comparisons": 3750,
+    "result": "equal to pinned upstream recursive operators on all enumerated inputs"
+  },
+  "complete_bounded_models": {
+    "Crash": {
+      "configuration": "source/PirateShip/validation/Crash.cfg",
+      "states_generated": 11705,
+      "distinct_states": 813,
+      "queue_remaining": 0,
+      "log_sha256": "71702d547701700ba31509a41919c224a03ddefa87faea6a69f4a0378ef569ef"
+    },
+    "Byzantine": {
+      "configuration": "source/PirateShip/validation/Byzantine.cfg",
+      "states_generated": 319644,
+      "distinct_states": 12926,
+      "queue_remaining": 0,
+      "log_sha256": "39e5d6323e50c92ce577b425100c472c418943780d79f931094315c8f8d6dc2a"
+    }
+  },
+  "reachable_scenarios": {
+    "view_change_source": {
+      "transitions": 28,
+      "states_generated": 30,
+      "distinct_states": 29,
+      "queue_remaining": 0,
+      "log_sha256": "1b7a3d9ec8c30fc0e2ed4aca224185c3afd1f1e98b635103d20121fb6d3970ff",
+      "coverage": "All selected safety properties; source Next conformance; completed schedule and nonempty audited prefixes at every honest replica."
+    },
+    "view_change_module": {
+      "transitions": 28,
+      "states_generated": 30,
+      "distinct_states": 29,
+      "queue_remaining": 0,
+      "log_sha256": "b8253819d5cb549c52691a01061a544ab325b897ef32bd1310fd65610dbfdd18",
+      "coverage": "All selected safety properties; source Next conformance; completed schedule and nonempty audited prefixes at every honest replica."
+    },
+    "byzantine_source": {
+      "transitions": 31,
+      "states_generated": 128,
+      "distinct_states": 96,
+      "queue_remaining": 0,
+      "log_sha256": "d9fb68366e97a463d012db30d273f2e6d184c372e23b97d13a8e0119732dddde",
+      "coverage": "All selected safety properties; source Next conformance; completed schedule and nonempty audited prefixes at every honest replica."
+    },
+    "byzantine_module": {
+      "transitions": 31,
+      "states_generated": 128,
+      "distinct_states": 96,
+      "queue_remaining": 0,
+      "log_sha256": "e010786990bce7bc0bb4fd0ed4fbee7c69d4ba51275a0b7f6695373d3146dd9c",
+      "coverage": "All selected safety properties; source Next conformance; completed schedule and nonempty audited prefixes at every honest replica."
+    }
+  },
+  "counterexample": {
+    "source": "unchanged upstream",
+    "transaction_domain": [
+      2
+    ],
+    "violation": "TypeOK",
+    "transitions": 2,
+    "actions": [
+      "SendEntries(3)",
+      "ByzLeaderEquivocate(3)"
+    ],
+    "adapted_result": "Rejected before exploration by the explicit transaction-domain premise in source, flat and module contexts."
+  },
+  "generation": {
+    "new_module_tasks": 1,
+    "new_proof_units": 11,
+    "sany_gate": "passed",
+    "nondegeneracy_gate": "no target removed",
+    "module_verification_errors": 0
+  },
+  "evidence_limit": "Finite checks and recursion compatibility proofs; no complete protocol certificate or measured solve rate."
+}

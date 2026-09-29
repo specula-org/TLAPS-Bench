@@ -366,6 +366,17 @@ WALs on S3 — benchmark groups SlateDBWAL, OSWALD, Walgit
     implementations of the named systems. Source pins and local adaptations
     are recorded in each group's upstream.json and docs/S3_WAL.md.
 
+PirateShip consensus — benchmark group PirateShip — licensing clarification pending
+    From PirateshipOrg/pirateship-tla at commit
+    19096c1de2f87c68a21311c9100a5bab423caa0e:
+    https://github.com/PirateshipOrg/pirateship-tla
+    The pinned TLA+ repository contains no license file or source-level license
+    grant. No MIT license is asserted for this material; the separate Rust
+    implementation's MIT license is not used as its licensing provenance.
+    Resolve permission to redistribute the TLA+ source before merging this
+    draft addition. The original file, hashes, additional parameter premises,
+    and recursive-function adaptation are recorded in source/PirateShip.
+
 == Bundled libraries ==
 
 TLA+ CommunityModules  —  MIT  —  https://github.com/tlaplus/CommunityModules
