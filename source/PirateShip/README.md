@@ -2,6 +2,9 @@
 
 This proof-from-scratch module contains eleven safety targets derived from
 [PirateshipOrg/pirateship-tla](https://github.com/PirateshipOrg/pirateship-tla/tree/19096c1de2f87c68a21311c9100a5bab423caa0e).
+The module is registered in the `next` collection; the default `current`
+collection remains unchanged. Preview with
+`uv run tlaps-bench run --task-list next --dry-run`.
 The original `pirateship.tla` is preserved byte-for-byte under `upstream/`.
 `upstream.json` pins its commit and SHA-256 and records the adapted model hash.
 `prepare.py` applies six exact, reviewable replacements from
