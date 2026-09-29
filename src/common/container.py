@@ -68,6 +68,8 @@ API_KEY_VARS = [
     # Anthropic
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_API_BASE",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_VERTEX_BASE_URL",
     # Gemini / Google
     "GOOGLE_API_KEY",
     "GEMINI_API_KEY",
