@@ -376,9 +376,11 @@ Microsoft CCF Raft — benchmark group CCF
     Raft specifications on which it is based.
     Network.tla and abs.tla are covered by CCF's Apache 2.0 license;
     see LICENSES/CCF-Apache-2.0.txt.
-    The three upstream modules are copied unchanged. CCFProof.tla supplies
-    explicit enum/network premises and two safety goals. Generated benchmark
-    contexts remove proofs, unrelated definitions, and comments. Source hashes,
+    ccfraft.tla and abs.tla are copied unchanged. Network.tla exports its helper
+    definitions for TLAPS by removing LOCAL qualifiers; operator bodies and
+    protocol behavior are unchanged. CCFProof.tla supplies explicit enum/network
+    premises and two safety goals. Generated benchmark contexts remove proofs,
+    unrelated definitions, and comments. Source hashes,
     scope, and validation limits are recorded in source/CCF/upstream.json and
     source/CCF/README.md.
 

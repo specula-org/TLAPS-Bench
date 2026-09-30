@@ -67,5 +67,45 @@
       }
     ]
   },
-  "validation": "See README.md and validation/; no reference TLAPS proof."
+  "validation": "See README.md and validation/; no reference TLAPS proof.",
+  "local_repairs": [
+    {
+      "file": "Network.tla",
+      "description": "Export network helper definitions by removing their LOCAL qualifiers, so proofs through INSTANCE Network can explicitly unfold them. Operator bodies, transitions, assumptions, and target predicates are unchanged.",
+      "exported_operators": [
+        "ReorderDupInitMessageVar",
+        "ReorderDupWithMessage",
+        "ReorderDupWithoutMessage",
+        "ReorderDupMessages",
+        "ReorderDupMessagesTo",
+        "ReorderDupOneMoreMessage",
+        "ReorderDupDropMessages",
+        "ReorderNoDupInitMessageVar",
+        "ReorderNoDupWithMessage",
+        "ReorderNoDupWithoutMessage",
+        "ReorderNoDupMessages",
+        "ReorderNoDupMessagesTo",
+        "ReorderNoDupOneMoreMessage",
+        "ReorderNoDupDropMessages",
+        "OrderInitMessageVar",
+        "OrderWithMessage",
+        "OrderWithoutMessage",
+        "OrderMessages",
+        "OrderMessagesTo",
+        "OrderOneMoreMessage",
+        "OrderDropMessages",
+        "OrderDropOlderMessages",
+        "OrderDropConsecutiveMessages",
+        "OrderDropMessage",
+        "OrderNoDupInitMessageVar",
+        "OrderNoDupWithMessage",
+        "OrderNoDupWithoutMessage",
+        "OrderNoDupMessages",
+        "OrderNoDupMessagesTo",
+        "OrderNoDupOneMoreMessage",
+        "OrderNoDupDropMessages"
+      ],
+      "local_sha256": "20919133be03d2e53228a134a1adfe389d222f2d654b0c5a6be745422dbf634b"
+    }
+  ]
 }

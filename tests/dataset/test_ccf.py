@@ -162,8 +162,17 @@ def test_safety_goals_reject_committed_log_corruption(tmp_path, context, fault, 
 
 def test_upstream_bytes_and_two_targets():
     metadata = json.loads((SOURCE / "upstream.json").read_text())
+    repairs = {entry["file"]: entry for entry in metadata.get("local_repairs", [])}
     for local, entry in metadata["files"].items():
-        assert hashlib.sha256((SOURCE / local).read_bytes()).hexdigest() == entry["sha256"]
+        content = (SOURCE / local).read_bytes()
+        if local in repairs:
+            repair = repairs[local]
+            assert hashlib.sha256(content).hexdigest() == repair["local_sha256"]
+            for name in repair["exported_operators"]:
+                pattern = rb"(?m)^" + re.escape(name.encode()) + rb"(?=\s|\()"
+                content, count = re.subn(pattern, lambda match: b"LOCAL " + match[0], content)
+                assert count == 1, name
+        assert hashlib.sha256(content).hexdigest() == entry["sha256"]
     for entry in metadata["licenses"]:
         assert hashlib.sha256((ROOT / entry["local_path"]).read_bytes()).hexdigest() == entry["sha256"]
     document = json.loads((MODULE_SUITE / "manifest.json").read_text())
@@ -216,3 +225,57 @@ def test_tlapm_loads_context_and_network_premise(tmp_path, context):
     text = result.stdout + result.stderr
     assert result.returncode == 0, text
     assert "All " in text and " obligations proved" in text, text
+
+
+def check_network_visibility(directory, context, restore_local=False):
+    tlapm = find_tlapm()
+    if tlapm is None or not (ROOT / "lib/tlapm").is_dir():
+        pytest.skip("TLAPM and the pinned proof libraries are required")
+    module, _ = stage(directory, context)
+    if restore_local:
+        metadata = json.loads((SOURCE / "upstream.json").read_text())
+        repair = next(entry for entry in metadata["local_repairs"] if entry["file"] == "Network.tla")
+        path = directory / "Network.tla"
+        text = path.read_text()
+        for name in repair["exported_operators"]:
+            text = re.sub(r"(?m)^" + re.escape(name) + r"(?=\s|\()", "LOCAL " + name, text)
+        path.write_text(text)
+    fixture = (ROOT / "tests/fixtures/ccf/NetworkVisibility.tla").read_text()
+    parent = "ccfraft" if context == "source" else f"{module}Defs"
+    probe = directory / "NetworkVisibility.tla"
+    probe.write_text(fixture.replace("EXTENDS CCFProofDefs", f"EXTENDS {parent}"))
+    result = subprocess.run(
+        [
+            tlapm,
+            "--strict",
+            "--nofp",
+            "--threads",
+            "1",
+            "-I",
+            str(ROOT / "lib/tlapm"),
+            "-I",
+            str(ROOT / "lib/community"),
+            str(probe),
+        ],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    text = result.stdout + result.stderr
+    (directory / "network-visibility.log").write_text(text)
+    return result.returncode, text
+
+
+@pytest.mark.parametrize("context", ["source", "module", *GOALS])
+def test_network_helpers_can_be_unfolded_in_proofs(tmp_path, context):
+    code, text = check_network_visibility(tmp_path, context)
+    assert code == 0, text
+    assert "All " in text and " obligations proved" in text, text
+
+
+@pytest.mark.parametrize("context", ["source", "module"])
+def test_original_local_network_helpers_reproduce_the_proof_obstacle(tmp_path, context):
+    code, text = check_network_visibility(tmp_path, context, restore_local=True)
+    assert code != 0, text
+    assert 'Operator "Network!OrderNoDupInitMessageVar" not found' in text, text

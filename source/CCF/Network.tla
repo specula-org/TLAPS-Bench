@@ -20,130 +20,130 @@ VARIABLE
 ----------------------------------------------------------------------------------
 \* Reordering and duplication of messages:
 
-LOCAL ReorderDupInitMessageVar ==
+ReorderDupInitMessageVar ==
     messages = <<>>
     
-LOCAL ReorderDupWithMessage(m, msgs) == 
+ReorderDupWithMessage(m, msgs) == 
     IF m \notin (DOMAIN msgs) THEN
         msgs @@ (m :> 1)
     ELSE
         [ msgs EXCEPT ![m] = @ + 1 ]
 
-LOCAL ReorderDupWithoutMessage(m, msgs) == 
+ReorderDupWithoutMessage(m, msgs) == 
     IF msgs[m] = 1 THEN
         [ msg \in ((DOMAIN msgs) \ {m}) |-> msgs[msg] ]
     ELSE
         [ msgs EXCEPT ![m] = @ - 1 ]
 
-LOCAL ReorderDupMessages ==
+ReorderDupMessages ==
     DOMAIN messages
 
-LOCAL ReorderDupMessagesTo(dest, source) ==
+ReorderDupMessagesTo(dest, source) ==
     { m \in ReorderDupMessages : m.dest = dest /\ m.source = source}
 
-LOCAL ReorderDupOneMoreMessage(msg) ==
+ReorderDupOneMoreMessage(msg) ==
     \/ msg \notin ReorderDupMessages /\ msg \in ReorderDupMessages'
     \/ msg \in ReorderDupMessages /\ messages'[msg] > messages[msg]
 
-LOCAL ReorderDupDropMessages ==
+ReorderDupDropMessages ==
     messages' \in SubBag(messages)
 
 ----------------------------------------------------------------------------------
 \* Reordering and deduplication of messages (iff the spec removes message m from
 \* msgs after receiving m, i.e., ReorderNoDupWithoutMessage.)
 
-LOCAL ReorderNoDupInitMessageVar ==
+ReorderNoDupInitMessageVar ==
     messages = {}
 
-LOCAL ReorderNoDupWithMessage(m, msgs) == 
+ReorderNoDupWithMessage(m, msgs) == 
     msgs \union {m}
 
-LOCAL ReorderNoDupWithoutMessage(m, msgs) == 
+ReorderNoDupWithoutMessage(m, msgs) == 
     msgs \ {m}
 
-LOCAL ReorderNoDupMessages ==
+ReorderNoDupMessages ==
     messages
 
-LOCAL ReorderNoDupMessagesTo(dest, source) ==
+ReorderNoDupMessagesTo(dest, source) ==
     { m \in messages : m.dest = dest /\ m.source = source }
 
-LOCAL ReorderNoDupOneMoreMessage(msg) ==
+ReorderNoDupOneMoreMessage(msg) ==
     \/ msg \notin ReorderNoDupMessages /\ msg \in ReorderNoDupMessages'
     \/ msg \in ReorderNoDupMessages /\ messages'[msg] > messages[msg]
 
-LOCAL ReorderNoDupDropMessages ==
+ReorderNoDupDropMessages ==
     messages' \in SUBSET messages
 
 ----------------------------------------------------------------------------------
 \* Point-to-Point Ordering and duplication of messages:
 
-LOCAL OrderInitMessageVar ==
+OrderInitMessageVar ==
     messages = [ s \in Servers |-> <<>>]
 
-LOCAL OrderWithMessage(m, msgs) ==
+OrderWithMessage(m, msgs) ==
     [ msgs EXCEPT ![m.dest] = Append(@, m) ]
 
-LOCAL OrderWithoutMessage(m, msgs) ==
+OrderWithoutMessage(m, msgs) ==
     [ msgs EXCEPT ![m.dest] = RemoveFirst(@, m) ]
 
-LOCAL OrderMessages ==
+OrderMessages ==
     UNION { Range(messages[s]) : s \in Servers }
 
-LOCAL OrderMessagesTo(dest, source) ==
+OrderMessagesTo(dest, source) ==
     FoldLeft(LAMBDA acc, e: IF acc = {} /\ e.source = source THEN acc \cup {e} ELSE acc, {}, messages[dest])
 
-LOCAL OrderOneMoreMessage(m) ==
+OrderOneMoreMessage(m) ==
     \/ /\ m \notin OrderMessages
        /\ m \in OrderMessages'
     \/ Len(SelectSeq(messages[m.dest], LAMBDA e: m = e)) < Len(SelectSeq(messages'[m.dest], LAMBDA e: m = e))
 
-LOCAL OrderDropMessages(server) ==
+OrderDropMessages(server) ==
     \E s \in AllSubSeqs(messages[server]):
         messages' = [ messages EXCEPT ![server] = s ]
 
 \* These alternatives of OrderDropMessages may be useful for debugging
-LOCAL OrderDropOlderMessages(server) ==
+OrderDropOlderMessages(server) ==
    (* Always drop older messages first, i.e., an old message has to be handled or dropped before a new message can be handled or dropped. *)
     \E s \in Suffixes(messages[server]):
         messages' = [ messages EXCEPT ![server] = s ]
 
-LOCAL OrderDropConsecutiveMessages(server) ==
+OrderDropConsecutiveMessages(server) ==
    (* Drop messages regardless of "time", but only ever drop consecutive messages. *)
     \E s \in SubSeqs(messages[server]):
         messages' = [ messages EXCEPT ![server] = s ]
 
-LOCAL OrderDropMessage(server, Test(_)) ==
+OrderDropMessage(server, Test(_)) ==
     \E i \in { idx \in 1..Len(messages[server]) : Test(messages[server][idx]) }:
         messages' = [ messages EXCEPT ![server] = RemoveAt(@, i) ]
 
 ----------------------------------------------------------------------------------
 \* Point-to-Point Ordering and no duplication of messages:
 
-LOCAL OrderNoDupInitMessageVar ==
+OrderNoDupInitMessageVar ==
     OrderInitMessageVar
 
-LOCAL OrderNoDupWithMessage(m, msgs) ==
+OrderNoDupWithMessage(m, msgs) ==
     IF \E i \in 1..Len(msgs[m.dest]) : msgs[m.dest][i] = m THEN
         msgs
     ELSE
         OrderWithMessage(m, msgs)
 
-LOCAL OrderNoDupWithoutMessage(m, msgs) ==
+OrderNoDupWithoutMessage(m, msgs) ==
     OrderWithoutMessage(m, msgs)
 
-LOCAL OrderNoDupMessages ==
+OrderNoDupMessages ==
     OrderMessages
 
-LOCAL OrderNoDupMessagesTo(dest, source) ==
+OrderNoDupMessagesTo(dest, source) ==
     OrderMessagesTo(dest, source)
 
-LOCAL OrderNoDupOneMoreMessage(m) ==
+OrderNoDupOneMoreMessage(m) ==
     \/ /\ m \notin OrderMessages
        /\ m \in OrderMessages'
     \/ /\ m \in OrderMessages
        /\ m \in OrderMessages'
 
-LOCAL OrderNoDupDropMessages(server) ==
+OrderNoDupDropMessages(server) ==
     \E subSeq \in SubSeqs(messages[server]):
         messages' = [ messages EXCEPT ![server] = subSeq ]
 

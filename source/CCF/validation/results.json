@@ -101,5 +101,6 @@
     "source_command": "timeout 1830s java -XX:ActiveProcessorCount=3 -Xmx2g -XX:+UseParallelGC -Dtlc2.tool.impl.Tool.cdot=true -cp lib/tla2tools.jar:lib/community tlc2.TLC -workers 2 -simulate num=999999999 -depth 100 -seed 20260930 -deadlock -metadir /tmp/ccf-source-simulation -config source/CCF/validation/CCFProof.cfg source/CCF/CCFProof.tla",
     "generated_staging": "Copy CCF/CCFProof.tla and every context file listed for it in benchmark/proof-from-scratch-module/manifest.json into one directory. Copy the source validation config there, omitting TypeInv and SignatureInv (not present in the pruned context). Run the same simulation with absolute classpath entries and the staged module/config paths. tests/dataset/test_ccf.py::stage implements the same flattening.",
     "expected_termination": "Exit 124 from the time limit; no exhaustive or theorem-proof claim. Progress counters are lower bounds because TLC does not print a final summary on SIGTERM."
-  }
+  },
+  "scope_note": "Historical checks of the pre-visibility-adaptation inputs at benchmark commit 9bb634043a2669a9d190d83aaf733a0091383882. Original input hashes and outcomes are preserved; see network-visibility.json for the later adaptation."
 }

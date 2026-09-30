@@ -13,12 +13,15 @@ protocol actions, fairness, and both property definitions are unchanged.
 
 ## Source and scope
 
-`ccfraft.tla`, `Network.tla`, and `abs.tla` are copied byte-for-byte from
+The model comes from
 [microsoft/CCF](https://github.com/microsoft/CCF/tree/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus)
 at `6a2dc420f0166c93f92b773aa49c5203b0767750`. That revision includes the
 upstream minimum-term assumption correction in `abs.tla` (CCF #8470).
-`upstream.json` records paths, hashes, and licenses. The abstract refinement
-theorem is not selected.
+`ccfraft.tla` and `abs.tla` are copied byte-for-byte. `Network.tla` exports its
+helper definitions for TLAPS by removing their `LOCAL` qualifiers; all operator
+bodies are unchanged. `upstream.json` records original hashes, the adapted hash,
+the exact exported names, and licenses. The abstract refinement theorem is not
+selected.
 
 This is CCF's crash-fault-tolerant Raft variant: signatures determine the
 committable prefix; elections can roll back unsigned entries; configurations
@@ -71,7 +74,15 @@ remain valid. Strict TLAPM canaries check that generated contexts load, expose
 the network premise, and support action composition through `ExpandCdot`,
 without admitting either target theorem.
 
-`validation/results.json` records the additional time-limited TLC simulations.
+The network visibility regression proves initialization, message insertion,
+removal, and source selection equations through `INSTANCE Network`, in
+the source and all generated contexts. Restoring `LOCAL` reproduces the missing
+operator error. A byte-level provenance check reconstructs the exact upstream
+module by restoring just those qualifiers, protecting protocol semantics.
+
+`validation/results.json` records the historical time-limited TLC simulations
+before the visibility adaptation. `validation/network-visibility.json` records
+the adaptation's regression checks and updated input hashes.
 TLC must use `-Dtlc2.tool.impl.Tool.cdot=true`, matching upstream `tla/tlc.py`,
 to evaluate the model's action composition. This implementation of action
 composition is experimental; finite schedules and simulations are supporting

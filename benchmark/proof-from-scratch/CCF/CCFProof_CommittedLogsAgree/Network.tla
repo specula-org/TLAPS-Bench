@@ -19,70 +19,70 @@ VARIABLE
 
 ----------------------------------------------------------------------------------
 
-LOCAL ReorderDupInitMessageVar ==
+ReorderDupInitMessageVar ==
     messages = <<>>
     
-LOCAL ReorderDupWithMessage(m, msgs) == 
+ReorderDupWithMessage(m, msgs) == 
     IF m \notin (DOMAIN msgs) THEN
         msgs @@ (m :> 1)
     ELSE
         [ msgs EXCEPT ![m] = @ + 1 ]
 
-LOCAL ReorderDupWithoutMessage(m, msgs) == 
+ReorderDupWithoutMessage(m, msgs) == 
     IF msgs[m] = 1 THEN
         [ msg \in ((DOMAIN msgs) \ {m}) |-> msgs[msg] ]
     ELSE
         [ msgs EXCEPT ![m] = @ - 1 ]
 
-LOCAL ReorderDupMessages ==
+ReorderDupMessages ==
     DOMAIN messages
 
-LOCAL ReorderDupMessagesTo(dest, source) ==
+ReorderDupMessagesTo(dest, source) ==
     { m \in ReorderDupMessages : m.dest = dest /\ m.source = source}
 
 ----------------------------------------------------------------------------------
 
-LOCAL ReorderNoDupInitMessageVar ==
+ReorderNoDupInitMessageVar ==
     messages = {}
 
-LOCAL ReorderNoDupWithMessage(m, msgs) == 
+ReorderNoDupWithMessage(m, msgs) == 
     msgs \union {m}
 
-LOCAL ReorderNoDupWithoutMessage(m, msgs) == 
+ReorderNoDupWithoutMessage(m, msgs) == 
     msgs \ {m}
 
-LOCAL ReorderNoDupMessagesTo(dest, source) ==
+ReorderNoDupMessagesTo(dest, source) ==
     { m \in messages : m.dest = dest /\ m.source = source }
 
 ----------------------------------------------------------------------------------
 
-LOCAL OrderInitMessageVar ==
+OrderInitMessageVar ==
     messages = [ s \in Servers |-> <<>>]
 
-LOCAL OrderWithMessage(m, msgs) ==
+OrderWithMessage(m, msgs) ==
     [ msgs EXCEPT ![m.dest] = Append(@, m) ]
 
-LOCAL OrderWithoutMessage(m, msgs) ==
+OrderWithoutMessage(m, msgs) ==
     [ msgs EXCEPT ![m.dest] = RemoveFirst(@, m) ]
 
-LOCAL OrderMessagesTo(dest, source) ==
+OrderMessagesTo(dest, source) ==
     FoldLeft(LAMBDA acc, e: IF acc = {} /\ e.source = source THEN acc \cup {e} ELSE acc, {}, messages[dest])
 
 ----------------------------------------------------------------------------------
 
-LOCAL OrderNoDupInitMessageVar ==
+OrderNoDupInitMessageVar ==
     OrderInitMessageVar
 
-LOCAL OrderNoDupWithMessage(m, msgs) ==
+OrderNoDupWithMessage(m, msgs) ==
     IF \E i \in 1..Len(msgs[m.dest]) : msgs[m.dest][i] = m THEN
         msgs
     ELSE
         OrderWithMessage(m, msgs)
 
-LOCAL OrderNoDupWithoutMessage(m, msgs) ==
+OrderNoDupWithoutMessage(m, msgs) ==
     OrderWithoutMessage(m, msgs)
 
-LOCAL OrderNoDupMessagesTo(dest, source) ==
+OrderNoDupMessagesTo(dest, source) ==
     OrderMessagesTo(dest, source)
 
 ----------------------------------------------------------------------------------
