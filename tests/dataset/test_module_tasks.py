@@ -12,7 +12,10 @@ Run: PYTHONPATH=src python3 -m pytest tests/dataset/test_module_tasks.py
 
 import hashlib
 import json
+import os
 import shutil
+import subprocess
+import sys
 from io import StringIO
 from pathlib import Path
 
@@ -40,9 +43,9 @@ from dataset.proof_from_scratch.module_tasks import (
     expected_suite_files,
     generate_module_tasks,
     group_targets_by_specification,
-    identifier_tokens,
     plan_statement_renames,
     rewrite_identifiers,
+    statement_identifier_spans,
     verify_module_tasks,
 )
 
@@ -158,30 +161,99 @@ def test_statements_are_read_back_from_the_emitted_bytes(tmp_path):
     assert _read_statements(entry, tmp_path) == UNITS
 
 
-def test_quantifier_is_not_read_as_an_identifier():
-    assert identifier_tokens(r"\A A \in S : A \in Nat") == {"A", "S", "Nat"}
-    assert "in" not in identifier_tokens(r"x \in Nat")
+@pytest.mark.parametrize(
+    ("formula", "expected"),
+    [
+        (r'\A A \in {1}: DOMAIN [A |-> A] = {"A"}', r'\A A1 \in {1}: DOMAIN [A |-> A1] = {"A"}'),
+        (r"\A A \in {1}: [A |-> A].A = A", r"\A A1 \in {1}: [A |-> A1].A = A1"),
+        (r"\A A \in {1}: [A |-> A] \in [A : {A}]", r"\A A1 \in {1}: [A |-> A1] \in [A : {A1}]"),
+        (
+            r"\A A \in {1}: [[A |-> [A |-> A]] EXCEPT !.A.A = A].A.A = A",
+            r"\A A1 \in {1}: [[A |-> [A |-> A1]] EXCEPT !.A.A = A1].A.A = A1",
+        ),
+        (
+            r"\A A \in {1}: [[i \in {A} |-> [A |-> A]] EXCEPT ![A].A = A][A].A = A",
+            r"\A A1 \in {1}: [[i \in {A1} |-> [A |-> A1]] EXCEPT ![A1].A = A1][A1].A = A1",
+        ),
+        (r"[A \in {1} |-> [A |-> A]][1].A = 1", r"[A1 \in {1} |-> [A |-> A1]][1].A = 1"),
+        (
+            r"\A A: [A : {\A x, A1: x = A1 /\ A = A}] = [A : {TRUE}]",
+            r"\A A2: [A : {\A x, A1: x = A1 /\ A2 = A2}] = [A : {TRUE}]",
+        ),
+        (r"(\A A: A = A) /\ (\E A: [A |-> A].A = A)", r"(\A A1: A1 = A1) /\ (\E A1: [A |-> A1].A = A1)"),
+        (r"LET A(x) == [A |-> x] IN A(1).A = 1", r"LET A1(x) == [A |-> x] IN A1(1).A = 1"),
+        (r"ASSUME NEW A, A = 1 PROVE [A |-> A].A = A", r"ASSUME NEW A1, A1 = 1 PROVE [A |-> A1].A = A1"),
+        (r"\A A: (A(A):: [A |-> A].A = A)", r"\A A1: (A(A1):: [A |-> A1].A = A1)"),
+        ("\\A A: [\tA (* A (* nested *) *) |->\n A].\n A = A", "\\A A1: [\tA (* A (* nested *) *) |->\n A1].\n A = A1"),
+        (r'DOMAIN [A |-> 1] = {"A"}', r'DOMAIN [A |-> 1] = {"A"}'),
+        (r"\A A: [TRUE]_A /\ <<TRUE>>_A", r"\A A1: [TRUE]_A1 /\ <<TRUE>>_A1"),
+        (r"\A A: WF_A(TRUE) /\ SF_A(TRUE)", r"\A A1: WF_A1(TRUE) /\ SF_A1(TRUE)"),
+        (r"\A A: LET 1A == A IN 1A = A", r"\A A1: LET 1A == A1 IN 1A = A1"),
+        (
+            r"\A A: LET I == INSTANCE Inner WITH A <- A IN I!Value = A",
+            r"\A A1: LET I == INSTANCE Inner WITH A <- A1 IN I!Value = A1",
+        ),
+        (r"\A A: C(A) ! (* A *) A = A", r"\A A1: C(A1) ! (* A *) A = A1"),
+        (r"\A A, D, Op: C(A)!D(D)!Op(Op) = A", r"\A A1, D1, Op1: C(A1)!D(D1)!Op(Op1) = A1"),
+        (r"LET A == INSTANCE Values IN A!A = 1", r"LET A1 == INSTANCE Values IN A1!A = 1"),
+        (r"\A A: LET I == INSTANCE A IN I!Value = A", r"\A A1: LET I == INSTANCE A IN I!Value = A1"),
+        (r'\A A: A = "A\"A"', r'\A A1: A1 = "A\"A"'),
+        ("\\A A: A \\* A\n = A", "\\A A1: A1 \\* A\n = A1"),
+        ("\\A A: (* 🦀 A *) [A |-> A].A = A", "\\A A1: (* 🦀 A *) [A |-> A1].A = A1"),
+    ],
+)
+@requires_sany
+def test_statement_rename_uses_sany_identifier_roles(tmp_path, formula, expected):
+    source = tmp_path / "Fields.tla"
+    (tmp_path / "Inner.tla").write_text("---- MODULE Inner ----\nCONSTANT A\nValue == A\nOp(x) == x\n====\n")
+    (tmp_path / "Values.tla").write_text("---- MODULE Values ----\nA == 1\nD(x) == INSTANCE Inner WITH A <- x\n====\n")
+    (tmp_path / "A.tla").write_text("---- MODULE A ----\nValue == 1\n====\n")
+    prelude = "---- MODULE Fields ----\nEXTENDS Naturals\nC(x) == INSTANCE Values\n"
+    text = prelude + f"  THEOREM Goal == {formula}\nPROOF OMITTED\nVARIABLES A, D, Op\n====\n"
+    source.write_text(text)
+    dump = generate.dump_sany(str(source))
+    theorem = dump["theorems"][0]
+    lines = text.splitlines(keepends=True)
+    statement = generate._statement_text(theorem, lines)
+    identifiers = statement_identifier_spans(theorem, statement, lines)
+    renames = plan_statement_renames(theorem, set(identifiers), dump, {"A", "D", "Op"})
+    rewritten = rewrite_identifiers(statement, renames, identifiers)
+    assert rewritten == "THEOREM Goal == " + expected
+    if formula == expected:
+        assert renames == {}
+    source.write_text(prelude + "VARIABLES A, D, Op\n" + rewritten + "\nPROOF OMITTED\n====\n")
+    generate.dump_sany(str(source))
 
 
-def test_string_contents_are_not_identifiers():
-    assert identifier_tokens('pc = "Done" => x') == {"pc", "x"}
+def test_missing_sany_identifier_metadata_is_rejected():
+    with pytest.raises(ModuleTaskError, match="lacks identifier metadata"):
+        statement_identifier_spans({"loc": {"line_start": 1}}, "THEOREM Goal == TRUE", ["THEOREM Goal == TRUE"])
 
 
-def test_instance_qualified_name_is_not_renamed():
-    assert identifier_tokens("C!Spec /\\ C") == {"C"}
-    assert rewrite_identifiers("C!Spec /\\ Spec", {"Spec": "Spec1"}) == "C!Spec /\\ Spec1"
-
-
-def test_rename_matches_whole_identifiers_only():
-    text = r"\A A \in [1..N -> Int] : [A EXCEPT ![i] = A0[i]] /\ A1 = A"
-
-    assert rewrite_identifiers(text, {"A": "A2", "i": "i1"}) == (
-        r"\A A2 \in [1..N -> Int] : [A2 EXCEPT ![i1] = A0[i1]] /\ A1 = A2"
+@requires_sany
+@pytest.mark.parametrize("explicit", [False, True])
+def test_captured_implicit_instance_substitution_requires_explicit_with(tmp_path, explicit):
+    (tmp_path / "Inner.tla").write_text("---- MODULE Inner ----\nCONSTANT A\nValue == A\n====\n")
+    substitution = " WITH A <- A" if explicit else ""
+    text = (
+        "---- MODULE Outer ----\n"
+        f"THEOREM Goal == \\A A: LET I == INSTANCE Inner{substitution} IN I!Value = A\n"
+        "PROOF OMITTED\nVARIABLE A\n====\n"
     )
-
-
-def test_rename_leaves_string_literals_alone():
-    assert rewrite_identifiers('pc = "pc" /\\ pc', {"pc": "pc1"}) == 'pc1 = "pc" /\\ pc1'
+    source = tmp_path / "Outer.tla"
+    source.write_text(text)
+    dump = generate.dump_sany(str(source))
+    theorem = dump["theorems"][0]
+    statement = generate._statement_text(theorem, text.splitlines(keepends=True))
+    identifiers = statement_identifier_spans(theorem, statement, text.splitlines(keepends=True))
+    assert theorem["implicit_identifiers"] == ([] if explicit else ["A"])
+    # No hoisted declaration means the implicit substitution remains safe.
+    assert plan_statement_renames(theorem, set(identifiers), dump, set()) == {}
+    if explicit:
+        assert plan_statement_renames(theorem, set(identifiers), dump, {"A"}) == {"A": "A1"}
+    else:
+        with pytest.raises(ModuleTaskError, match="implicit INSTANCE.*A; use explicit WITH"):
+            plan_statement_renames(theorem, set(identifiers), dump, {"A"})
 
 
 def _dump(**line_by_name):
@@ -195,7 +267,7 @@ def test_binder_captured_by_a_later_declaration_is_renamed():
     dump = _dump(A=("variables", 131), i=("variables", 131), pc=("variables", 131))
     theorem = {"loc": {"line_start": 69}}
 
-    renames = plan_statement_renames(theorem, r"\A A \in S, i \in T : P(A, i)", dump, {"A", "i", "pc"})
+    renames = plan_statement_renames(theorem, {"A", "S", "i", "T", "P"}, dump, {"A", "i", "pc"})
 
     assert renames == {"A": "A1", "i": "i1"}
 
@@ -204,31 +276,31 @@ def test_name_already_in_scope_at_the_statement_is_never_renamed():
     dump = _dump(A=("variables", 10), pc=("variables", 10))
     theorem = {"loc": {"line_start": 202}}
 
-    assert plan_statement_renames(theorem, 'A /\\ pc = "Done"', dump, {"A", "pc"}) == {}
+    assert plan_statement_renames(theorem, {"A", "pc"}, dump, {"A", "pc"}) == {}
 
 
 def test_declaration_that_does_not_survive_into_the_layers_cannot_capture():
     dump = _dump(A=("variables", 131))
     theorem = {"loc": {"line_start": 69}}
 
-    assert plan_statement_renames(theorem, r"\A A \in S : TRUE", dump, set()) == {}
+    assert plan_statement_renames(theorem, {"A", "S", "TRUE"}, dump, set()) == {}
 
 
 def test_fresh_binder_name_avoids_every_name_the_module_uses():
     dump = _dump(A=("variables", 131), A1=("operators", 5), A2=("operators", 6))
     theorem = {"loc": {"line_start": 69}}
 
-    assert plan_statement_renames(theorem, r"\A A \in S : A3 = A", dump, {"A"}) == {"A": "A4"}
+    assert plan_statement_renames(theorem, {"A", "S", "A3"}, dump, {"A"}) == {"A": "A4"}
 
 
 def test_binder_rename_is_deterministic():
     dump = _dump(A=("variables", 131), i=("variables", 131), j=("variables", 131))
     theorem = {"loc": {"line_start": 69}}
-    statement = r"\A A \in S, i, j \in T : P(A, i, j)"
+    tokens = {"A", "S", "i", "j", "T", "P"}
     exposed = {"A", "i", "j"}
 
-    first = plan_statement_renames(theorem, statement, dump, exposed)
-    assert first == plan_statement_renames(theorem, statement, dump, exposed)
+    first = plan_statement_renames(theorem, tokens, dump, exposed)
+    assert first == plan_statement_renames(theorem, tokens, dump, exposed)
     assert first == {"A": "A1", "i": "i1", "j": "j1"}
 
 
@@ -985,3 +1057,74 @@ def test_shipped_regions_round_trip_through_the_contract(shipped):
         assert regions.render() == text
         with pytest.raises(ModuleTaskContractError):
             parse_module_task_regions(text, unit_ids + ["Group/Absent.tla"])
+
+
+@requires_sany
+@pytest.mark.skipif(shutil.which("tlapm") is None, reason="the corpus gate and proof replay need tlapm")
+def test_corpus_to_module_cli_preserves_record_goal_and_original_proof(tmp_path):
+    source_root = tmp_path / "source"
+    source = source_root / "Case" / "FieldAlias.tla"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        '---- MODULE FieldAlias ----\nEXTENDS Naturals\nExpected == {"A"}\n'
+        r"THEOREM FieldDomain == \A A \in {1} : DOMAIN [A |-> A] = Expected" + "\n"
+        "PROOF BY DEF Expected\nVARIABLE A\n====\n"
+    )
+    corpus = tmp_path / "corpus"
+    suite = tmp_path / "suite"
+    env = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "src")}
+
+    def run(*args, cwd=tmp_path):
+        result = subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=True, timeout=120)
+        output = result.stdout + result.stderr
+        assert result.returncode == 0, output
+        return output
+
+    assert "All 1 obligation proved." in run("tlapm", str(source))
+    run(
+        sys.executable,
+        "-m",
+        "dataset.proof_from_scratch.generate",
+        "--source-dir",
+        str(source_root),
+        "--output-dir",
+        str(corpus),
+        "--layered",
+    )
+    corpus_bytes = {p: p.read_bytes() for p in corpus.rglob("*") if p.is_file()}
+    assert "Case/FieldAlias_FieldDomain.tla" in json.loads((corpus / MANIFEST_FILENAME).read_text())
+    module_cli = (
+        sys.executable,
+        "-m",
+        "dataset.proof_from_scratch.module_tasks",
+        "--source-root",
+        str(source_root),
+        "--corpus-dir",
+        str(corpus),
+        "--output-root",
+        str(suite),
+    )
+    run(*module_cli)
+    assert "(0 error(s))" in run(*module_cli, "--verify")
+    assert {p: p.read_bytes() for p in corpus.rglob("*") if p.is_file()} == corpus_bytes
+    task = suite / "Case" / "FieldAlias.tla"
+    task_text = task.read_text()
+    generated_goal = next(line.split(" == ", 1)[1] for line in task_text.splitlines() if line.startswith("THEOREM"))
+    assert generated_goal == r"\A A1 \in {1} : DOMAIN [A |-> A1] = Expected"
+    # The same original proof must still discharge the emitted goal.
+    task.write_text(task_text.replace(CANONICAL_PROOF, "PROOF BY DEF Expected"))
+    assert "All 1 obligation proved." in run("tlapm", str(task), cwd=task.parent)
+    # Independently evaluate both goals; syntactic validity alone missed CR-1.
+    model = tmp_path / "Check.tla"
+    source_goal = next(
+        line.split(" == ", 1)[1] for line in source.read_text().splitlines() if line.startswith("THEOREM")
+    )
+    model.write_text(
+        '---- MODULE Check ----\nEXTENDS Naturals\nExpected == {"A"}\n'
+        "VARIABLE x\nInit == x = 0\nNext == x' = x\n"
+        f"SourceGoal == {source_goal}\nGeneratedGoal == {generated_goal}\n====\n"
+    )
+    (tmp_path / "Check.cfg").write_text("INIT Init\nNEXT Next\nINVARIANTS SourceGoal GeneratedGoal\n")
+    assert "No error has been found." in run(
+        "java", "-Xmx256m", "-cp", str(TLA2TOOLS), "tlc2.TLC", "-workers", "1", str(model)
+    )
