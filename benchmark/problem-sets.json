@@ -132,7 +132,9 @@
     ]
   },
   "next": {
-    "tasks": [],
+    "tasks": [
+      "CCF/CCFProof.tla"
+    ],
     "pending": [
       {
         "name": "Wildfire",

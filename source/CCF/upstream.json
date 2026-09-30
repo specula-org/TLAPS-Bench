@@ -1,0 +1,71 @@
+{
+  "repository": "https://github.com/microsoft/CCF",
+  "commit": "6a2dc420f0166c93f92b773aa49c5203b0767750",
+  "files": {
+    "ccfraft.tla": {
+      "path": "tla/consensus/ccfraft.tla",
+      "sha256": "7307ea2c8f3d2844fff78d286f1b09abae0e1b6a3e351d54403cc3ba394249d7"
+    },
+    "Network.tla": {
+      "path": "tla/consensus/Network.tla",
+      "sha256": "259cfcde30c2e3c57dbd4cf61ea2006e97fe5736a4fae7cc4ee03641f632ebe0"
+    },
+    "abs.tla": {
+      "path": "tla/consensus/abs.tla",
+      "sha256": "bd3f98a2fe74662003b9c8042d6cb08586a92b598fe44647834f8bf69af16ba6"
+    }
+  },
+  "licenses": [
+    {
+      "files": [
+        "ccfraft.tla"
+      ],
+      "declaration": "tla/consensus/ccfraft.tla:4-7",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "local_path": "LICENSES/CC-BY-4.0.txt",
+      "sha256": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744"
+    },
+    {
+      "files": [
+        "Network.tla",
+        "abs.tla"
+      ],
+      "path": "LICENSE",
+      "local_path": "LICENSES/CCF-Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
+  "local_adaptations": {
+    "proof_wrapper": "CCFProof.tla",
+    "assumptions": "Distinct labels within each protocol enum and Guarantee = OrderedNoDup, following upstream MCccfraft.cfg. The existing nonempty finite Servers assumption is retained; no bound on server count, terms, logs, requests, or executions.",
+    "targets": [
+      "Spec => []LogInv",
+      "Spec => CommittedLogAppendOnlyProp"
+    ],
+    "protocol_changes": [],
+    "wrapper_sha256": "f64944ebaafa8ef3488812ca18e0ea88cd7b9658e32e4ac3838aa549a5518f6c",
+    "design_references": [
+      {
+        "path": "tla/consensus/MCccfraft.cfg",
+        "lines": "17-48",
+        "purpose": "Protocol enum model values and OrderedNoDup network choice"
+      },
+      {
+        "path": "src/kv/kv_types.h",
+        "lines": "114-148",
+        "purpose": "Distinct leadership states, membership states, and retirement phases"
+      },
+      {
+        "path": "src/node/channels.h",
+        "lines": "279-300",
+        "purpose": "Reject non-increasing received nonces before accepting authenticated messages"
+      },
+      {
+        "path": "tla/tlc.py",
+        "lines": "222-223",
+        "purpose": "Enable TLC action composition in the upstream runner"
+      }
+    ]
+  },
+  "validation": "See README.md and validation/; no reference TLAPS proof."
+}
