@@ -14,8 +14,13 @@
     "renderer": "prepare.py"
   },
   "license": {
-    "status": "pending",
-    "note": "No license file or source-level grant in the pinned TLA+ repository. Licensing clarification is required before merge."
+    "spdx_id": "MIT",
+    "commit": "0f647dbe8287a09ba123dca55781dee1b35153fe",
+    "path": "LICENSE",
+    "local_path": "LICENSES/pirateship-tla-MIT.txt",
+    "sha256": "301a9f24ba4783e43de9443d84c2c9691693d99af12bbb81a61dd5cafe8b751c",
+    "source_sha256": "7b84c8b53e7ba9909ed41dfd6f64a367e3be2f789a38b084054f1887b346912d",
+    "note": "The license commit only adds LICENSE. Its pirateship.tla is byte-identical to the pinned source."
   },
   "adaptations": [
     "Rename the module to PirateShip.",

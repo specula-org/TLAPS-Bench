@@ -110,7 +110,10 @@ def test_pinned_source_and_reproducible_adaptation():
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "RECURSIVE" not in (SOURCE / "PirateShip.tla").read_text()
-    assert meta["license"]["status"] == "pending"
+    license_info = meta["license"]
+    assert license_info["spdx_id"] == "MIT"
+    assert hashlib.sha256((ROOT / license_info["local_path"]).read_bytes()).hexdigest() == license_info["sha256"]
+    assert license_info["source_sha256"] == hashlib.sha256(raw).hexdigest()
 
 
 @pytest.mark.parametrize("context", ["source", "module", "flat"])

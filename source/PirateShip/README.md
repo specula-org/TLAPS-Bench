@@ -10,10 +10,13 @@ The original `pirateship.tla` is preserved byte-for-byte under `upstream/`.
 `prepare.py` applies six exact, reviewable replacements from
 `tlaps-compatibility.json` to produce `PirateShip.tla`.
 
-**Draft merge prerequisite:** the pinned TLA+ repository contains no license
-file or source-level license grant. Permission to redistribute this material
-must be clarified before merge. The separate Rust implementation's MIT license
-is not used as evidence of a license for these TLA+ files. See `NOTICE`.
+The upstream TLA+ repository added an
+[MIT license](https://github.com/PirateshipOrg/pirateship-tla/blob/0f647dbe8287a09ba123dca55781dee1b35153fe/LICENSE)
+at commit `0f647dbe8287a09ba123dca55781dee1b35153fe`. That commit only adds
+`LICENSE`; its `pirateship.tla` is byte-identical to the pinned source above.
+The license text is preserved in [LICENSES/pirateship-tla-MIT.txt](../../LICENSES/pirateship-tla-MIT.txt),
+with the license revision and hashes recorded separately in `upstream.json`.
+Copyright (c) 2026 PirateshipOrg; see also `NOTICE`.
 
 ## Model and theorem scope
 
