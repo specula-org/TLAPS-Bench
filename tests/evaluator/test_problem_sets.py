@@ -99,7 +99,7 @@ def test_readme_current_matches_collection_and_retired_showcases_a_subset(pfs_mo
         else:
             assert members
             assert members <= set(collections[name].tasks)
-    assert collections["next"].tasks == ()
+    assert collections["next"].tasks == ("PirateShip/PirateShipProof.tla",)
     assert collections["next"].pending == (("Wildfire", "https://github.com/specula-org/TLAPS-Bench/pull/164"),)
 
 
@@ -141,13 +141,29 @@ def test_pfs_collection_names_are_unavailable_in_proof_completion(collection, pr
 
 
 @pytest.mark.parametrize("dry_run", [[], ["--dry-run"]])
-def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_only, capsys):
+def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_only, capsys, monkeypatch):
+    original = runner.load_problem_sets
+
+    def pending_only(*args):
+        collections = original(*args)
+        next_set = collections["next"]
+        collections["next"] = type(next_set)((), next_set.pending)
+        return collections
+
+    monkeypatch.setattr(runner, "load_problem_sets", pending_only)
     with pytest.raises(SystemExit) as exc:
         cli.main(["run", "--task-list", "next", *dry_run])
     assert exc.value.code == 2
     error = capsys.readouterr().err
     assert "has no runnable tasks" in error
     assert "pending merge: Wildfire (https://github.com/specula-org/TLAPS-Bench/pull/164)" in error
+
+
+def test_next_selects_pirateship_without_backend_setup(preview_only, capsys):
+    assert cli.main(["run", "--task-list", "next", "--dry-run"]) == 0
+    printed = capsys.readouterr().out
+    assert _selected(printed) == ["PirateShip/PirateShipProof.tla"]
+    assert "1 specifications, 11 proof units" in printed
 
 
 @pytest.mark.parametrize("extra,count", [([], 706), (["--task-list", "core"], 190)])

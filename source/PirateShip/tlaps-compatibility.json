@@ -1,0 +1,26 @@
+[
+  {
+    "before": "---- MODULE pirateship ----",
+    "after": "---- MODULE PirateShip ----"
+  },
+  {
+    "before": "ASSUME R # {}",
+    "after": "ASSUME R # {}\nASSUME ReplicaSetFinite == IsFiniteSet(R)"
+  },
+  {
+    "before": "ASSUME Txs # {}",
+    "after": "ASSUME Txs # {}\n\\* ModifyAppendEntries uses the distinguished transaction 1.\nASSUME DistinguishedTransaction == 1 \\in Txs"
+  },
+  {
+    "before": "CONSTANT MaxByzActions",
+    "after": "CONSTANT MaxByzActions\nASSUME ByzantineBudgetNatural == MaxByzActions \\in Nat"
+  },
+  {
+    "before": "HighestUnanimity(b, idx, r) ==\n    \\* Traverse the branch *backwards* and record the replicas that have voted for the current idx or higher\n    \\* indices (see V).\n    LET \\* Include r's vote in V of 1..i if r voted for index i.\n        V(S, i) == S \\cup b[i].auditQCVotes \\cup IF i <= idx THEN {r} ELSE {}\n        RECURSIVE RUnanimity(_,_)\n        RUnanimity(i, S) ==\n            IF i = 0 THEN {0}\n            ELSE IF V(S, i) = R \n                 THEN b[i].auditQC\n                 ELSE RUnanimity(i-1, V(S, i))\n    IN RUnanimity(Len(b), {})\n",
+    "after": "UnanimityScan(b, idx, r) ==\n    LET V(S, i) == S \\cup b[i].auditQCVotes \\cup IF i <= idx THEN {r} ELSE {}\n        RUnanimity[i \\in 0..Len(b)] ==\n            IF i = 0 THEN [S \\in SUBSET R |-> {0}]\n            ELSE [S \\in SUBSET R |->\n                IF V(S, i) = R THEN b[i].auditQC\n                ELSE RUnanimity[i-1][V(S, i)]]\n    IN RUnanimity\n\nHighestUnanimity(b, idx, r) ==\n    UnanimityScan(b, idx, r)[Len(b)][{}]\n"
+  },
+  {
+    "before": "MaxQuorum(Q, b, m, default) ==\n    LET RECURSIVE RMaxQuorum(_)\n        RMaxQuorum(i) ==\n            IF i = default THEN default\n            ELSE IF \\E q \\in Q: \\A n \\in q: m[n] >= i\n                 THEN i ELSE RMaxQuorum(i-1)\n    IN RMaxQuorum(Len(b))\n\n",
+    "after": "QuorumScan(Q, b, m, default) ==\n    LET RMaxQuorum[i \\in default..Len(b)] ==\n            IF i = default THEN default\n            ELSE IF \\E q \\in Q: \\A n \\in q: m[n] >= i\n                 THEN i ELSE RMaxQuorum[i-1]\n    IN RMaxQuorum\n\nMaxQuorum(Q, b, m, default) ==\n    QuorumScan(Q, b, m, default)[Len(b)]\n\n"
+  }
+]

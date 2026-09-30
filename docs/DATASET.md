@@ -33,6 +33,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [libomp](https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp) | LLVM libomp (Specula) | – | 4 | 4 |
 | [MongoDB](https://github.com/mongodb-labs/vldb25-dist-txns/blob/74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla) | MongoDB distributed transactions | – | 1 | 1 |
 | [OpenAddressing](https://github.com/lemmy/Examples/tree/mku-OA/specifications/TLC) | OpenAddressing | 1 | 5 | 6 |
+| [PirateShip](https://github.com/PirateshipOrg/pirateship-tla/blob/19096c1de2f87c68a21311c9100a5bab423caa0e/pirateship.tla) | PirateShip consensus | – | 11 | 11 |
 | [Data](https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data) | TLAPS distribution examples | 15 | 9 | 24 |
 | [Consensus](https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus) | TLAPS distribution examples | 13 | 10 | 23 |
 | [Paxos](https://github.com/hengxin/tlaps-examples/tree/master/Paxos) | TLAPS distribution examples | 13 | 6 | 19 |
@@ -108,4 +109,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 85 examples — 706 proof-completion + 301 proof-from-scratch = 1007 tasks.**
+**Total: 86 examples — 706 proof-completion + 312 proof-from-scratch = 1018 tasks.**

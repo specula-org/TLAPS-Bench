@@ -441,6 +441,83 @@
       "Peterson/Peterson_MutualExclusionDefs.tla"
     ]
   },
+  "PirateShip/PirateShipProof_AuditBranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_AuditBranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_AuditBranchInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_BranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_BranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_BranchInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_IndexBoundsInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_IndexBoundsInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_IndexBoundsInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_TypeOKCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_TypeOKCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_TypeOKCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_ViewMonotonicInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_ViewMonotonicInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_ViewMonotonicInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_ViewStabilizationInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_ViewStabilizationInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_ViewStabilizationInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_WellFormedBranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_WellFormedBranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_WellFormedBranchInvCorrectDefs.tla"
+    ]
+  },
   "Record/Record_SV_Spec.tla": {
     "spec_id": "Record/Record.tla",
     "context": [

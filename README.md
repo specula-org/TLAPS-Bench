@@ -43,6 +43,10 @@ We currently focus on a few hard problems (due to token shortage).
 
 For more problems, check out [the full problem set](https://github.com/specula-org/TLAPS-Bench/tree/main/benchmark/proof-from-scratch-module).
 
+## Next Problem Set
+
+The `next` collection includes [PirateShip consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/PirateShip/PirateShipProof.tla): one specification with eleven safety goals. Its [source notes](source/PirateShip/README.md) describe the model scope, validation, and upstream MIT license. Preview it with `uv run tlaps-bench run --task-list next --dry-run`.
+
 ## Retired Problems (Proofs Available)
 
 We have retired the following problems from TLAP-Bench, because they are well proved (or disproved) by frontier AI models and thus are no longer capable of measuring the frontier. The problems can all be found in the repository, but we no longer run them for [our leaderboard](https://specula-org.github.io/tlaps-bench-website/#/leaderboard). 

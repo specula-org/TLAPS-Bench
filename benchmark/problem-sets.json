@@ -132,7 +132,9 @@
     ]
   },
   "next": {
-    "tasks": [],
+    "tasks": [
+      "PirateShip/PirateShipProof.tla"
+    ],
     "pending": [
       {
         "name": "Wildfire",
