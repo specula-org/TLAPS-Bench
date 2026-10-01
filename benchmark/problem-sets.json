@@ -133,7 +133,8 @@
   },
   "next": {
     "tasks": [
-      "CCF/CCFProof.tla"
+      "CCF/CCFProof.tla",
+      "PirateShip/PirateShipProof.tla"
     ],
     "pending": [
       {

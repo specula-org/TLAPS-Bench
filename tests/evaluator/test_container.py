@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -628,6 +629,101 @@ class TestRunPreflight:
         config = ContainerConfig(firewall_hosts=["api.githubcopilot.com"])
         with pytest.raises(RuntimeError, match="preflight failed"):
             runner.run_preflight(config, ["copilot"], "say ok")
+
+
+class TestContainerStdout:
+    @pytest.fixture
+    def run_output(self, tmp_path, monkeypatch):
+        from evaluator import runner as runner_mod
+
+        processes = []
+
+        def run(code, *, timeout=0, cooperative=False, grace=0.0, read_size=65536):
+            backend = LiteLLMBackend(model="test-model")
+            backend.capabilities = SimpleNamespace(cooperative_deadline=cooperative, timeout_drain_grace=grace)
+            item = SimpleNamespace(
+                benchmark_path=str(tmp_path / "Bench.tla"),
+                timeout=timeout,
+                check_timeout=600,
+                keep_container=False,
+                session_dir="",
+                container_image="unused",
+                mode=SimpleNamespace(canonical_replay_required=False),
+            )
+
+            class FakeRunner:
+                def run(self, config, _cmd, stdin_data=None):
+                    proc = subprocess.Popen(
+                        [sys.executable, "-u", "-c", code, config.agent_start_marker],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        encoding="utf-8",
+                    )
+                    processes.append(proc)
+                    return SimpleNamespace(proc=proc)
+
+                def kill(self, handle):
+                    handle.proc.kill()
+                    handle.proc.wait(timeout=5)
+
+                def cleanup_credential_tmps(self):
+                    pass
+
+            read = os.read
+
+            def read_chunk(fd, size):
+                if processes and fd == processes[-1].stdout.fileno():
+                    size = min(size, read_size)
+                return read(fd, size)
+
+            monkeypatch.setattr(runner_mod, "ContainerRunner", FakeRunner)
+            monkeypatch.setattr(runner_mod, "STREAM_AGENT_OUTPUT", False)
+            monkeypatch.setattr(runner_mod.os, "read", read_chunk)
+            result = {}
+            output = tmp_path / "output.jsonl"
+            duration = runner_mod._run_backend_container(
+                item, backend, str(tmp_path), str(tmp_path), str(output), "prompt", result
+            )
+            return result, output.read_text(), duration
+
+        yield run
+        for proc in processes:
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait(timeout=5)
+            proc.stdout.close()
+            proc.stderr.close()
+
+    @pytest.mark.parametrize("cooperative,grace", [(False, 0.0), (True, 0.2)])
+    def test_partial_line_does_not_block_hard_deadline(self, tmp_path, run_output, cooperative, grace):
+        released = tmp_path / "newline-released"
+        code = (
+            "import pathlib, sys, time; "
+            "sys.stdout.write('partial'); sys.stdout.flush(); "
+            "time.sleep(2); "
+            f"pathlib.Path({str(released)!r}).touch(); "
+            "print(' completed', flush=True)"
+        )
+        started = time.monotonic()
+        result, output, _duration = run_output(code, timeout=0.2, cooperative=cooperative, grace=grace)
+        elapsed = time.monotonic() - started
+
+        assert result["agent_exit"] == -1
+        assert "timeout after 0.2s" in result["error"]
+        assert not released.exists(), "the deadline waited for the child to finish its line"
+        assert elapsed >= 0.2 + grace
+        assert output == "partial"
+
+    @pytest.mark.parametrize("read_size", [1, 65536])
+    def test_fragmented_output_preserves_unicode_marker_and_eof_tail(self, run_output, read_size):
+        payload = '{"text":"证明🦀"}\r\n' + "x" * 70000 + "\nlast line"
+        code = f"import sys; sys.stdout.buffer.write((sys.argv[1] + '\\r\\n' + {payload!r}).encode('utf-8'))"
+        result, output, duration = run_output(code, read_size=read_size)
+
+        assert result["agent_exit"] == 0
+        assert output == payload.replace("\r\n", "\n")
+        assert duration is not None
 
 
 class TestRunAgentContainerSessionWiring:

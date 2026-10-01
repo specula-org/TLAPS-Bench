@@ -100,7 +100,7 @@ def test_readme_current_matches_collection_and_retired_showcases_a_subset(pfs_mo
         else:
             assert members
             assert members <= set(collections[name].tasks)
-    assert collections["next"].tasks == ("CCF/CCFProof.tla",)
+    assert collections["next"].tasks == ("CCF/CCFProof.tla", "PirateShip/PirateShipProof.tla")
     assert collections["next"].pending == (("Wildfire", "https://github.com/specula-org/TLAPS-Bench/pull/164"),)
 
 
@@ -154,11 +154,11 @@ def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_onl
     assert "pending merge: Wildfire (https://github.com/specula-org/TLAPS-Bench/pull/164)" in error
 
 
-def test_next_previews_ccf_without_backend_setup(preview_only, capsys):
+def test_next_previews_ccf_and_pirateship_without_backend_setup(preview_only, capsys):
     assert cli.main(["run", "--task-list", "next", "--dry-run"]) == 0
     output = capsys.readouterr().out
-    assert _selected(output) == ["CCF/CCFProof.tla"]
-    assert "1 specifications, 2 proof units" in output
+    assert _selected(output) == ["CCF/CCFProof.tla", "PirateShip/PirateShipProof.tla"]
+    assert "2 specifications, 13 proof units" in output
 
 
 @pytest.mark.parametrize("extra,count", [([], 706), (["--task-list", "core"], 190)])

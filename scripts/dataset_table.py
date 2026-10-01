@@ -59,6 +59,8 @@ def source_label(group):
         return "HashiCorp Raft (Specula)"
     if group == "libomp":
         return "LLVM libomp (Specula)"
+    if group == "PirateShip":
+        return "PirateShip consensus"
     if group == "DiskStateQueue":
         return "TLC disk state queue"
     if group == "CCF":
@@ -71,6 +73,7 @@ def source_label(group):
 # Upstream provenance per source (see NOTICE for full attribution).
 SOURCE_URL = {
     "Microsoft CCF Raft": "https://github.com/microsoft/CCF/tree/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus",
+    "PirateShip consensus": "https://github.com/PirateshipOrg/pirateship-tla",
     "WALs on S3 (Vanlightly)": "https://github.com/Vanlightly/s3-wal-collection",
     "HashiCorp Raft (Specula)": "https://github.com/hashicorp/raft",
     "tlaplus/Examples": "https://github.com/tlaplus/Examples",
@@ -107,6 +110,7 @@ _TLAPM_FILE = {"Allocator", "Bakery", "BubbleSort", "EWD840", "Peterson", "Simpl
 _TLAPM_DIR = {"Cantor": "examples/cantor"}
 _GROUP_URL = {
     "CCF": "https://github.com/microsoft/CCF/blob/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus/ccfraft.tla",
+    "PirateShip": "https://github.com/PirateshipOrg/pirateship-tla/blob/19096c1de2f87c68a21311c9100a5bab423caa0e/pirateship.tla",
     "SlateDBWAL": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/slatedb/SlateDBWAL.tla",
     "OSWALD": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/oswald/Oswald.tla",
     "Walgit": "https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/walgit/Walgit.tla",

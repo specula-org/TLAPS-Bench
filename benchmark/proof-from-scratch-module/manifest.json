@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "56d8a5162967af4fa63008cfc11d689b6e94af13910498967c4aad32cdd4030d",
+  "corpus_sha256": "58395353d2eb2d0d6ee4e0fc6c657a7d0cc508f91e1ef7a0e07bd3675f2cca7d",
   "complete": true,
   "module_tasks": [
     {
@@ -700,6 +700,64 @@
       "context": [
         "Peterson/PetersonDefs.tla",
         "Peterson/PetersonModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "PirateShip/PirateShipProof.tla",
+        "source_sha256": "020b5d27f63864576ffb7a4d240ed0c17576817ea33b2961716a721024aabf54",
+        "proof_units": [
+          {
+            "task_id": "PirateShip/PirateShipProof_TypeOKCorrect.tla",
+            "statement_sha256": "625f427f142fbc83464935fb5470de069d660feaaac7a1bd36b0a87ee498a4fc"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_IndexBoundsInvCorrect.tla",
+            "statement_sha256": "7a089ad5569914205ac65b3c24523fe90085de1a09877dc9a536afcdda33efad"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_BranchInvCorrect.tla",
+            "statement_sha256": "7a2d7b1cf0f016c34c290e72e372187577cb13a29c0a82f6ffd9c1fdf88d0bb7"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_AuditBranchInvCorrect.tla",
+            "statement_sha256": "f6992847d4bcd2b3e644acd033a41ee782e7cde8395d15f9a8529c8caf0799b7"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect.tla",
+            "statement_sha256": "aacba9dc468d38a0776b72385d972bcd61eced39861ece5470055d1b63426188"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_WellFormedBranchInvCorrect.tla",
+            "statement_sha256": "763fd0eae7f7ecee85bcd536edd7574541288fe077caa6b0108c1b242961bbba"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_ViewMonotonicInvCorrect.tla",
+            "statement_sha256": "1ba6bd1d2f9074335d47aa2d9c35fcc6e866053b5514bfdc5aefa132a88e2015"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_ViewStabilizationInvCorrect.tla",
+            "statement_sha256": "0920087899de83615108fb4ca251adf348da98d3c53f8b79c0d676ade049cf17"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect.tla",
+            "statement_sha256": "a59a6096c0e24ff1fba2794b5ccf1ed78b3756263a153264197f93609546cae0"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect.tla",
+            "statement_sha256": "cc687914cf18fb458e320b9e8abfdb2a5bf75fca8799ffc7a024560766007c31"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect.tla",
+            "statement_sha256": "b24800aaae73907d9f06da49f0e7ced39c54605cf3cc1dfbb61c8efa5d7b7702"
+          }
+        ]
+      },
+      "context": [
+        "PirateShip/PirateShipProof/PirateShip.tla",
+        "PirateShip/PirateShipProofDefs.tla"
       ],
       "renamed_bindings": {}
     },

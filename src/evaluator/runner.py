@@ -15,11 +15,13 @@ Usage:
 """
 
 import argparse
+import codecs
 import contextlib
 import copy
 import fcntl
 import glob
 import hashlib
+import io
 import json
 import math
 import os
@@ -3288,6 +3290,13 @@ def _run_backend_container(
         proc = container_run.proc
         assert proc.stdout is not None  # Popen created with stdout=PIPE
 
+        # Read available bytes: readiness does not guarantee a complete line.
+        os.set_blocking(proc.stdout.fileno(), False)
+        stdout_decoder = io.IncrementalNewlineDecoder(
+            codecs.getincrementaldecoder(proc.stdout.encoding)(errors=proc.stdout.errors), translate=True
+        )
+        stdout_pending = ""
+
         # Make stderr non-blocking to prevent pipe deadlock (>64KB stderr blocks agent)
         if proc.stderr:
             flags = fcntl.fcntl(proc.stderr, fcntl.F_GETFL)
@@ -3306,6 +3315,7 @@ def _run_backend_container(
                 if logical_deadline is not None and now >= logical_deadline:
                     timed_out = True
                 if timed_out and hard_deadline is not None and now >= hard_deadline:
+                    jsonl_f.write(stdout_pending)
                     runner.kill(container_run)
                     result["agent_exit"] = -1
                     result["error"] = f"{backend.name} timeout after {item.timeout}s"
@@ -3328,12 +3338,17 @@ def _run_backend_container(
                         # BlockingIOError. Treat all three as "no data yet".
                         pass
                 if ready:
-                    line = proc.stdout.readline()
-                    if not line and proc.poll() is not None:
-                        if agent_ended_at is None:
-                            agent_ended_at = time.monotonic()
-                        break
-                    if line:
+                    try:
+                        chunk = os.read(proc.stdout.fileno(), 65536)
+                    except BlockingIOError:
+                        continue
+                    stdout_pending += stdout_decoder.decode(chunk, final=not chunk)
+                    *lines, stdout_pending = stdout_pending.split("\n")
+                    lines = [line + "\n" for line in lines]
+                    if not chunk and stdout_pending:
+                        lines.append(stdout_pending)
+                        stdout_pending = ""
+                    for line in lines:
                         if config.agent_start_marker and line.rstrip("\r\n") == config.agent_start_marker:
                             if agent_started_at is None:
                                 agent_started_at = time.monotonic()
@@ -3345,6 +3360,8 @@ def _run_backend_container(
                                 sys.stdout.flush()
                     if proc.poll() is not None and agent_ended_at is None:
                         agent_ended_at = time.monotonic()
+                    if not chunk and proc.returncode is not None:
+                        break
                 elif proc.poll() is not None:
                     if agent_ended_at is None:
                         agent_ended_at = time.monotonic()
