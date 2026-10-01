@@ -31,6 +31,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [tlb](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/tlb.ivy) | Ivy liveness | – | 2 | 2 |
 | [split_queue_2_new](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/split_queue_2_new.ivy) | Ivy liveness | – | 1 | 1 |
 | [libomp](https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp) | LLVM libomp (Specula) | – | 4 | 4 |
+| [CCF](https://github.com/microsoft/CCF/blob/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus/ccfraft.tla) | Microsoft CCF Raft | – | 2 | 2 |
 | [MongoDB](https://github.com/mongodb-labs/vldb25-dist-txns/blob/74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla) | MongoDB distributed transactions | – | 1 | 1 |
 | [OpenAddressing](https://github.com/lemmy/Examples/tree/mku-OA/specifications/TLC) | OpenAddressing | 1 | 5 | 6 |
 | [PirateShip](https://github.com/PirateshipOrg/pirateship-tla/blob/19096c1de2f87c68a21311c9100a5bab423caa0e/pirateship.tla) | PirateShip consensus | – | 11 | 11 |
@@ -109,4 +110,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 86 examples — 706 proof-completion + 312 proof-from-scratch = 1018 tasks.**
+**Total: 87 examples — 706 proof-completion + 314 proof-from-scratch = 1020 tasks.**

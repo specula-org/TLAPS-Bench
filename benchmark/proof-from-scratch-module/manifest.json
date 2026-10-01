@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "2c6f15a75a6d16f9d90a33848447ec4a32d033cdb30ae0ee4a9d410be663bc73",
+  "corpus_sha256": "58395353d2eb2d0d6ee4e0fc6c657a7d0cc508f91e1ef7a0e07bd3675f2cca7d",
   "complete": true,
   "module_tasks": [
     {
@@ -120,6 +120,30 @@
           "A": "A1"
         }
       }
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "CCF/CCFProof.tla",
+        "source_sha256": "f64944ebaafa8ef3488812ca18e0ea88cd7b9658e32e4ac3838aa549a5518f6c",
+        "proof_units": [
+          {
+            "task_id": "CCF/CCFProof_CommittedLogsAgree.tla",
+            "statement_sha256": "0eca6138ad66182b7bab723e5520579bc7365b9d038ec0fe4a4ebf016b476bc1"
+          },
+          {
+            "task_id": "CCF/CCFProof_CommittedLogsAppendOnly.tla",
+            "statement_sha256": "2108b7a7baff168ff1828bb8c103fdd9a9f42d34263fee44f392574cd2bfe3e7"
+          }
+        ]
+      },
+      "context": [
+        "CCF/CCFProof/Network.tla",
+        "CCF/CCFProof/abs.tla",
+        "CCF/CCFProof/ccfraft.tla",
+        "CCF/CCFProofDefs.tla"
+      ],
+      "renamed_bindings": {}
     },
     {
       "spec": {

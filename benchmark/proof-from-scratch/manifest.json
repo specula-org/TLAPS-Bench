@@ -63,6 +63,24 @@
       "BubbleSort/BubbleSort_line202Defs.tla"
     ]
   },
+  "CCF/CCFProof_CommittedLogsAgree.tla": {
+    "spec_id": "CCF/CCFProof.tla",
+    "context": [
+      "CCF/CCFProof_CommittedLogsAgree/Network.tla",
+      "CCF/CCFProof_CommittedLogsAgree/abs.tla",
+      "CCF/CCFProof_CommittedLogsAgree/ccfraft.tla",
+      "CCF/CCFProof_CommittedLogsAgreeDefs.tla"
+    ]
+  },
+  "CCF/CCFProof_CommittedLogsAppendOnly.tla": {
+    "spec_id": "CCF/CCFProof.tla",
+    "context": [
+      "CCF/CCFProof_CommittedLogsAppendOnly/Network.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnly/abs.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnly/ccfraft.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnlyDefs.tla"
+    ]
+  },
   "CahillSSI/CahillSerializability_CahillSerializableCorrect.tla": {
     "spec_id": "CahillSSI/CahillSerializability.tla",
     "context": [

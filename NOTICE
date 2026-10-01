@@ -366,6 +366,24 @@ WALs on S3 — benchmark groups SlateDBWAL, OSWALD, Walgit
     implementations of the named systems. Source pins and local adaptations
     are recorded in each group's upstream.json and docs/S3_WAL.md.
 
+Microsoft CCF Raft — benchmark group CCF
+    From microsoft/CCF at commit 6a2dc420f0166c93f92b773aa49c5203b0767750:
+    https://github.com/microsoft/CCF/tree/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus
+    ccfraft.tla: Copyright 2014 Diego Ongaro; modifications Copyright 2021
+    Microsoft. Licensed under Creative Commons Attribution 4.0 International;
+    see LICENSES/CC-BY-4.0.txt. The source credits Fritz Alder, Heidi Howard,
+    and Markus Alexander Kuppe for the CCF modifications and identifies the
+    Raft specifications on which it is based.
+    Network.tla and abs.tla are covered by CCF's Apache 2.0 license;
+    see LICENSES/CCF-Apache-2.0.txt.
+    ccfraft.tla and abs.tla are copied unchanged. Network.tla exports its helper
+    definitions for TLAPS by removing LOCAL qualifiers; operator bodies and
+    protocol behavior are unchanged. CCFProof.tla supplies explicit enum/network
+    premises and two safety goals. Generated benchmark contexts remove proofs,
+    unrelated definitions, and comments. Source hashes,
+    scope, and validation limits are recorded in source/CCF/upstream.json and
+    source/CCF/README.md.
+
 PirateShip consensus — benchmark group PirateShip — MIT
     From PirateshipOrg/pirateship-tla at commit
     19096c1de2f87c68a21311c9100a5bab423caa0e:

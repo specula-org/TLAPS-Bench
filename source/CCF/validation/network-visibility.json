@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "baseline_benchmark_revision": "9bb634043a2669a9d190d83aaf733a0091383882",
+  "upstream_commit": "6a2dc420f0166c93f92b773aa49c5203b0767750",
+  "change": "Export 31 Network helper definitions by removing LOCAL qualifiers only.",
+  "semantics_check": {
+    "upstream_reconstruction_sha256": "259cfcde30c2e3c57dbd4cf61ea2006e97fe5736a4fae7cc4ee03641f632ebe0",
+    "adapted_network_sha256": "20919133be03d2e53228a134a1adfe389d222f2d654b0c5a6be745422dbf634b",
+    "source_and_generated_operator_bodies_unchanged": true,
+    "target_ids_and_statement_hashes_unchanged": true
+  },
+  "proof_interface_checks": {
+    "test_file": "tests/dataset/test_ccf.py",
+    "fixture": "tests/fixtures/ccf/NetworkVisibility.tla",
+    "positive_contexts": [
+      "source",
+      "module",
+      "CommittedLogsAgree",
+      "CommittedLogsAppendOnly"
+    ],
+    "equations": [
+      "initialization",
+      "message insertion",
+      "message removal",
+      "message selection"
+    ],
+    "baseline_controls": [
+      "source",
+      "module"
+    ],
+    "baseline_error": "Operator \"Network!OrderNoDupInitMessageVar\" not found",
+    "tests_passed": 6
+  },
+  "other_ccf_and_catalog_tests_passed": 78,
+  "source_sha256": {
+    "CCFProof.tla": "f64944ebaafa8ef3488812ca18e0ea88cd7b9658e32e4ac3838aa549a5518f6c",
+    "abs.tla": "bd3f98a2fe74662003b9c8042d6cb08586a92b598fe44647834f8bf69af16ba6",
+    "Network.tla": "20919133be03d2e53228a134a1adfe389d222f2d654b0c5a6be745422dbf634b",
+    "ccfraft.tla": "7307ea2c8f3d2844fff78d286f1b09abae0e1b6a3e351d54403cc3ba394249d7"
+  },
+  "module_context_sha256": {
+    "CCF/CCFProof.tla": "9637d8689b6e4a15e42374c91e70c0005cbc46a3f3f222bcc6fdc009b1dd5ae2",
+    "CCF/CCFProof/Network.tla": "927ebf5bc7ce561d4823b4a45b706bde9b307ff565193772a0ec448f077977c5",
+    "CCF/CCFProof/abs.tla": "dcff3f758aefe9e5bf1964ed4864d456e6cf58c74d9f37f9b1589b7d3b726636",
+    "CCF/CCFProof/ccfraft.tla": "70487b383fe2128d51adf92f386613cb580897b8447902a17dfaacc9cf2822c0",
+    "CCF/CCFProofDefs.tla": "7d063f0b68596f5cecd63f448d3e6b1e8e7e0302cb0e053adc5f8ca589bc483e"
+  },
+  "limitations": [
+    "The interface equations and finite regression scenarios do not prove either benchmark target.",
+    "Historical TLC simulations remain recorded against their original input hashes in results.json."
+  ],
+  "full_regressions": {
+    "passed": 2366,
+    "skipped": 3,
+    "elapsed_seconds": 682.34
+  },
+  "module_suite_errors": 0,
+  "canonical_template_check": {
+    "sany_status": "valid",
+    "trusted_targets": 0,
+    "target_count": 2,
+    "expected": "Unchanged omitted proofs remain unresolved."
+  }
+}

@@ -3,6 +3,7 @@
 import json
 import re
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -99,7 +100,7 @@ def test_readme_current_matches_collection_and_retired_showcases_a_subset(pfs_mo
         else:
             assert members
             assert members <= set(collections[name].tasks)
-    assert collections["next"].tasks == ("PirateShip/PirateShipProof.tla",)
+    assert collections["next"].tasks == ("CCF/CCFProof.tla", "PirateShip/PirateShipProof.tla")
     assert collections["next"].pending == (("Wildfire", "https://github.com/specula-org/TLAPS-Bench/pull/164"),)
 
 
@@ -141,16 +142,10 @@ def test_pfs_collection_names_are_unavailable_in_proof_completion(collection, pr
 
 
 @pytest.mark.parametrize("dry_run", [[], ["--dry-run"]])
-def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_only, capsys, monkeypatch):
-    original = runner.load_problem_sets
-
-    def pending_only(*args):
-        collections = original(*args)
-        next_set = collections["next"]
-        collections["next"] = type(next_set)((), next_set.pending)
-        return collections
-
-    monkeypatch.setattr(runner, "load_problem_sets", pending_only)
+def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_only, capsys, monkeypatch, pfs_mode):
+    collections = load_problem_sets(CATALOG, pfs_mode.specification_ids())
+    collections["next"] = replace(collections["next"], tasks=())
+    monkeypatch.setattr(runner, "load_problem_sets", lambda *_: collections)
     with pytest.raises(SystemExit) as exc:
         cli.main(["run", "--task-list", "next", *dry_run])
     assert exc.value.code == 2
@@ -159,11 +154,11 @@ def test_next_reports_pending_wildfire_before_backend_setup(dry_run, preview_onl
     assert "pending merge: Wildfire (https://github.com/specula-org/TLAPS-Bench/pull/164)" in error
 
 
-def test_next_selects_pirateship_without_backend_setup(preview_only, capsys):
+def test_next_previews_ccf_and_pirateship_without_backend_setup(preview_only, capsys):
     assert cli.main(["run", "--task-list", "next", "--dry-run"]) == 0
-    printed = capsys.readouterr().out
-    assert _selected(printed) == ["PirateShip/PirateShipProof.tla"]
-    assert "1 specifications, 11 proof units" in printed
+    output = capsys.readouterr().out
+    assert _selected(output) == ["CCF/CCFProof.tla", "PirateShip/PirateShipProof.tla"]
+    assert "2 specifications, 13 proof units" in output
 
 
 @pytest.mark.parametrize("extra,count", [([], 706), (["--task-list", "core"], 190)])
