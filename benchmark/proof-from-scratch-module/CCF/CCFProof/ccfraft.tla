@@ -62,7 +62,7 @@ CONSTANTS
     TypeRetired
 
 CONSTANTS Servers
-ASSUME Servers /= {} /\ IsFiniteSet(Servers)
+ASSUME ServerSetAssumption == Servers /= {} /\ IsFiniteSet(Servers)
 
 StartTerm == 2
 

@@ -70,8 +70,16 @@
   "validation": "See README.md and validation/; no reference TLAPS proof.",
   "local_repairs": [
     {
+      "file": "ccfraft.tla",
+      "description": "Name the existing finite nonempty server-set assumption for explicit citation; its formula is unchanged.",
+      "named_assumptions": [
+        "ServerSetAssumption"
+      ],
+      "local_sha256": "ccf9b89d8d53f334f95921a9c5fe98e393f0cadf4e4da295db78af31a04f578d"
+    },
+    {
       "file": "Network.tla",
-      "description": "Export network helper definitions by removing their LOCAL qualifiers, so proofs through INSTANCE Network can explicitly unfold them. Operator bodies, transitions, assumptions, and target predicates are unchanged.",
+      "description": "Export network helper definitions by removing their LOCAL qualifiers, so proofs through INSTANCE Network can explicitly unfold them. Operator bodies, transitions, assumptions, and target predicates are unchanged. Name the existing network-guarantee assumption for explicit citation.",
       "exported_operators": [
         "ReorderDupInitMessageVar",
         "ReorderDupWithMessage",
@@ -105,7 +113,20 @@
         "OrderNoDupOneMoreMessage",
         "OrderNoDupDropMessages"
       ],
-      "local_sha256": "20919133be03d2e53228a134a1adfe389d222f2d654b0c5a6be745422dbf634b"
+      "local_sha256": "59775a5c61c28fcec0eabc134bf0e4fa8a4100e69806ba69398093b5b924e77a",
+      "named_assumptions": [
+        "NetworkGuaranteeAssumption"
+      ]
+    },
+    {
+      "file": "abs.tla",
+      "description": "Name the three existing module-level assumptions for explicit citation; their formulas are unchanged.",
+      "named_assumptions": [
+        "FiniteServersAssumption",
+        "OrderedTermsAssumption",
+        "StartTermAssumption"
+      ],
+      "local_sha256": "a46fee0b6f098ec1924f42584453d54138aca61423a6ed3b7f62fda0510270a1"
     }
   ]
 }
