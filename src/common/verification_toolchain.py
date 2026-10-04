@@ -86,11 +86,12 @@ def load_toolchain_lock(path: Path = DEFAULT_TOOLCHAIN_LOCK) -> dict[str, object
         _validate_artifact(artifact, label=f"tlapm {platform_name}")
 
     sany = tools["sany"]
-    if type(sany) is not dict or set(sany) != {"repository", "tag", "asset", "sha256"}:
+    sany_fields = {"repository", "tag", "asset", "sha256"}
+    if type(sany) is not dict or set(sany) not in (sany_fields, sany_fields | {"url"}):
         raise VerificationToolchainError("invalid sany verification toolchain entry")
     _require_string(sany, "repository", label="sany")
     _require_string(sany, "tag", label="sany")
-    _validate_artifact({key: sany[key] for key in ("asset", "sha256")}, label="sany")
+    _validate_artifact({key: sany[key] for key in ("asset", "sha256", "url") if key in sany}, label="sany")
     return value
 
 

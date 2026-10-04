@@ -20,6 +20,7 @@
       "repository": "tlaplus/tlaplus",
       "tag": "v1.8.0",
       "asset": "tla2tools.jar",
+      "url": "https://github.com/specula-org/TLAPS-Bench/releases/download/toolchain-tlapm-7824dab/tla2tools.jar",
       "sha256": "ab4694601923fd5ac06452abbf847c366a5054a3d739552085edd6ed986c29ec"
     }
   }
