@@ -102,7 +102,7 @@ CONSTANTS
 
 \* Set of nodes for this model
 CONSTANTS Servers
-ASSUME Servers /= {} /\ IsFiniteSet(Servers)
+ASSUME ServerSetAssumption == Servers /= {} /\ IsFiniteSet(Servers)
 
 \* Initial term used by the Start node in the network
 StartTerm == 2

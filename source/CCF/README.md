@@ -17,11 +17,12 @@ The model comes from
 [microsoft/CCF](https://github.com/microsoft/CCF/tree/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus)
 at `6a2dc420f0166c93f92b773aa49c5203b0767750`. That revision includes the
 upstream minimum-term assumption correction in `abs.tla` (CCF #8470).
-`ccfraft.tla` and `abs.tla` are copied byte-for-byte. `Network.tla` exports its
-helper definitions for TLAPS by removing their `LOCAL` qualifiers; all operator
-bodies are unchanged. `upstream.json` records original hashes, the adapted hash,
-the exact exported names, and licenses. The abstract refinement theorem is not
-selected.
+The five module-level assumptions in `ccfraft.tla`, `Network.tla`, and `abs.tla`
+have names for explicit citation in TLAPS proofs; their formulas are unchanged.
+`Network.tla` also exports its helper definitions by removing their `LOCAL`
+qualifiers; all operator bodies are unchanged. `upstream.json` records original
+and adapted hashes, assumption names, exported helpers, and licenses. The
+abstract refinement theorem is not selected.
 
 This is CCF's crash-fault-tolerant Raft variant: signatures determine the
 committable prefix; elections can roll back unsigned entries; configurations
@@ -78,11 +79,13 @@ The network visibility regression proves initialization, message insertion,
 removal, and source selection equations through `INSTANCE Network`, in
 the source and all generated contexts. Restoring `LOCAL` reproduces the missing
 operator error. A byte-level provenance check reconstructs the exact upstream
-module by restoring just those qualifiers, protecting protocol semantics.
+modules by removing the added assumption names and restoring those qualifiers,
+protecting protocol semantics.
 
 `validation/results.json` records the historical time-limited TLC simulations
 before the visibility adaptation. `validation/network-visibility.json` records
-the adaptation's regression checks and updated input hashes.
+the earlier visibility adaptation's regression checks and input hashes, before
+the assumptions were named.
 TLC must use `-Dtlc2.tool.impl.Tool.cdot=true`, matching upstream `tla/tlc.py`,
 to evaluate the model's action composition. This implementation of action
 composition is experimental; finite schedules and simulations are supporting

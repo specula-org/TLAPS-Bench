@@ -168,7 +168,11 @@ def test_upstream_bytes_and_two_targets():
         if local in repairs:
             repair = repairs[local]
             assert hashlib.sha256(content).hexdigest() == repair["local_sha256"]
-            for name in repair["exported_operators"]:
+            for name in repair.get("named_assumptions", []):
+                pattern = rb"(?m)^ASSUME " + re.escape(name.encode()) + rb" == "
+                content, count = re.subn(pattern, b"ASSUME ", content)
+                assert count == 1, name
+            for name in repair.get("exported_operators", []):
                 pattern = rb"(?m)^" + re.escape(name.encode()) + rb"(?=\s|\()"
                 content, count = re.subn(pattern, lambda match: b"LOCAL " + match[0], content)
                 assert count == 1, name

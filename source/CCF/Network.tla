@@ -9,7 +9,7 @@ CONSTANT
 
 CONSTANT
     Guarantee
-ASSUME Guarantee \in {OrderedNoDup, Ordered, ReorderedNoDup, Reordered}
+ASSUME NetworkGuaranteeAssumption == Guarantee \in {OrderedNoDup, Ordered, ReorderedNoDup, Reordered}
 
 CONSTANT 
     Servers
