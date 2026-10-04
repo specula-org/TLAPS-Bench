@@ -547,6 +547,8 @@ make setup
 
 This installs the Python environment, downloads the TLAPM and SANY artifacts locked by content in `config/verification-toolchain.json`, installs the exact official proof-library commits pinned in `config/proof-library-sources.json`, compiles the checker binary, and runs a SANY smoke test. Safe to rerun. Uses about 3 GB of disk. Setup warns when either official repository has moved but never updates the pins automatically; maintainers can inspect the pinned trees with `python3 scripts/install_proof_libraries.py inspect` before editing the source lock.
 
+The Linux TLAPM build `7824dab` and SANY jar use fixed mirrors with their original SHA-256 values. An optional artifact `url` in the toolchain lock selects the mirror for both native and Docker installation; other artifacts use their upstream release URLs.
+
 ---
 
 ## Backend Architecture
