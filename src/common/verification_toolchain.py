@@ -10,6 +10,7 @@ import re
 import subprocess
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TOOLCHAIN_LOCK = _REPO_ROOT / "config" / "verification-toolchain.json"
@@ -44,11 +45,20 @@ def _require_string(mapping: dict[str, object], key: str, *, label: str) -> str:
 
 
 def _validate_artifact(value: object, *, label: str) -> dict[str, str]:
-    if type(value) is not dict or set(value) != {"asset", "sha256"}:
+    required = {"asset", "sha256"}
+    if type(value) is not dict or set(value) not in (required, required | {"url"}):
         raise VerificationToolchainError(f"invalid verification toolchain artifact {label}")
     artifact = {key: _require_string(value, key, label=label) for key in ("asset", "sha256")}
     if _SHA256.fullmatch(artifact["sha256"]) is None:
         raise VerificationToolchainError(f"{label} has invalid 'sha256'")
+    if "url" in value:
+        artifact["url"] = _require_string(value, "url", label=label)
+        try:
+            url = urlsplit(artifact["url"])
+            if url.scheme != "https" or not url.hostname or url.username or url.password or url.fragment:
+                raise ValueError("expected an HTTPS download URL")
+        except ValueError as exc:
+            raise VerificationToolchainError(f"{label} has invalid 'url'") from exc
     return artifact
 
 
@@ -128,7 +138,7 @@ def artifact_descriptor(
         "platform": selected_platform,
         "asset": asset,
         "sha256": artifact["sha256"],
-        "url": f"https://github.com/{repository}/releases/download/{tag}/{asset}",
+        "url": artifact.get("url", f"https://github.com/{repository}/releases/download/{tag}/{asset}"),
     }
 
 

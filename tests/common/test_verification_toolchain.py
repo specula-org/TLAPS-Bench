@@ -46,13 +46,49 @@ def _lock(tmp_path, *, tlapm_archive: bytes = b"tlapm archive", sany: bytes = b"
     return path
 
 
-def test_artifact_descriptor_uses_platform_specific_tlapm_asset(tmp_path):
+@pytest.mark.parametrize("mirrored", [False, True])
+def test_artifact_descriptor_uses_platform_specific_tlapm_asset(tmp_path, mirrored):
     lock = _lock(tmp_path)
+    mirror_url = "https://example.org/releases/tlapm-build-123/tlapm-linux.tgz"
+    if mirrored:
+        value = json.loads(lock.read_text())
+        value["tools"]["tlapm"]["platforms"]["linux-x86_64"]["url"] = mirror_url
+        lock.write_text(json.dumps(value))
 
     descriptor = artifact_descriptor("tlapm", lock_path=lock, platform_key="linux-x86_64")
 
     assert descriptor["asset"] == "tlapm-linux.tgz"
-    assert descriptor["url"].endswith("/1.6.0-pre/tlapm-linux.tgz")
+    if mirrored:
+        assert descriptor["url"] == mirror_url
+    else:
+        assert descriptor["url"].endswith("/1.6.0-pre/tlapm-linux.tgz")
+    mac = artifact_descriptor("tlapm", lock_path=lock, platform_key="darwin-arm64")
+    assert mac["url"].endswith("/1.6.0-pre/tlapm-mac.tgz")
+
+
+@pytest.mark.parametrize("url", ["", "http://example.org/tool.tgz", "https:///tool.tgz", "file:///tmp/tool.tgz"])
+def test_artifact_descriptor_rejects_invalid_download_url(tmp_path, url):
+    lock = _lock(tmp_path)
+    value = json.loads(lock.read_text())
+    value["tools"]["tlapm"]["platforms"]["linux-x86_64"]["url"] = url
+    lock.write_text(json.dumps(value))
+
+    with pytest.raises(VerificationToolchainError):
+        artifact_descriptor("tlapm", lock_path=lock, platform_key="linux-x86_64")
+
+
+def test_mirrored_artifact_still_requires_locked_content(tmp_path):
+    lock = _lock(tmp_path)
+    value = json.loads(lock.read_text())
+    value["tools"]["tlapm"]["platforms"]["linux-x86_64"]["url"] = "https://example.org/tlapm-linux.tgz"
+    lock.write_text(json.dumps(value))
+    artifact = tmp_path / "tlapm-linux.tgz"
+    artifact.write_bytes(b"tlapm archive")
+    verify_artifact("tlapm", artifact, lock_path=lock, platform_key="linux-x86_64")
+    artifact.write_bytes(b"replacement archive")
+
+    with pytest.raises(VerificationToolchainError, match="content drifted"):
+        verify_artifact("tlapm", artifact, lock_path=lock, platform_key="linux-x86_64")
 
 
 def test_artifact_verification_rejects_same_tag_with_different_bytes(tmp_path):

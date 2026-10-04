@@ -11,6 +11,7 @@
         },
         "linux-x86_64": {
           "asset": "tlapm-1.6.0-pre-x86_64-linux-gnu.tar.gz",
+          "url": "https://github.com/specula-org/TLAPS-Bench/releases/download/toolchain-tlapm-7824dab/tlapm-1.6.0-pre-x86_64-linux-gnu.tar.gz",
           "sha256": "a2860384bc89c4c5b2c73ec367e29f44d829e4d4a2698ab295139f829219331c"
         }
       }
