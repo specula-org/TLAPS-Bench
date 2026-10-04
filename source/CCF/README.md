@@ -80,8 +80,7 @@ removal, and source selection equations through `INSTANCE Network`, in
 the source and all generated contexts. Restoring `LOCAL` reproduces the missing
 operator error. A byte-level provenance check reconstructs the exact upstream
 modules by removing the added assumption names and restoring those qualifiers,
-protecting protocol semantics. Strict TLAPM checks cite all five named assumptions
-in the source and generated contexts.
+protecting protocol semantics.
 
 `validation/results.json` records the historical time-limited TLC simulations
 before the visibility adaptation. `validation/network-visibility.json` records

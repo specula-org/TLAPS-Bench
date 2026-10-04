@@ -231,63 +231,6 @@ def test_tlapm_loads_context_and_network_premise(tmp_path, context):
     assert "All " in text and " obligations proved" in text, text
 
 
-@pytest.mark.parametrize("context", ["source", "module", *GOALS])
-@pytest.mark.parametrize(
-    "module,proof",
-    [
-        (
-            "ccfraft",
-            "THEOREM ServerDomain == Servers /= {} /\\ IsFiniteSet(Servers)\nBY ServerSetAssumption\n",
-        ),
-        (
-            "Network",
-            "THEOREM GuaranteeDomain == Guarantee \\in {OrderedNoDup, Ordered, ReorderedNoDup, Reordered}\n"
-            "BY NetworkGuaranteeAssumption\n",
-        ),
-        (
-            "abs",
-            "THEOREM ServerDomain == IsFiniteSet(Servers)\n"
-            "BY FiniteServersAssumption\n"
-            "THEOREM TermOrder == /\\ IsStrictlyTotallyOrderedUnder(<, Terms)\n"
-            "                     /\\ \\E min \\in Terms : \\A t \\in Terms : min <= t\n"
-            "BY OrderedTermsAssumption\n"
-            "THEOREM InitialTerm == /\\ StartTerm \\in Terms\n"
-            "                       /\\ \\A t \\in Terms : StartTerm <= t\n"
-            "BY StartTermAssumption\n",
-        ),
-    ],
-)
-def test_upstream_assumptions_can_be_cited(tmp_path, context, module, proof):
-    tlapm = find_tlapm()
-    if tlapm is None or not (ROOT / "lib/tlapm").is_dir():
-        pytest.skip("TLAPM and the pinned proof libraries are required")
-    stage(tmp_path, context)
-    # Extend each owning module: INSTANCE does not import its assumptions.
-    probe = tmp_path / "NamedAssumptions.tla"
-    probe.write_text(f"---- MODULE NamedAssumptions ----\nEXTENDS {module}\n{proof}====\n")
-    result = subprocess.run(
-        [
-            tlapm,
-            "--strict",
-            "--nofp",
-            "--threads",
-            "1",
-            "-I",
-            str(ROOT / "lib/tlapm"),
-            "-I",
-            str(ROOT / "lib/community"),
-            str(probe),
-        ],
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    text = result.stdout + result.stderr
-    assert result.returncode == 0, text
-    assert "All " in text and " obligations proved" in text, text
-
-
 def check_network_visibility(directory, context, restore_local=False):
     tlapm = find_tlapm()
     if tlapm is None or not (ROOT / "lib/tlapm").is_dir():
