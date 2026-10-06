@@ -31,8 +31,10 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [tlb](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/tlb.ivy) | Ivy liveness | – | 2 | 2 |
 | [split_queue_2_new](https://github.com/kenmcmil/ivy/blob/master/examples/liveness/split_queue_2_new.ivy) | Ivy liveness | – | 1 | 1 |
 | [libomp](https://github.com/specula-org/specula-case-studies/tree/8885d2c0687d1e197f261585919718a035ce4464/systems/libomp) | LLVM libomp (Specula) | – | 4 | 4 |
+| [CCF](https://github.com/microsoft/CCF/blob/6a2dc420f0166c93f92b773aa49c5203b0767750/tla/consensus/ccfraft.tla) | Microsoft CCF Raft | – | 2 | 2 |
 | [MongoDB](https://github.com/mongodb-labs/vldb25-dist-txns/blob/74526c1201109405172eb845413154f547a815ee/MultiShardTxn.tla) | MongoDB distributed transactions | – | 1 | 1 |
 | [OpenAddressing](https://github.com/lemmy/Examples/tree/mku-OA/specifications/TLC) | OpenAddressing | 1 | 5 | 6 |
+| [PirateShip](https://github.com/PirateshipOrg/pirateship-tla/blob/19096c1de2f87c68a21311c9100a5bab423caa0e/pirateship.tla) | PirateShip consensus | – | 11 | 11 |
 | [Data](https://github.com/tlaplus/tlapm/tree/main/zenon/regression/examples/data) | TLAPS distribution examples | 15 | 9 | 24 |
 | [Consensus](https://github.com/tlaplus/tlapm/tree/main/examples_draft/consensus) | TLAPS distribution examples | 13 | 10 | 23 |
 | [Paxos](https://github.com/hengxin/tlaps-examples/tree/master/Paxos) | TLAPS distribution examples | 13 | 6 | 19 |
@@ -48,6 +50,9 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [Record](https://github.com/hengxin/tlaps-examples/tree/master/Record) | TLAPS distribution examples | – | 1 | 1 |
 | [SumAndMax](https://github.com/tlaplus/tlapm/blob/main/examples/SumAndMax.tla) | TLAPS distribution examples | – | 1 | 1 |
 | [DiskStateQueue](https://github.com/tlaplus/tlaplus/blob/f959b37fb8dcd62a236abb6d0ca4c1cff7c96b55/tlatools/org.lamport.tlatools/spec/queue/DiskStateQueueWorkload.tla) | TLC disk state queue | – | 1 | 1 |
+| [Walgit](https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/walgit/Walgit.tla) | WALs on S3 (Vanlightly) | – | 7 | 7 |
+| [SlateDBWAL](https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/slatedb/SlateDBWAL.tla) | WALs on S3 (Vanlightly) | – | 4 | 4 |
+| [OSWALD](https://github.com/Vanlightly/s3-wal-collection/blob/06d5cc60990cf8e5995dc56f28e5d56128eca227/oswald/Oswald.tla) | WALs on S3 (Vanlightly) | – | 3 | 3 |
 | [Wildfire](https://github.com/pron/wildfire-challenge/tree/bf02363fa9bc3e9e81124d372ffd86bbd14ecbf8) | Wildfire cache coherence | – | 1 | 1 |
 | [ZooKeeper](https://github.com/Disalg-ICS-NJU/zookeeper-tla-spec/blob/main/high-level-spec/Zab.tla) | ZooKeeper (Remix) | – | 9 | 9 |
 | [ZooKeeper_LowLevel](https://github.com/Disalg-ICS-NJU/zookeeper-tla-spec/tree/main/low-level-spec/zk-3.7) | ZooKeeper (Remix) | – | 9 | 9 |
@@ -106,4 +111,4 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [SpecifyingSystems_HourClock](https://github.com/tlaplus/Examples/tree/master/specifications/SpecifyingSystems/HourClock) | tlaplus/Examples | 1 | – | 1 |
 | [two_thread_mutex](https://github.com/anvil-verifier/anvil/blob/main/src/tla_demo.rs) | two_thread_mutex (Anvil) | – | 1 | 1 |
 
-**Total: 83 examples — 706 proof-completion + 288 proof-from-scratch = 994 tasks.**
+**Total: 88 examples — 706 proof-completion + 315 proof-from-scratch = 1021 tasks.**

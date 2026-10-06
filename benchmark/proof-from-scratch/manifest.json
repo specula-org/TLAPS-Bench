@@ -63,6 +63,24 @@
       "BubbleSort/BubbleSort_line202Defs.tla"
     ]
   },
+  "CCF/CCFProof_CommittedLogsAgree.tla": {
+    "spec_id": "CCF/CCFProof.tla",
+    "context": [
+      "CCF/CCFProof_CommittedLogsAgree/Network.tla",
+      "CCF/CCFProof_CommittedLogsAgree/abs.tla",
+      "CCF/CCFProof_CommittedLogsAgree/ccfraft.tla",
+      "CCF/CCFProof_CommittedLogsAgreeDefs.tla"
+    ]
+  },
+  "CCF/CCFProof_CommittedLogsAppendOnly.tla": {
+    "spec_id": "CCF/CCFProof.tla",
+    "context": [
+      "CCF/CCFProof_CommittedLogsAppendOnly/Network.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnly/abs.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnly/ccfraft.tla",
+      "CCF/CCFProof_CommittedLogsAppendOnlyDefs.tla"
+    ]
+  },
   "CahillSSI/CahillSerializability_CahillSerializableCorrect.tla": {
     "spec_id": "CahillSSI/CahillSerializability.tla",
     "context": [
@@ -322,10 +340,32 @@
     "spec_id": "MongoDB/MultiShardTxnSnapshot.tla",
     "context": [
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/ClientCentric.tla",
+      "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/IdentitySnapshotIsolation.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/MultiShardTxn.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Storage.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect/Util.tla",
       "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrectDefs.tla"
+    ]
+  },
+  "OSWALD/OswaldProof_ConsistentObservedSnapshotsInvariant.tla": {
+    "spec_id": "OSWALD/OswaldProof.tla",
+    "context": [
+      "OSWALD/OswaldProof_ConsistentObservedSnapshotsInvariant/Oswald.tla",
+      "OSWALD/OswaldProof_ConsistentObservedSnapshotsInvariantDefs.tla"
+    ]
+  },
+  "OSWALD/OswaldProof_ConsistentWriterSnapshotsInvariant.tla": {
+    "spec_id": "OSWALD/OswaldProof.tla",
+    "context": [
+      "OSWALD/OswaldProof_ConsistentWriterSnapshotsInvariant/Oswald.tla",
+      "OSWALD/OswaldProof_ConsistentWriterSnapshotsInvariantDefs.tla"
+    ]
+  },
+  "OSWALD/OswaldProof_TypeOKInvariant.tla": {
+    "spec_id": "OSWALD/OswaldProof.tla",
+    "context": [
+      "OSWALD/OswaldProof_TypeOKInvariant/Oswald.tla",
+      "OSWALD/OswaldProof_TypeOKInvariantDefs.tla"
     ]
   },
   "OpenAddressing/OpenAddressing_CompleteAsSafety.tla": {
@@ -419,6 +459,83 @@
       "Peterson/Peterson_MutualExclusionDefs.tla"
     ]
   },
+  "PirateShip/PirateShipProof_AuditBranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_AuditBranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_AuditBranchInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_BranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_BranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_BranchInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_IndexBoundsInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_IndexBoundsInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_IndexBoundsInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_TypeOKCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_TypeOKCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_TypeOKCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_ViewMonotonicInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_ViewMonotonicInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_ViewMonotonicInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_ViewStabilizationInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_ViewStabilizationInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_ViewStabilizationInvCorrectDefs.tla"
+    ]
+  },
+  "PirateShip/PirateShipProof_WellFormedBranchInvCorrect.tla": {
+    "spec_id": "PirateShip/PirateShipProof.tla",
+    "context": [
+      "PirateShip/PirateShipProof_WellFormedBranchInvCorrect/PirateShip.tla",
+      "PirateShip/PirateShipProof_WellFormedBranchInvCorrectDefs.tla"
+    ]
+  },
   "Record/Record_SV_Spec.tla": {
     "spec_id": "Record/Record.tla",
     "context": [
@@ -440,11 +557,88 @@
       "SimpleMutex/SimpleMutex_line140Defs.tla"
     ]
   },
+  "SlateDBWAL/SlateDBWALProof_ConsistentMachineDataInvariant.tla": {
+    "spec_id": "SlateDBWAL/SlateDBWALProof.tla",
+    "context": [
+      "SlateDBWAL/SlateDBWALProof_ConsistentMachineDataInvariant/SlateDBWAL.tla",
+      "SlateDBWAL/SlateDBWALProof_ConsistentMachineDataInvariantDefs.tla"
+    ]
+  },
+  "SlateDBWAL/SlateDBWALProof_ManifestRepresentsCommittedLogInvariant.tla": {
+    "spec_id": "SlateDBWAL/SlateDBWALProof.tla",
+    "context": [
+      "SlateDBWAL/SlateDBWALProof_ManifestRepresentsCommittedLogInvariant/SlateDBWAL.tla",
+      "SlateDBWAL/SlateDBWALProof_ManifestRepresentsCommittedLogInvariantDefs.tla"
+    ]
+  },
+  "SlateDBWAL/SlateDBWALProof_TypeOKInvariant.tla": {
+    "spec_id": "SlateDBWAL/SlateDBWALProof.tla",
+    "context": [
+      "SlateDBWAL/SlateDBWALProof_TypeOKInvariant/SlateDBWAL.tla",
+      "SlateDBWAL/SlateDBWALProof_TypeOKInvariantDefs.tla"
+    ]
+  },
+  "SlateDBWAL/SlateDBWALProof_ValidWritersInvariant.tla": {
+    "spec_id": "SlateDBWAL/SlateDBWALProof.tla",
+    "context": [
+      "SlateDBWAL/SlateDBWALProof_ValidWritersInvariant/SlateDBWAL.tla",
+      "SlateDBWAL/SlateDBWALProof_ValidWritersInvariantDefs.tla"
+    ]
+  },
   "SumAndMax/SumAndMax_Correctness.tla": {
     "spec_id": "SumAndMax/SumAndMax.tla",
     "context": [
       "SumAndMax/SumAndMaxModel.tla",
       "SumAndMax/SumAndMax_CorrectnessDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ConsistentReadsInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ConsistentReadsInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ConsistentReadsInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ManifestRepresentsCommittedStateInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ManifestRepresentsCommittedStateInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ManifestRepresentsCommittedStateInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ReplicaStateIsCommittedPrefixInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ReplicaStateIsCommittedPrefixInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ReplicaStateIsCommittedPrefixInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_TypeOKInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_TypeOKInvariant/Walgit.tla",
+      "Walgit/WalgitProof_TypeOKInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ValidLogSegmentsInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ValidLogSegmentsInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ValidLogSegmentsInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ValidManifestInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ValidManifestInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ValidManifestInvariantDefs.tla"
+    ]
+  },
+  "Walgit/WalgitProof_ValidReplicasInvariant.tla": {
+    "spec_id": "Walgit/WalgitProof.tla",
+    "context": [
+      "Walgit/WalgitProof_ValidReplicasInvariant/Walgit.tla",
+      "Walgit/WalgitProof_ValidReplicasInvariantDefs.tla"
     ]
   },
   "Wildfire/WildfireProof_Refinement.tla": {

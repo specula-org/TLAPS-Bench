@@ -13,11 +13,12 @@
   },
   "proof_model": {
     "file": "CahillSSIModel.tla",
-    "sha256": "ee83cb6713b77baa1640aa65c4787b6da82502f6a24f6c0a25bfa61905c0fa77",
+    "sha256": "974619f2011160122296c51fe32bc6d44723a70875982fd13810fe21f50e5e6b",
     "rules": "tlaps-compatibility.json",
     "renderer": "prepare.py",
     "transformations": [
       "Convert three recursive operators to recursive functions over their call domains.",
+      "Use a curried single-argument recursive function for cycle search so TLAPM can unfold its applications.",
       "Expand tuple binders into scalar binders and tuple projections.",
       "Rename the module and normalize line endings."
     ]

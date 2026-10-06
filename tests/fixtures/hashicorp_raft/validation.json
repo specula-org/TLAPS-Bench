@@ -83,5 +83,14 @@
     "tests_passed": 2188,
     "tests_skipped": 8,
     "module_suite_verification": "passed"
+  },
+  "superseded_by": {
+    "runtime_sha256": "96df472e63ed62fe7b025c82543b6051bd75e8ebf7fea45b7cd3a28f2cf5d114",
+    "reason": "Commit observations now record their term; LeaderCompleteness uses commitment rather than entry-creation terms. The exploration records above remain historical evidence.",
+    "regression_tests": "tests/dataset/test_hashicorp_raft.py",
+    "new_scenarios": [
+      12,
+      13
+    ]
   }
 }

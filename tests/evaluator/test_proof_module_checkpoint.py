@@ -465,6 +465,8 @@ def test_runner_resume_work_item_carries_checkpoint_identity_and_submission(tmp_
             "copilot",
             "--mode",
             "proof-from-scratch",
+            "--filter",
+            TASK_ID,
             "--no-container",
             "--resume",
             "--output-dir",

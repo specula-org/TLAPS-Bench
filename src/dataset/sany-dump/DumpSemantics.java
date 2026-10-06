@@ -3,8 +3,11 @@ import java.nio.file.*;
 import java.util.*;
 import tla2sany.drivers.SANY;
 import tla2sany.modanalyzer.SpecObj;
+import tla2sany.parser.TLAplusParserConstants;
 import tla2sany.semantic.*;
 import tla2sany.st.Location;
+import tla2sany.st.SyntaxTreeConstants;
+import tla2sany.st.TreeNode;
 import util.UniqueString;
 
 /**
@@ -265,7 +268,17 @@ public class DumpSemantics {
     UniqueString us = t.getName();
     j.field("name", us == null ? null : us.toString());
     emitLoc(j, t);
+    j.openArrayField("identifiers");
+    Set<TreeNode> literals = Collections.newSetFromMap(new IdentityHashMap<>());
+    collectLiteralIdentifiers(t.getTreeNode(), literals);
+    emitIdentifiers(j, t.getTreeNode(), literals);
+    j.closeArray();
     LevelNode stmt = t.getTheorem();
+    Set<String> implicit = new LinkedHashSet<>();
+    collectImplicitIdentifiers(stmt, t.getTreeNode().getFilename(), implicit);
+    j.openArrayField("implicit_identifiers");
+    for (String name : implicit) j.stringElem(name);
+    j.closeArray();
     if (stmt != null) {
       j.openObjectField("statement_loc");
       int[] sl = locOf(stmt);
@@ -303,6 +316,85 @@ public class DumpSemantics {
     for (String r : stmtRefs) j.stringElem(r);
     j.closeArray();
     j.closeObject();
+  }
+
+  // Exclude record/label names and names in another module's namespace.
+  // Use the concrete syntax tree: semantic subexpression
+  // references may point into another definition, outside this statement.
+  static void collectLiteralIdentifiers(TreeNode node, Set<TreeNode> literals) {
+    int kind = node.getKind();
+    if (kind == SyntaxTreeConstants.N_Proof || kind == SyntaxTreeConstants.N_TerminalProof) return;
+    TreeNode[] children = node.heirs();
+    TreeNode literal = null;
+    if (kind == SyntaxTreeConstants.N_FieldVal || kind == SyntaxTreeConstants.N_FieldSet) {
+      literal = children[0];
+    } else if (kind == SyntaxTreeConstants.N_RecordComponent) {
+      literal = children[children.length - 1];
+    } else if (kind == SyntaxTreeConstants.N_ExceptComponent && ".".equals(children[0].getImage())) {
+      literal = children[1];
+    } else if (kind == SyntaxTreeConstants.N_Label) {
+      // The first identifier is the label; its parameter list contains actual
+      // bound-variable uses and must remain eligible for alpha-renaming.
+      literal = firstIdentifier(children[0]);
+    }
+    if (literal != null) literals.add(literal);
+    // Only the first name in C!D!Op denotes a local binding. The other
+    // selectors name members of that binding; arguments still contain uses.
+    if (kind == SyntaxTreeConstants.N_IdPrefix) {
+      for (int i = 1; i < children.length; i++) literals.add(firstIdentifier(children[i]));
+    } else if (children.length > 1 && children[0].getKind() == SyntaxTreeConstants.N_IdPrefix
+        && children[0].heirs().length > 0) {
+      literals.add(children[1]);
+    }
+    if (kind == SyntaxTreeConstants.N_Substitution) literals.add(firstIdentifier(children[0]));
+    if (kind == SyntaxTreeConstants.N_Instance || kind == SyntaxTreeConstants.N_NonLocalInstance) {
+      literals.add(firstIdentifier(node));
+    }
+    for (TreeNode child : children) collectLiteralIdentifiers(child, literals);
+  }
+
+  static TreeNode firstIdentifier(TreeNode node) {
+    if (node.getKind() == TLAplusParserConstants.IDENTIFIER) return node;
+    for (TreeNode child : node.heirs()) {
+      TreeNode found = firstIdentifier(child);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  static void emitIdentifiers(JsonBuilder j, TreeNode node, Set<TreeNode> literals) {
+    int kind = node.getKind();
+    if (kind == SyntaxTreeConstants.N_Proof || kind == SyntaxTreeConstants.N_TerminalProof) return;
+    if (kind == TLAplusParserConstants.IDENTIFIER && !literals.contains(node)) {
+      Location loc = node.getLocation();
+      j.openObject();
+      j.field("name", node.getImage());
+      j.field("line", loc.beginLine());
+      j.field("column", loc.beginColumn());
+      j.closeObject();
+    }
+    for (TreeNode child : node.heirs()) emitIdentifiers(j, child, literals);
+  }
+
+  // An implicit INSTANCE substitution uses a binding without a source token to
+  // rename. Report these separately so the generator can reject a capture.
+  static void collectImplicitIdentifiers(SemanticNode node, String file, Set<String> names) {
+    if (node == null) return;
+    Subst[] substs = node instanceof SubstInNode ? ((SubstInNode) node).getSubsts()
+        : node instanceof APSubstInNode ? ((APSubstInNode) node).getSubsts() : null;
+    if (substs != null) {
+      for (Subst subst : substs) {
+        if (!subst.isImplicit()) continue;
+        ExprOrOpArgNode expr = subst.getExpr();
+        SymbolNode symbol = expr instanceof OpApplNode ? ((OpApplNode) expr).getOperator()
+            : expr instanceof OpArgNode ? ((OpArgNode) expr).getOp() : null;
+        if (symbol != null && isFromFile(symbol, file)) names.add(symbolName(symbol));
+      }
+    }
+    SemanticNode[] children = node.getChildren();
+    if (children != null) {
+      for (SemanticNode child : children) collectImplicitIdentifiers(child, file, names);
+    }
   }
 
   static void classifyTheoremShape(JsonBuilder j, LevelNode stmt, Set<String> specFormulas) {

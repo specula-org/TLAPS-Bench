@@ -7,11 +7,12 @@
       "platforms": {
         "darwin-arm64": {
           "asset": "tlapm-1.6.0-pre-arm64-darwin.tar.gz",
-          "sha256": "ad1cb0a047ac2b5c33d6811d5d57c5bfbad4b317cd90299fee4302514f1bebde"
+          "sha256": "106a967159f1c163105c5a863fe1844960ffa408821ac7c91cc4d66d902b4bdb"
         },
         "linux-x86_64": {
           "asset": "tlapm-1.6.0-pre-x86_64-linux-gnu.tar.gz",
-          "sha256": "bfa5e5350ac1ec7202feecad0a4a71a5bb58c16a49660448b35b6f371ba9e2f5"
+          "url": "https://github.com/specula-org/TLAPS-Bench/releases/download/toolchain-tlapm-7824dab/tlapm-1.6.0-pre-x86_64-linux-gnu.tar.gz",
+          "sha256": "a2860384bc89c4c5b2c73ec367e29f44d829e4d4a2698ab295139f829219331c"
         }
       }
     },
@@ -19,7 +20,8 @@
       "repository": "tlaplus/tlaplus",
       "tag": "v1.8.0",
       "asset": "tla2tools.jar",
-      "sha256": "2c903dcd6f50f12b0c0a2e14c1406be782126c7cee64f3e0b8550c2020870293"
+      "url": "https://github.com/specula-org/TLAPS-Bench/releases/download/toolchain-tlapm-7824dab/tla2tools.jar",
+      "sha256": "ab4694601923fd5ac06452abbf847c366a5054a3d739552085edd6ed986c29ec"
     }
   }
 }

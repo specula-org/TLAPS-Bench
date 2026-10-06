@@ -1,0 +1,38 @@
+{
+  "repository": "https://github.com/Vanlightly/s3-wal-collection",
+  "commit": "06d5cc60990cf8e5995dc56f28e5d56128eca227",
+  "files": {
+    "Oswald.tla": {
+      "path": "oswald/Oswald.tla",
+      "sha256": "102b7eb1400d79e3eb09f2eb353a12314e82f4cd443933625dbcb858cc3d384e"
+    },
+    "validation/Oswald.cfg": {
+      "path": "oswald/Oswald.cfg",
+      "sha256": "3a550f4021a15bac163048f6ea0c416c7956999341955859ef277b1b8391b2d5"
+    },
+    "UPSTREAM_NOTES.md": {
+      "path": "oswald/notes.md",
+      "sha256": "8f4e2f98e875232b5c072098bb35c0c447eb9308ad83afdb5e3c290decdeecb8"
+    }
+  },
+  "license": {
+    "path": "LICENSE",
+    "local_path": "LICENSES/s3-wal-collection-MIT.txt",
+    "sha256": "19a004eec80f19e3f6db6ef65806a64c85b3befaed40e2c86c12772b2ce5c97c"
+  },
+  "local_adaptations": {
+    "proof_wrapper": "OswaldProof.tla",
+    "assumptions": "Finite parameter sets, a nonempty process set, distinct control labels, and sentinel separation; no fixed process/value cardinality and no state-space constraint.",
+    "targets": [
+      "TypeOK",
+      "ConsistentWriterSnapshots",
+      "ConsistentObservedSnapshots"
+    ],
+    "model_sha256": "f12ecf520f243876133527fa72c5316f4cc4333aface4c44b557e8df77b656f6",
+    "repairs": [
+      "Remove the stray vertical bar after the module terminator; no operator or transition changes."
+    ],
+    "formatting": "Ensure a final newline."
+  },
+  "validation": "Finite TLC checks and source/generated-context regressions; no reference TLAPS proof or empirical model solve rate."
+}

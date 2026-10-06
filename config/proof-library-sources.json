@@ -11,11 +11,11 @@
     },
     "community_modules": {
       "repository": "tlaplus/CommunityModules",
-      "commit": "c2f2c77b1a399e56875d52afd92f4ffd1acb43f2",
+      "commit": "e5c823f1f151a17ce868fdb2190299c31b5efc32",
       "tracking_ref": "master",
       "subdirectory": "modules",
       "destination": "community",
-      "tree_sha256": "a16f3f3d15b0df0c53fb1b64a8927fe0d7045f52e9c377a588311bdd9da68d2e"
+      "tree_sha256": "9789779118f58d81ccf64c2f4dc6988c2092e2891124795a2dda91fea8f74429"
     }
   }
 }

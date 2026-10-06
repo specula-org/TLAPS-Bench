@@ -1,0 +1,106 @@
+{
+  "format_version": 1,
+  "upstream_commit": "6a2dc420f0166c93f92b773aa49c5203b0767750",
+  "benchmark_base": "4789d6deca0d47919c7b7b1b55ff30dfdb627176",
+  "source_sha256": {
+    "CCFProof.tla": "f64944ebaafa8ef3488812ca18e0ea88cd7b9658e32e4ac3838aa549a5518f6c",
+    "abs.tla": "bd3f98a2fe74662003b9c8042d6cb08586a92b598fe44647834f8bf69af16ba6",
+    "Network.tla": "259cfcde30c2e3c57dbd4cf61ea2006e97fe5736a4fae7cc4ee03641f632ebe0",
+    "ccfraft.tla": "7307ea2c8f3d2844fff78d286f1b09abae0e1b6a3e351d54403cc3ba394249d7"
+  },
+  "module_context_sha256": {
+    "CCF/CCFProof.tla": "9637d8689b6e4a15e42374c91e70c0005cbc46a3f3f222bcc6fdc009b1dd5ae2",
+    "CCF/CCFProof/Network.tla": "4bff4678cc81b6d79d81f9c9e08c65270fc9125a73520629f11b031474cbbd19",
+    "CCF/CCFProof/abs.tla": "dcff3f758aefe9e5bf1964ed4864d456e6cf58c74d9f37f9b1589b7d3b726636",
+    "CCF/CCFProof/ccfraft.tla": "70487b383fe2128d51adf92f386613cb580897b8447902a17dfaacc9cf2822c0",
+    "CCF/CCFProofDefs.tla": "7d063f0b68596f5cecd63f448d3e6b1e8e7e0302cb0e053adc5f8ca589bc483e"
+  },
+  "toolchain": {
+    "tlapm_version": "7824dab",
+    "sany_sha256": "ab4694601923fd5ac06452abbf847c366a5054a3d739552085edd6ed986c29ec",
+    "toolchain_lock_sha256": "c0bcde555c65157af0e42b3eadff7eaabff1d92429ed3105bf6440ea3c79cf74",
+    "proof_library_lock_sha256": "37c7b6b1a1d78cbee9788286f4dd1460871799c7aa5574d65f1268d6cfb856b8",
+    "tlc_version": "TLC2 Version 2026.09.25.163503 (rev: 8f4bc8b)"
+  },
+  "regressions": {
+    "command": "PYTHONPATH=src uv run pytest -q tests",
+    "passed": 2360,
+    "skipped": 3,
+    "elapsed_seconds": 597.6,
+    "ccf_and_catalog_tests": 78,
+    "additional_tlapm_composition_canaries_passed": 3,
+    "module_suite_errors": 0
+  },
+  "canonical_template_check": {
+    "sany_status": "valid",
+    "proof_unit_count": 2,
+    "trusted_proof_unit_count": 0,
+    "result": "UNRESOLVED",
+    "expected": true
+  },
+  "simulations": [
+    {
+      "context": "source",
+      "specification": "CCFProof",
+      "config": "source/CCF/validation/CCFProof.cfg",
+      "config_sha256": "f62ab9eb0115f6293e76dfea3f4cb96393c9ba75c5509d3bc278d3957ec9919b",
+      "method": "TLC random simulation",
+      "servers": 3,
+      "seed": 20260930,
+      "depth_limit": 100,
+      "workers": 2,
+      "heap_mib": 2048,
+      "time_limit_seconds": 1830,
+      "exit_code": 124,
+      "status": "TIME_LIMIT_NO_VIOLATION",
+      "last_reported_states_checked": 46533257,
+      "last_reported_traces_generated": 370612,
+      "counts_are_lower_bounds": true,
+      "invariants": [
+        "TypeInv",
+        "LogInv",
+        "SignatureInv"
+      ],
+      "action_properties": [
+        "CommittedLogAppendOnlyProp"
+      ],
+      "log_sha256": "45610c917fa02fc32802c054f188e30b34fcf2355aecba1ceb18f50c9a52fe4b"
+    },
+    {
+      "context": "generated_module",
+      "specification": "CCFProof",
+      "config": "CCFProof.cfg staged from source/CCF/validation/CCFProof.cfg with the pruned TypeInv and SignatureInv diagnostics removed",
+      "config_sha256": "73f2293d8bf2021e75bcaeeed4796679304e19e427a6e8e2117f5d9f79428269",
+      "method": "TLC random simulation",
+      "servers": 3,
+      "seed": 20260930,
+      "depth_limit": 100,
+      "workers": 2,
+      "heap_mib": 2048,
+      "time_limit_seconds": 1830,
+      "exit_code": 124,
+      "status": "TIME_LIMIT_NO_VIOLATION",
+      "last_reported_states_checked": 59310734,
+      "last_reported_traces_generated": 472296,
+      "counts_are_lower_bounds": true,
+      "invariants": [
+        "LogInv"
+      ],
+      "action_properties": [
+        "CommittedLogAppendOnlyProp"
+      ],
+      "log_sha256": "a81b91bfe81ae594af9af8ce81375fbf3af13661c0447b0766876929cdace271"
+    }
+  ],
+  "limitations": [
+    "No complete TLAPS proof of either selected theorem.",
+    "TLC simulation is finite sampled evidence, not exhaustive model checking.",
+    "TLC action composition is experimental and requires -Dtlc2.tool.impl.Tool.cdot=true."
+  ],
+  "reproduction": {
+    "source_command": "timeout 1830s java -XX:ActiveProcessorCount=3 -Xmx2g -XX:+UseParallelGC -Dtlc2.tool.impl.Tool.cdot=true -cp lib/tla2tools.jar:lib/community tlc2.TLC -workers 2 -simulate num=999999999 -depth 100 -seed 20260930 -deadlock -metadir /tmp/ccf-source-simulation -config source/CCF/validation/CCFProof.cfg source/CCF/CCFProof.tla",
+    "generated_staging": "Copy CCF/CCFProof.tla and every context file listed for it in benchmark/proof-from-scratch-module/manifest.json into one directory. Copy the source validation config there, omitting TypeInv and SignatureInv (not present in the pruned context). Run the same simulation with absolute classpath entries and the staged module/config paths. tests/dataset/test_ccf.py::stage implements the same flattening.",
+    "expected_termination": "Exit 124 from the time limit; no exhaustive or theorem-proof claim. Progress counters are lower bounds because TLC does not print a final summary on SIGTERM."
+  },
+  "scope_note": "Historical checks of the pre-visibility-adaptation inputs at benchmark commit 9bb634043a2669a9d190d83aaf733a0091383882. Original input hashes and outcomes are preserved; see network-visibility.json for the later adaptation."
+}

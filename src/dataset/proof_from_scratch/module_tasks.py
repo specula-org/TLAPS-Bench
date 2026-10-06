@@ -27,7 +27,7 @@ import re
 import shutil
 import sys
 import tempfile
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Mapping, Sequence, Set
 from io import StringIO
 from pathlib import Path, PurePosixPath
 
@@ -61,70 +61,53 @@ class ModuleTaskError(RuntimeError):
     """A module task cannot be generated from its source specification."""
 
 
-_ASCII_IDENT_START = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_")
-_ASCII_IDENT_BODY = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_")
+def rewrite_identifiers(
+    text: str, renames: Mapping[str, str], identifiers: Mapping[str, Sequence[tuple[int, int]]]
+) -> str:
+    """Rename only identifier tokens classified as binding uses by SANY."""
 
-
-def _walk_identifiers(text: str) -> Iterator[tuple[int, int, str, bool]]:
-    """Yield ``(start, end, token, qualified)`` for each TLA+ identifier.
-
-    String literals are skipped, and so is the letter run after a backslash: in
-    ``\\A A \\in S`` only the second ``A`` is an identifier, and reading the
-    quantifier as one is exactly the bug ``_unneeded_decl_edits`` guards against
-    on the declaration side. ``qualified`` marks an instance-qualified use
-    (``C!Spec``), whose right half names something in another module.
-    """
-
-    index = 0
-    length = len(text)
-    in_string = False
-    while index < length:
-        char = text[index]
-        if in_string:
-            if char == "\\" and index + 1 < length:
-                index += 2
-                continue
-            if char == '"':
-                in_string = False
-            index += 1
-        elif char == '"':
-            in_string = True
-            index += 1
-        elif char == "\\":
-            index += 1
-            while index < length and text[index] in _ASCII_IDENT_BODY:
-                index += 1
-        elif char in _ASCII_IDENT_START:
-            start = index
-            while index < length and text[index] in _ASCII_IDENT_BODY:
-                index += 1
-            yield start, index, text[start:index], start > 0 and text[start - 1] == "!"
-        else:
-            index += 1
-
-
-def identifier_tokens(text: str) -> set[str]:
-    """Unqualified TLA+ identifiers mentioned in ``text``."""
-
-    return {token for _start, _end, token, qualified in _walk_identifiers(text) if not qualified}
-
-
-def rewrite_identifiers(text: str, renames: Mapping[str, str]) -> str:
-    """Rename whole identifiers in ``text``, leaving strings and operators alone."""
-
-    if not renames:
-        return text
+    edits = sorted((start, end, renames[name]) for name in renames for start, end in identifiers[name])
     out: list[str] = []
     cursor = 0
-    for start, end, token, qualified in _walk_identifiers(text):
-        replacement = None if qualified else renames.get(token)
-        if replacement is None:
-            continue
+    for start, end, replacement in edits:
         out.append(text[cursor:start])
         out.append(replacement)
         cursor = end
     out.append(text[cursor:])
     return "".join(out)
+
+
+def statement_identifier_spans(
+    theorem: Mapping, statement: str, source_lines: Sequence[str]
+) -> dict[str, list[tuple[int, int]]]:
+    """Map SANY's binding identifier tokens before comments are stripped.
+
+    SANY columns use eight-column tab stops and Java UTF-16 character widths.
+    Validate the spelling at each location before using it to rename a token.
+    """
+    if "identifiers" not in theorem or "implicit_identifiers" not in theorem:
+        raise ModuleTaskError("SANY dump lacks identifier metadata; rebuild the SANY dumper")
+    first = theorem["loc"]["line_start"] - 1
+    prefix = len(source_lines[first]) - len(source_lines[first].lstrip())
+    offsets = [0]
+    for line in source_lines[first : theorem["loc"]["line_end"]]:
+        offsets.append(offsets[-1] + len(line))
+    spans: dict[str, list[tuple[int, int]]] = {}
+    for identifier in theorem["identifiers"]:
+        line_index = identifier["line"] - 1
+        column = 1
+        for index, char in enumerate(source_lines[line_index]):
+            if column == identifier["column"]:
+                start = offsets[line_index - first] + index - prefix
+                break
+            column += 8 - (column - 1) % 8 if char == "\t" else len(char.encode("utf-16-le")) // 2
+        else:
+            raise ModuleTaskError(f"invalid SANY identifier location: {identifier}")
+        end = start + len(identifier["name"])
+        if statement[start:end] != identifier["name"]:
+            raise ModuleTaskError(f"SANY identifier does not match the statement: {identifier}")
+        spans.setdefault(identifier["name"], []).append((start, end))
+    return spans
 
 
 def _fresh_name(base: str, taken: set[str]) -> str:
@@ -134,7 +117,12 @@ def _fresh_name(base: str, taken: set[str]) -> str:
     return f"{base}{index}"
 
 
-def plan_statement_renames(theorem: Mapping, statement: str, dump: Mapping, exposed: set[str]) -> dict[str, str]:
+def plan_statement_renames(
+    theorem: Mapping,
+    tokens: Set[str],
+    dump: Mapping,
+    exposed: set[str],
+) -> dict[str, str]:
     """Rename statement binders that the layered module would capture.
 
     TLA+ scoping is order-sensitive, and the layered Model puts every
@@ -147,7 +135,7 @@ def plan_statement_renames(theorem: Mapping, statement: str, dump: Mapping, expo
 
     A name is renamed only when the source declares it *after* this statement.
     SANY accepted the source, so a name that is not yet in scope there cannot be
-    free in the statement -- every occurrence is bound by the statement itself,
+    free in the statement -- its variable/operator occurrences are bound there,
     and renaming them together is alpha-equivalence, not a change of goal. Names
     already in scope at the statement are left alone, so a genuine reference is
     never rewritten.
@@ -164,10 +152,15 @@ def plan_statement_renames(theorem: Mapping, statement: str, dump: Mapping, expo
         )
         if entry.get("name") and entry.get("loc", {}).get("line_start", 0) > line and entry["name"] in exposed
     }
-    tokens = identifier_tokens(statement)
     captured = sorted(declared_later & tokens)
     if not captured:
         return {}
+    implicit = set(captured) & set(theorem.get("implicit_identifiers", []))
+    if implicit:
+        raise ModuleTaskError(
+            f"cannot rename implicit INSTANCE substitution(s) {', '.join(sorted(implicit))}; "
+            "use explicit WITH substitutions in the source statement"
+        )
 
     taken = set(tokens)
     for group in ("constants", "variables", "operators", "instances", "theorems"):
@@ -331,14 +324,15 @@ def emit_module_task(
     statements: list[tuple[str, str]] = []
     renamed: dict[str, dict[str, str]] = {}
     for task_id, theorem in units:
-        statement = generate.strip_comments(generate._statement_text(theorem, source_lines)).strip()
-        renames = plan_statement_renames(theorem, statement, dump, exposed)
+        statement = generate._statement_text(theorem, source_lines)
+        identifiers = statement_identifier_spans(theorem, statement, source_lines)
+        renames = plan_statement_renames(theorem, set(identifiers), dump, exposed)
         if renames:
-            statement = rewrite_identifiers(statement, renames)
+            statement = rewrite_identifiers(statement, renames, identifiers)
             renamed[task_id] = renames
             pairs = ", ".join(f"{old} -> {new}" for old, new in sorted(renames.items()))
             audit.write(f"[audit] {task_id}: renamed statement binder(s) captured by a hoisted declaration: {pairs}\n")
-        statements.append((task_id, statement))
+        statements.append((task_id, generate.strip_comments(statement).strip()))
 
     _write(output_root / spec_id, build_module_task(base_module, defs_module, statements))
 

@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "corpus_sha256": "d0be6d460d8589a1d1b18d35f526bfb13cb3ace7e72331f3f02bc14e97debd69",
+  "corpus_sha256": "33cb3131b55742805a23b95f77fbcf2874ea9573f0174f4d4270c1f5da60d730",
   "complete": true,
   "module_tasks": [
     {
@@ -120,6 +120,30 @@
           "A": "A1"
         }
       }
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "CCF/CCFProof.tla",
+        "source_sha256": "f64944ebaafa8ef3488812ca18e0ea88cd7b9658e32e4ac3838aa549a5518f6c",
+        "proof_units": [
+          {
+            "task_id": "CCF/CCFProof_CommittedLogsAgree.tla",
+            "statement_sha256": "0eca6138ad66182b7bab723e5520579bc7365b9d038ec0fe4a4ebf016b476bc1"
+          },
+          {
+            "task_id": "CCF/CCFProof_CommittedLogsAppendOnly.tla",
+            "statement_sha256": "2108b7a7baff168ff1828bb8c103fdd9a9f42d34263fee44f392574cd2bfe3e7"
+          }
+        ]
+      },
+      "context": [
+        "CCF/CCFProof/Network.tla",
+        "CCF/CCFProof/abs.tla",
+        "CCF/CCFProof/ccfraft.tla",
+        "CCF/CCFProofDefs.tla"
+      ],
+      "renamed_bindings": {}
     },
     {
       "spec": {
@@ -512,7 +536,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "MongoDB/MultiShardTxnSnapshot.tla",
-        "source_sha256": "cfc80d60359710ce21cf79ce3c8899e4f7c416edfd51c44d09578062e6b3b421",
+        "source_sha256": "cfb408c5e3065c636204b28931f334850ae7cbbbd4329f07bab27d88a421e12c",
         "proof_units": [
           {
             "task_id": "MongoDB/MultiShardTxnSnapshot_SnapshotIsolationCorrect.tla",
@@ -522,10 +546,37 @@
       },
       "context": [
         "MongoDB/MultiShardTxnSnapshot/ClientCentric.tla",
+        "MongoDB/MultiShardTxnSnapshot/IdentitySnapshotIsolation.tla",
         "MongoDB/MultiShardTxnSnapshot/MultiShardTxn.tla",
         "MongoDB/MultiShardTxnSnapshot/Storage.tla",
         "MongoDB/MultiShardTxnSnapshot/Util.tla",
         "MongoDB/MultiShardTxnSnapshotDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "OSWALD/OswaldProof.tla",
+        "source_sha256": "3a7ce98233bdc042e651dced46769406f4e4c54c44ac8fd9167a8f60f2759284",
+        "proof_units": [
+          {
+            "task_id": "OSWALD/OswaldProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "OSWALD/OswaldProof_ConsistentWriterSnapshotsInvariant.tla",
+            "statement_sha256": "e50b5f8e7e3bcb5c2be915ebf2c47c63fcd10bcffb1fd7fbfc17e8154c644451"
+          },
+          {
+            "task_id": "OSWALD/OswaldProof_ConsistentObservedSnapshotsInvariant.tla",
+            "statement_sha256": "eb03fcdf80ea41443c85d32fdc5efed6ef10a7c45bcd5f38b87c197427ced695"
+          }
+        ]
+      },
+      "context": [
+        "OSWALD/OswaldProof/Oswald.tla",
+        "OSWALD/OswaldProofDefs.tla"
       ],
       "renamed_bindings": {}
     },
@@ -655,6 +706,64 @@
     {
       "spec": {
         "format_version": 1,
+        "task_id": "PirateShip/PirateShipProof.tla",
+        "source_sha256": "020b5d27f63864576ffb7a4d240ed0c17576817ea33b2961716a721024aabf54",
+        "proof_units": [
+          {
+            "task_id": "PirateShip/PirateShipProof_TypeOKCorrect.tla",
+            "statement_sha256": "625f427f142fbc83464935fb5470de069d660feaaac7a1bd36b0a87ee498a4fc"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_IndexBoundsInvCorrect.tla",
+            "statement_sha256": "7a089ad5569914205ac65b3c24523fe90085de1a09877dc9a536afcdda33efad"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_BranchInvCorrect.tla",
+            "statement_sha256": "7a2d7b1cf0f016c34c290e72e372187577cb13a29c0a82f6ffd9c1fdf88d0bb7"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_AuditBranchInvCorrect.tla",
+            "statement_sha256": "f6992847d4bcd2b3e644acd033a41ee782e7cde8395d15f9a8529c8caf0799b7"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_OneLeaderPerViewInvCorrect.tla",
+            "statement_sha256": "aacba9dc468d38a0776b72385d972bcd61eced39861ece5470055d1b63426188"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_WellFormedBranchInvCorrect.tla",
+            "statement_sha256": "763fd0eae7f7ecee85bcd536edd7574541288fe077caa6b0108c1b242961bbba"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_ViewMonotonicInvCorrect.tla",
+            "statement_sha256": "1ba6bd1d2f9074335d47aa2d9c35fcc6e866053b5514bfdc5aefa132a88e2015"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_ViewStabilizationInvCorrect.tla",
+            "statement_sha256": "0920087899de83615108fb4ca251adf348da98d3c53f8b79c0d676ade049cf17"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_CommittedBranchAppendOnlyPropCorrect.tla",
+            "statement_sha256": "a59a6096c0e24ff1fba2794b5ccf1ed78b3756263a153264197f93609546cae0"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_AuditedBranchAppendOnlyPropCorrect.tla",
+            "statement_sha256": "cc687914cf18fb458e320b9e8abfdb2a5bf75fca8799ffc7a024560766007c31"
+          },
+          {
+            "task_id": "PirateShip/PirateShipProof_MonotonicAuditedIndexPropCorrect.tla",
+            "statement_sha256": "b24800aaae73907d9f06da49f0e7ced39c54605cf3cc1dfbb61c8efa5d7b7702"
+          }
+        ]
+      },
+      "context": [
+        "PirateShip/PirateShipProof/PirateShip.tla",
+        "PirateShip/PirateShipProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
         "task_id": "Record/Record.tla",
         "source_sha256": "fecf9020091fa96430e20df0612389387c360147c9ec67e5565049386f8d9ee3",
         "proof_units": [
@@ -696,6 +805,36 @@
     {
       "spec": {
         "format_version": 1,
+        "task_id": "SlateDBWAL/SlateDBWALProof.tla",
+        "source_sha256": "66dc040b3cc05886a4edd4cebfb1e82b3fb2566669cc769aa444e1e1b2075c6e",
+        "proof_units": [
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ValidWritersInvariant.tla",
+            "statement_sha256": "204e0f3d9a28db275b429616d1e94cf190deb246bb5ccaba75735d40458032ef"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ConsistentMachineDataInvariant.tla",
+            "statement_sha256": "a8ed77c80f032d9792a496bc40811b8fcae37d687f331dbabc724e4e2e2e8999"
+          },
+          {
+            "task_id": "SlateDBWAL/SlateDBWALProof_ManifestRepresentsCommittedLogInvariant.tla",
+            "statement_sha256": "7146aea6d5cba2ee15a9e21987461261f1fc59daae9fa5dce2d1d8595a035a0e"
+          }
+        ]
+      },
+      "context": [
+        "SlateDBWAL/SlateDBWALProof/SlateDBWAL.tla",
+        "SlateDBWAL/SlateDBWALProofDefs.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
         "task_id": "SumAndMax/SumAndMax.tla",
         "source_sha256": "88b3862f8467f2262f23f0a52c6be6a57a5dbc1ab6e70b60252dc8cc51a254fc",
         "proof_units": [
@@ -708,6 +847,48 @@
       "context": [
         "SumAndMax/SumAndMaxDefs.tla",
         "SumAndMax/SumAndMaxModel.tla"
+      ],
+      "renamed_bindings": {}
+    },
+    {
+      "spec": {
+        "format_version": 1,
+        "task_id": "Walgit/WalgitProof.tla",
+        "source_sha256": "04de5ad535e09b68193d5b9902fa8711d96587a899d48afd17e90afa1a71396e",
+        "proof_units": [
+          {
+            "task_id": "Walgit/WalgitProof_TypeOKInvariant.tla",
+            "statement_sha256": "c1fc941b1e45953b4be3733e556f260c42f63dd233a1b7e965fcd3b29f4ed94b"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidReplicasInvariant.tla",
+            "statement_sha256": "178cab2fd70e209d1e7bcd5129094e57aa55d15a23951dc79c263f7730cff86e"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidManifestInvariant.tla",
+            "statement_sha256": "d45cee46f5a96895a9e00f6e14e6f21bde99d4b1ac032dd3593946914a077e7d"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ValidLogSegmentsInvariant.tla",
+            "statement_sha256": "3401b45d2a2770b56fe0ad1ac0d871b562209e1e1ea54abd177f50c596489bd1"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ReplicaStateIsCommittedPrefixInvariant.tla",
+            "statement_sha256": "09037f6e242e9735960ba4e9c6468ad377761c8daa0b837a53f838a29938464e"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ManifestRepresentsCommittedStateInvariant.tla",
+            "statement_sha256": "de9760795bbdcac85cac678fd40cb6253e7e32b8f7ec37e4fdde3437741faadd"
+          },
+          {
+            "task_id": "Walgit/WalgitProof_ConsistentReadsInvariant.tla",
+            "statement_sha256": "99c03e07f55b0b8af6e940dd279cef9a134f34dfc92eba287fb8f1e0d559a4d7"
+          }
+        ]
+      },
+      "context": [
+        "Walgit/WalgitProof/Walgit.tla",
+        "Walgit/WalgitProofDefs.tla"
       ],
       "renamed_bindings": {}
     },
@@ -1600,7 +1781,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof.tla",
-        "source_sha256": "8fe413184e0150167ddb7009563af31bdb151219d7156796bce4dd4551bfed21",
+        "source_sha256": "fadd44c503acc59c15e66403ea1b267ec040c4301142ffa6a1d69f754b8d0963",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_MultiCarElevator/Elevator_proof_TypeCorrect.tla",
@@ -2069,7 +2250,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof.tla",
-        "source_sha256": "90e197d259730d495108449362d5a7efea47c6c80ab23b34d9712048c075b932",
+        "source_sha256": "bb94b8cb7a721e80bce96f9c5c0d9a4510082d0c8effc22ba61aa96fde7c6937",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_allocator/AllocatorImplementation_proof_TypeCorrect.tla",
@@ -2088,7 +2269,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof.tla",
-        "source_sha256": "11402242872c6bc07418a9fde6241b91bcb56c8f34d954188e5e25815edffae2",
+        "source_sha256": "5f05d6b75af786612e5f5600a8ab54e6ee4e1fc8c1e4ed1fd41d741b08734868",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_allocator/SchedulingAllocator_proof_TypeCorrect.tla",
@@ -2307,7 +2488,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "tlaplus_examples_btree/btree.tla",
-        "source_sha256": "ec247d5d944643666fd5ec60c3c2b489b5560d67ccbc958ebd1710564fae23b2",
+        "source_sha256": "3d2a7c343cc6f8033185357c4205de081071157b610ba72286d7dfaeae04dbf7",
         "proof_units": [
           {
             "task_id": "tlaplus_examples_btree/btree_TypeOkCorrect.tla",
