@@ -439,17 +439,15 @@ uv run tlaps-bench run --mode proof-completion --backend codex --model gpt-5.5 -
 
 The runner skips benchmarks already recorded as `SKIP` or as a genuine `PASS` in that directory (first-attempt or via a continuation round), and reruns the rest.
 
-For PFS runs with a current `run-manifest.json`, only the output directory is needed:
+For PFS, resume with the saved configuration and task list:
 
 ```bash
 uv run tlaps-bench run --resume --output-dir results/my-pfs-run
 ```
 
-Omitted options inherit the recorded backend, model, reasoning effort, output-token limit, container/local mode, agent and checker budgets, checker CPU limit, retry and continuation limits, and persistent session directory. Explicit conflicting options are rejected, even when they equal the normal CLI defaults. The exact cohort is restored from `task-list.json`, so changes to the Current collection do not silently change the selected tasks. Explicit selection flags must still select the original cohort.
+Conflicting options are rejected. Reapply `--jobs`, quota limits, and `--keep-container` if needed. For Proof Completion, repeat the original run options.
 
-Only recorded settings can be recovered. Scheduling and operational options such as `--jobs`, quota thresholds, and `--keep-container` still use their normal defaults unless supplied. Proof Completion runs do not record an execution manifest: their recorded task list can restore the mode and cohort, but backend/model/budget options must be supplied again. Unsupported older PFS manifest schemas require the original checkout.
-
-`--dry-run --resume --output-dir DIR` checks recorded options and the selected cohort without starting a run. Full PFS resume also checks `run-manifest.json`: the canonical corpus, execution sources, pinned proof libraries, verification toolchain, execution limits, and persistent-session policy must still match. Restoring options does not waive these identity checks. Keep the original checkout and inputs when continuing a historical run.
+Use `--dry-run --resume --output-dir DIR` to preview the selection. Keep the original checkout and inputs when resuming.
 
 Inline infra retries are intentionally short: the default `--infra-retries 3` gives the original attempt plus three retries with brief backoff. If a longer provider or network outage leaves `INFRA_ERROR` / `QUOTA_EXHAUSTED` results, rerun later with the same `--output-dir --resume`; those non-genuine results are not skipped.
 
