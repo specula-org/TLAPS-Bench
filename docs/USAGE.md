@@ -316,6 +316,8 @@ Proof Completion checks reuse `<target-dir>/.tlacache` by default; use `--no-cac
 
 PFS checks require a positive `--timeout T`, used without scaling. Use `--check-session DIR` to resume a check with its remaining budget, or omit it to start a new check. With `--container`, `DIR` must be inside the mounted workspace.
 
+Inside a benchmark run, omit `--timeout` and `--check-cpus` to inherit its frozen policy. A conflicting override exits with code 3 and a `RETRY-COMMAND` carrying the required options; this is not a proof verdict. Fixed-scaffold failures identify the first differing submitted and canonical lines. Correct the reported edit and rerun the full check on the final file, including a partial submission; a syntax-only or raw TLAPM check does not establish submission integrity.
+
 Cheating is checked before proving: a detected cheat fails fast and skips the tlapm run (`--keep-verifying` verifies anyway). Each run also snapshots the workspace to a hidden git ref — browse it with `git log refs/tlaps-check/history`; `--no-git-track` disables.
 
 Huge proofs are verified in parallel shards (`tlapm --toolbox` line ranges split at theorem boundaries, one cache dir per shard). Sharding is automatic above `TLAPS_SHARD_MIN_LINES` (5000) lines at nproc/2 shards capped by available memory (`TLAPS_SHARD_MEM_MB` per shard); `--shards N` forces a count, `--shards 1` forces a single run.

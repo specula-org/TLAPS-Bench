@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import sys
 import time
 from types import SimpleNamespace
@@ -13,6 +14,7 @@ import pytest
 from common import check_proof
 from common.proof_from_scratch_module import begin_agent_proof, end_agent_proof
 from common.task_contract import BEGIN_AGENT_HELPERS, END_AGENT_HELPERS
+from common.verification_budget import POLICY_ENV, VerificationPolicy
 from evaluator.proof_module_result import validate_module_result
 from tlacore.model import Loc, Module, Theorem
 from tlacore.sany.dump import SanyRun, SanyStatus
@@ -335,6 +337,182 @@ def test_newline_only_module_integrity_failure_is_not_cheating(tmp_path, monkeyp
     assert any(line.startswith("FAIL SCAFFOLD_FORMAT_MODIFIED:") for line in lines)
     assert "GATES-FAILED: module_integrity" in lines
     assert not any(line.startswith("CHEAT-DETECTED:") for line in lines)
+
+
+@pytest.mark.parametrize("timeout,cpus", [(1200, None), (10800, 2)])
+@pytest.mark.parametrize("frozen", [False, True])
+def test_frozen_policy_error_provides_a_retry_with_original_check_options(tmp_path, monkeypatch, timeout, cpus, frozen):
+    filepath, benchmark = _write_inputs(tmp_path)
+    policy = VerificationPolicy.create(3600, tuple(f"Suite/Task_{i}.tla" for i in range(9)), 8)
+    monkeypatch.setenv(POLICY_ENV, json.dumps(policy.as_dict()))
+    monkeypatch.setattr(sys, "frozen", frozen, raising=False)
+    monkeypatch.setattr(
+        check_proof, "run_normalized", lambda *_args, **_kwargs: pytest.fail("invalid policy must not start SANY")
+    )
+    monkeypatch.setattr(
+        check_proof, "run_killgroup", lambda *_args, **_kwargs: pytest.fail("invalid policy must not start TLAPM")
+    )
+    lines: list[str] = []
+    session = tmp_path / "saved check with spaces"
+    output = tmp_path / "my check.result"
+    exit_code = check_proof.run_module_task_check(
+        filepath=str(filepath),
+        benchmark_dir=str(benchmark),
+        expected_unit_ids=policy.proof_unit_ids,
+        tlapm_path="/custom tools/tlapm",
+        tlapm_lib="/custom tools/lib",
+        timeout=timeout,
+        check_cpus=cpus,
+        check_session=str(session),
+        no_cache=True,
+        no_git_track=True,
+        output_path=str(output),
+        import_violations=[],
+        emit=lines.append,
+    )
+
+    assert exit_code == 3
+    assert not session.exists()
+    assert not any(line.startswith(check_proof.MODULE_RESULT_PREFIX) for line in lines)
+    retry = shlex.split(
+        next(line.removeprefix("RETRY-COMMAND: ") for line in lines if line.startswith("RETRY-COMMAND: "))
+    )
+    prefix = [sys.executable] if frozen else [sys.executable, "-m", "common.check_proof"]
+    assert retry[: len(prefix) + 1] == [*prefix, str(filepath)]
+    for option, expected in {
+        "--timeout": "10800",
+        "--check-cpus": "8",
+        "--check-session": str(session),
+        "--output": str(output),
+        "--benchmark-dir": str(benchmark),
+        "--tlapm": "/custom tools/tlapm",
+        "--tlapm-lib": "/custom tools/lib",
+    }.items():
+        assert retry[retry.index(option) + 1] == expected
+    assert "--no-cache" in retry
+    assert "--no-container" in retry
+    assert "--no-git-track" in retry
+    assert "required 10800s" in lines[0] if timeout != 10800 else "required 8" in lines[0]
+
+
+def test_retry_preserves_local_tool_and_disabled_git_tracking(tmp_path, monkeypatch, capsys):
+    filepath, benchmark = _write_inputs(tmp_path, canonical_source=_marked_source(UNIT_A))
+    monkeypatch.setenv(POLICY_ENV, json.dumps(VerificationPolicy.create(30, (UNIT_A,), 4).as_dict()))
+    monkeypatch.delenv("TLAPS_IN_CONTAINER", raising=False)
+    monkeypatch.delenv("TLAPS_NO_GIT_TRACK", raising=False)
+    monkeypatch.setattr(check_proof, "find_tlapm", lambda: None)
+    monkeypatch.setattr(check_proof, "resolve_frozen_catalog", lambda _: None)
+    monkeypatch.setattr(check_proof, "scan_installed_libraries", lambda: SimpleNamespace(allowed_modules=set()))
+    monkeypatch.setattr(check_proof, "verify_installed_libraries", lambda _: None)
+    monkeypatch.setattr(check_proof, "_run_in_container", lambda *_: pytest.fail("retry changed execution environment"))
+    monkeypatch.setattr(check_proof, "snapshot_worktree", lambda *_: pytest.fail("retry enabled git tracking"))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "check_proof_bin",
+            str(filepath),
+            "--mode",
+            "proof-from-scratch",
+            "--no-container",
+            "--no-git-track",
+            "--benchmark-dir",
+            str(benchmark),
+            "--tlapm",
+            "/custom tools/tlapm",
+            "--tlapm-lib",
+            "/custom tools/lib",
+            "--output",
+            str(tmp_path / "check.result"),
+            "--timeout",
+            "1",
+        ],
+    )
+    with pytest.raises(SystemExit) as first:
+        check_proof.main()
+    assert first.value.code == 3
+    retry = shlex.split(
+        next(
+            line.removeprefix("RETRY-COMMAND: ")
+            for line in capsys.readouterr().out.splitlines()
+            if line.startswith("RETRY-COMMAND: ")
+        )
+    )
+    received = []
+    monkeypatch.setattr(check_proof, "run_module_task_check", lambda **kwargs: received.append(kwargs) or 0)
+    assert retry[:3] == [sys.executable, "-m", "common.check_proof"]
+    monkeypatch.setattr(sys, "argv", ["common.check_proof", *retry[3:]])
+    with pytest.raises(SystemExit) as second:
+        check_proof.main()
+    assert second.value.code == 0
+    assert received[0]["timeout"] == 30
+    assert received[0]["check_cpus"] == 4
+    assert received[0]["tlapm_path"] == "/custom tools/tlapm"
+    assert received[0]["no_git_track"] is True
+
+
+def test_wrong_module_policy_does_not_offer_a_budget_only_retry(tmp_path, monkeypatch):
+    filepath, benchmark = _write_inputs(tmp_path)
+    monkeypatch.setenv(POLICY_ENV, json.dumps(VerificationPolicy.create(30, (UNIT_A,)).as_dict()))
+    lines: list[str] = []
+    exit_code = check_proof.run_module_task_check(
+        filepath=str(filepath),
+        benchmark_dir=str(benchmark),
+        expected_unit_ids=(UNIT_B,),
+        tlapm_path="tlapm",
+        tlapm_lib="/lib",
+        timeout=30,
+        output_path=str(tmp_path / "check.result"),
+        import_violations=[],
+        emit=lines.append,
+    )
+    assert exit_code == 3
+    assert "proof-unit IDs differ" in lines[0]
+    assert not any(line.startswith("RETRY-COMMAND:") for line in lines)
+
+
+def test_scaffold_feedback_locates_extra_blank_line_and_repaired_check_passes(tmp_path, monkeypatch):
+    canonical = _marked_source(UNIT_A, "BY TRUE")
+    submitted = canonical.replace("====\n", "\n====\n")
+    filepath, benchmark = _write_inputs(tmp_path, canonical_source=canonical, submitted_source=submitted)
+    monkeypatch.setenv(POLICY_ENV, json.dumps(VerificationPolicy.create(30, (UNIT_A,)).as_dict()))
+    monkeypatch.setattr(check_proof, "run_normalized", lambda *_args, **_kwargs: _valid_sany())
+
+    def parsed_module(_raw):
+        module = _module_for_marked_source(filepath.read_text(), UNIT_A)
+        module.theorems[0].proof_is_omitted = False
+        return module
+
+    monkeypatch.setattr(check_proof.Module, "parse", parsed_module)
+    monkeypatch.setattr(check_proof, "find_community_lib", lambda _filepath: None)
+    calls = []
+    monkeypatch.setattr(
+        check_proof, "run_killgroup", _tlapm_responses({5: ("[INFO]: All 1 obligation proved.\n", "", 0)}, calls)
+    )
+    options = dict(
+        filepath=str(filepath),
+        benchmark_dir=str(benchmark),
+        expected_unit_ids=(UNIT_A,),
+        tlapm_path="tlapm",
+        tlapm_lib="/lib",
+        timeout=30,
+        output_path=str(tmp_path / "check.result"),
+        import_violations=[],
+    )
+    lines: list[str] = []
+    assert check_proof.run_module_task_check(**options, emit=lines.append) == 1
+    assert "CHEAT-DETECTED: SCAFFOLD_MODIFIED" in lines
+    assert not calls
+    message = _report(lines)["integrity_issues"][0]["message"]
+    extra_line = submitted.splitlines().index("====")
+    assert f"submitted line {extra_line}" in message
+    assert "expected '====\\n', found '\\n'" in message
+
+    filepath.write_text(canonical)
+    lines.clear()
+    assert check_proof.run_module_task_check(**options, emit=lines.append) == 0
+    assert _report(lines)["trusted_proof_unit_ids"] == [UNIT_A]
+    assert len(calls) == 1
 
 
 def test_raw_pass_with_untrusted_dependency_is_blocked(tmp_path, monkeypatch):

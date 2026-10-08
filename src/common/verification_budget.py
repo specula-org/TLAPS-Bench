@@ -92,14 +92,40 @@ def scaled_timeout(base: int, targets: int) -> int:
     return (base * min(targets + 3, 12) + 3) // 4
 
 
+class FrozenPolicyMismatch(ValueError):
+    """A check used different inputs or options from its recorded run."""
+
+    def __init__(self, message: str, policy: VerificationPolicy, *, same_task: bool):
+        super().__init__(message)
+        self.policy = policy
+        self.same_task = same_task
+
+
 def policy_for_check(timeout: int, proof_unit_ids, cpus: int | None = None) -> VerificationPolicy:
     raw = os.environ.get(POLICY_ENV)
     if raw:
         policy = VerificationPolicy.from_dict(json.loads(raw))
-        if tuple(proof_unit_ids) != policy.proof_unit_ids or timeout != policy.effective_timeout_secs:
-            raise ValueError("checker inputs differ from the runner's frozen verification policy")
+        if tuple(proof_unit_ids) != policy.proof_unit_ids:
+            raise FrozenPolicyMismatch(
+                "checker proof-unit IDs differ from the runner's frozen verification policy; "
+                "check the assigned canonical module task",
+                policy,
+                same_task=False,
+            )
+        if timeout != policy.effective_timeout_secs:
+            raise FrozenPolicyMismatch(
+                "checker timeout differs from the runner's frozen verification policy: "
+                f"received {timeout}s, required {policy.effective_timeout_secs}s",
+                policy,
+                same_task=True,
+            )
         if cpus is not None and cpus != policy.cpus:
-            raise ValueError("checker CPUs differ from the runner's frozen verification policy")
+            raise FrozenPolicyMismatch(
+                "checker CPUs differ from the runner's frozen verification policy: "
+                f"received {cpus}, required {policy.cpus}",
+                policy,
+                same_task=True,
+            )
         return policy
     # Standalone checker --timeout is already effective, never scale it here.
     return VerificationPolicy(None, tuple(proof_unit_ids), timeout, DEFAULT_CPUS if cpus is None else cpus)

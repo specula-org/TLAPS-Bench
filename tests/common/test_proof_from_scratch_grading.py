@@ -445,6 +445,24 @@ def test_extra_eof_newlines_are_allowed():
     assert tuple(unit.unit_id for unit in analysis.target_units) == UNITS
 
 
+def test_scaffold_feedback_tracks_line_numbers_after_longer_editable_proofs():
+    canonical = _source()
+    submitted = _source(proof_bodies={UNIT_A: "BY TRUE\n\n\n", UNIT_B: "BY TRUE"})
+    submitted = submitted.replace("====\n", "\n====\n")
+    with pytest.raises(ModuleSubmissionError) as caught:
+        analyze_module_submission(
+            canonical_source=canonical,
+            submitted_source=submitted,
+            expected_unit_ids=UNITS,
+            module=_module(submitted),
+        )
+
+    assert caught.value.code == "SCAFFOLD_MODIFIED"
+    assert f"submitted line {submitted.splitlines().index('====')}" in str(caught.value)
+    assert f"canonical line {canonical.splitlines().index('====') + 1}" in str(caught.value)
+    assert "expected '====\\n', found '\\n'" in str(caught.value)
+
+
 @pytest.mark.parametrize(
     "transform",
     [

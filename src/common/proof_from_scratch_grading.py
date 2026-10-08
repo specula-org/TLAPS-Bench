@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
+from itertools import zip_longest
 
 from common.proof_from_scratch_module import (
     ModuleTaskContractError,
@@ -77,6 +78,34 @@ def _parse_regions(source: str, expected_unit_ids: Iterable[str], *, label: str)
         raise ModuleSubmissionError(
             "MODULE_MARKERS_INVALID", f"{label} module task has invalid editable regions: {exc}"
         ) from exc
+
+
+def _fixed_text_difference(canonical: ModuleTaskRegions, submitted: ModuleTaskRegions) -> str:
+    """Locate the first changed fixed line without comparing editable proofs."""
+
+    canonical_bodies = [canonical.helpers, *(proof.text for proof in canonical.proofs)]
+    submitted_bodies = [submitted.helpers, *(proof.text for proof in submitted.proofs)]
+    canonical_line = submitted_line = 1
+    for index, (expected, actual) in enumerate(zip(canonical.fixed_segments, submitted.fixed_segments, strict=True)):
+        if expected != actual:
+            for offset, (left, right) in enumerate(
+                zip_longest(expected.splitlines(keepends=True), actual.splitlines(keepends=True))
+            ):
+                if left != right:
+                    expected_text = "<end of fixed region>" if left is None else repr(left[:120])
+                    actual_text = "<end of fixed region>" if right is None else repr(right[:120])
+                    return (
+                        f"first difference at submitted line {submitted_line + offset} "
+                        f"(canonical line {canonical_line + offset}): "
+                        f"expected {expected_text}, found {actual_text}; "
+                        "restore the fixed text exactly and keep proof edits inside the marked regions"
+                    )
+        canonical_line += len(expected.splitlines())
+        submitted_line += len(actual.splitlines())
+        if index < len(canonical_bodies):
+            canonical_line += len(canonical_bodies[index].splitlines())
+            submitted_line += len(submitted_bodies[index].splitlines())
+    return "restore the fixed text exactly and keep proof edits inside the marked regions"
 
 
 def _theorem_in_range(theorems: tuple[Theorem, ...], start: int, end: int, *, unit_id: str) -> Theorem:
@@ -302,12 +331,14 @@ def analyze_module_submission(
     if fixed_segment_status is FixedSegmentStatus.FORMAT_MODIFIED:
         raise ModuleSubmissionError(
             "SCAFFOLD_FORMAT_MODIFIED",
-            "fixed module task scaffold differs only in line endings or the final newline",
+            "fixed module task scaffold differs only in line endings or the final newline; "
+            + _fixed_text_difference(canonical_regions, submitted_regions),
         )
     if fixed_segment_status is FixedSegmentStatus.MODIFIED:
         raise ModuleSubmissionError(
             "SCAFFOLD_MODIFIED",
-            "fixed module task scaffold outside editable regions was modified",
+            "fixed module task scaffold outside editable regions was modified; "
+            + _fixed_text_difference(canonical_regions, submitted_regions),
         )
 
     if expected_extends is not None and tuple(module.extends) != tuple(expected_extends):
