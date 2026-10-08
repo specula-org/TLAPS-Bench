@@ -439,9 +439,17 @@ uv run tlaps-bench run --mode proof-completion --backend codex --model gpt-5.5 -
 
 The runner skips benchmarks already recorded as `SKIP` or as a genuine `PASS` in that directory (first-attempt or via a continuation round), and reruns the rest.
 
-For PFS, resume must select the same module tasks as the original run. A default run can resume without selection flags only while Current still resolves to the same tasks. To resume an older full-PFS run, supply a task-list file containing its original module IDs. For an explicit task-list run in either mode, pass the same list again.
+For PFS runs with a current `run-manifest.json`, only the output directory is needed:
 
-`--dry-run --resume --output-dir DIR` checks the selected cohort against `task-list.json` without starting a run. Full PFS resume also checks `run-manifest.json`: the canonical corpus, execution sources, pinned proof libraries, verification toolchain, execution limits, and persistent-session policy must still match. If the original run used `--session-dir` or the implicit directory from `--keep-container`, retain that session path. Keep the original checkout and inputs when continuing a historical run.
+```bash
+uv run tlaps-bench run --resume --output-dir results/my-pfs-run
+```
+
+Omitted options inherit the recorded backend, model, reasoning effort, output-token limit, container/local mode, agent and checker budgets, checker CPU limit, retry and continuation limits, and persistent session directory. Explicit conflicting options are rejected, even when they equal the normal CLI defaults. The exact cohort is restored from `task-list.json`, so changes to the Current collection do not silently change the selected tasks. Explicit selection flags must still select the original cohort.
+
+Only recorded settings can be recovered. Scheduling and operational options such as `--jobs`, quota thresholds, and `--keep-container` still use their normal defaults unless supplied. Proof Completion runs do not record an execution manifest: their recorded task list can restore the mode and cohort, but backend/model/budget options must be supplied again. Unsupported older PFS manifest schemas require the original checkout.
+
+`--dry-run --resume --output-dir DIR` checks recorded options and the selected cohort without starting a run. Full PFS resume also checks `run-manifest.json`: the canonical corpus, execution sources, pinned proof libraries, verification toolchain, execution limits, and persistent-session policy must still match. Restoring options does not waive these identity checks. Keep the original checkout and inputs when continuing a historical run.
 
 Inline infra retries are intentionally short: the default `--infra-retries 3` gives the original attempt plus three retries with brief backoff. If a longer provider or network outage leaves `INFRA_ERROR` / `QUOTA_EXHAUSTED` results, rerun later with the same `--output-dir --resume`; those non-genuine results are not skipped.
 
