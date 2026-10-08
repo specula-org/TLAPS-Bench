@@ -17,6 +17,14 @@ official checker's SANY/TLAPM envelope subtract recorded pauses. Ordinary idle
 time, network/API waits, and solver execution still consume time. This is an
 elapsed-time budget, not a CPU-time budget.
 
+Claude Code benchmark launches set `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` in
+their child environment. This disables print mode's wall-clock ceiling for
+pending background tasks, which can otherwise terminate them immediately after
+a long freeze. The benchmark's configured `--timeout` remains the execution
+limit; `--timeout 0` intentionally has no overall limit. The caller's environment
+is unchanged. This setting does not suspend raw shell `timeout` commands or
+TLAPM/solver internal timers, and does not alter already-running Claude sessions.
+
 Docker agent results also record `agent_wall_time_secs` and
 `agent_paused_time_secs`; the difference is the measured active process runtime.
 On timeout, the existing `agent_time_secs` cap can additionally exclude shutdown
