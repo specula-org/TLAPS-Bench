@@ -11,15 +11,19 @@ to get a parsed view of a module — no regex parsing of TLA+ source anywhere.
 
 from __future__ import annotations
 
+import contextlib
 import glob
 import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from enum import StrEnum
+
+from common.active_clock import ActiveClock, communicate
 
 from ..model import Module
 
@@ -98,12 +102,21 @@ def run_raw(tla_path: str, timeout: int = 180) -> SanyRun:
 
     command = (_RUN_SH, tla_path)
     try:
-        res = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
+        clock = ActiveClock.from_environment()
+        if clock.path is None:
+            res = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+        else:
+            with subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True
+            ) as proc:
+                try:
+                    stdout, stderr = communicate(proc, timeout, clock=clock)
+                except BaseException:
+                    with contextlib.suppress(ProcessLookupError):
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    proc.communicate()
+                    raise
+                res = subprocess.CompletedProcess(command, proc.returncode, stdout, stderr)
     except subprocess.TimeoutExpired as exc:
         stdout = _captured_text(exc.stdout)
         stderr = _captured_text(exc.stderr)

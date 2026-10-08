@@ -42,6 +42,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from common.active_clock import ActiveClock
 from common.container import (
     IMAGE_TAG,
     ContainerConfig,
@@ -167,6 +168,8 @@ _RUNNER_OWNED_ACCOUNTING_KEYS = frozenset(
         "input_tokens",
         "output_tokens",
         "agent_time_secs",
+        "agent_wall_time_secs",
+        "agent_paused_time_secs",
         "grading_time_secs",
         "grader_error_time_secs",
         "logical_timeout_used_secs",
@@ -264,6 +267,7 @@ def _write_attempt_accounting(
     time_secs: float | None,
     usage: UsageSummary,
     backend: Backend,
+    pause_metrics: dict | None = None,
 ) -> None:
     """Store non-experiment accounting beside an infra/quota attempt."""
 
@@ -271,6 +275,14 @@ def _write_attempt_accounting(
         return
     os.makedirs(directory, exist_ok=True)
     diagnostic: dict[str, object] = {"time_secs": time_secs}
+    if pause_metrics:
+        diagnostic.update(
+            {
+                key: pause_metrics[key]
+                for key in ("agent_wall_time_secs", "agent_paused_time_secs")
+                if key in pause_metrics
+            }
+        )
     _attach_equivalent_cost(diagnostic, usage, backend)
     with open(os.path.join(directory, "accounting.json"), "w") as stream:
         json.dump(diagnostic, stream, indent=2)
@@ -752,6 +764,8 @@ def _reset_logical_attempt_segment(result: dict[str, object], backend: Backend) 
     result["termination_reason"] = TerminationReason.OK
     result["error"] = ""
     result["agent_time_secs"] = None if _supports_cost_time(backend) else 0.0
+    result.pop("agent_wall_time_secs", None)
+    result.pop("agent_paused_time_secs", None)
     result["grading_time_secs"] = 0.0
     result["logical_timeout_used_secs"] = 0.0
     result["time_secs"] = None if _supports_cost_time(backend) else 0.0
@@ -808,6 +822,9 @@ def _merge_logical_attempt_accounting(
     result["input_tokens"] = aggregate_usage.legacy_input_tokens
     result["output_tokens"] = aggregate_usage.legacy_output_tokens
     result["agent_time_secs"] = _sum_accounting_values(previous.get("agent_time_secs"), result.get("agent_time_secs"))
+    for field in ("agent_wall_time_secs", "agent_paused_time_secs"):
+        if field in previous or field in result:
+            result[field] = _sum_accounting_values(previous.get(field), result.get(field))
     result["grading_time_secs"] = _sum_accounting_values(
         previous.get("grading_time_secs"), result.get("grading_time_secs")
     )
@@ -1233,6 +1250,8 @@ def _run_backend_with_retries(
             def _run_once(workspace=workspace, canonical_dir=canonical_dir):
                 nonlocal active_secs, attempt_secs, attempt_timeout_used_secs
                 result["error"] = ""
+                result.pop("agent_wall_time_secs", None)
+                result.pop("agent_paused_time_secs", None)
                 # Establish a valid empty-stream marker before process/container
                 # startup. A launch exception is then distinguishable from a
                 # child that flushed a malformed or truncated event.
@@ -1272,6 +1291,7 @@ def _run_backend_with_retries(
                         canonical_dir,
                     )
                 wall_elapsed = time.monotonic() - t0
+                wall_elapsed = max(0.0, wall_elapsed - result.pop("_container_paused_secs", 0.0))
                 elapsed = container_agent_secs if item.use_container and _supports_cost_time(backend) else wall_elapsed
                 # Cooperative backends may spend a bounded grace period flushing
                 # audit events after the logical deadline. That is not extra model
@@ -1311,6 +1331,7 @@ def _run_backend_with_retries(
                     backend,
                     time_secs=attempt_secs,
                     usage=quota_usage,
+                    pause_metrics=result,
                 )
                 return True
 
@@ -1398,6 +1419,7 @@ def _run_backend_with_retries(
                 backend,
                 time_secs=attempt_secs,
                 usage=attempt_usage,
+                pause_metrics=result,
             )
             if fixed_workspace is None:
                 shutil.rmtree(workspace, ignore_errors=True)
@@ -1440,6 +1462,7 @@ def _run_backend_with_retries(
             time_secs=attempt_secs,
             usage=attempt_usage,
             backend=backend,
+            pause_metrics=result,
         )
         attempt_usage = UsageSummary(
             sources=("runner.non_experiment_attempt",),
@@ -1447,6 +1470,9 @@ def _run_backend_with_retries(
             warnings=("infra/quota accounting is stored separately under agent artifacts",),
         )
         result["agent_time_secs"] = None
+        for field in ("agent_wall_time_secs", "agent_paused_time_secs"):
+            if field in result:
+                result[field] = None
         result["logical_timeout_used_secs"] = 0.0
         result["time_secs"] = None
         result["equivalent_cost_usd"] = None
@@ -2647,6 +2673,9 @@ def run_single_benchmark(item: WorkItem):
         with open(os.path.join(agent_dir, "transcript.txt"), "w") as f:
             f.write(f"Benchmark: {rel_path}\n")
             f.write(f"Agent time: {_format_task_time(result.get('agent_time_secs'))}\n")
+            if "agent_wall_time_secs" in result:
+                f.write(f"Agent wall time: {_format_task_time(result.get('agent_wall_time_secs'))}\n")
+                f.write(f"Managed pause time: {_format_task_time(result.get('agent_paused_time_secs'))}\n")
             if _supports_cost_time(backend):
                 f.write(f"Equivalent cost: {_format_equivalent_cost(result.get('equivalent_cost_usd'))}\n")
             f.write(f"Tokens: {format_token_usage(result_token_usage(result), verbose=True)}\n")
@@ -2878,16 +2907,17 @@ def _stash_failed_attempt(
     *,
     time_secs: float | None,
     usage: UsageSummary,
+    pause_metrics: dict | None = None,
 ) -> None:
     """Move a failed attempt's raw outputs to agent/attempts/attempt-N/: the
     retry starts clean (no stale stderr.txt) and the evidence stays debuggable."""
     dest = os.path.join(agent_dir, "attempts", f"attempt-{attempt}")
     os.makedirs(dest, exist_ok=True)
-    for fname in ("output.jsonl", "stderr.txt", *backend.attempt_output_files()):
+    for fname in ("output.jsonl", "stderr.txt", "active-clock.json", *backend.attempt_output_files()):
         src = os.path.join(agent_dir, fname)
         if os.path.isfile(src):
             shutil.move(src, os.path.join(dest, fname))
-    _write_attempt_accounting(dest, time_secs=time_secs, usage=usage, backend=backend)
+    _write_attempt_accounting(dest, time_secs=time_secs, usage=usage, backend=backend, pause_metrics=pause_metrics)
 
 
 def _stash_quota_attempt(
@@ -2898,6 +2928,7 @@ def _stash_quota_attempt(
     *,
     time_secs: float | None,
     usage: UsageSummary,
+    pause_metrics: dict | None = None,
 ) -> None:
     """Preserve a no-model-work hard-cap launch before the next launch replaces it."""
 
@@ -2907,11 +2938,11 @@ def _stash_quota_attempt(
         f"infra-{infra_attempt}-quota-{quota_attempt}",
     )
     os.makedirs(dest, exist_ok=True)
-    for fname in ("output.jsonl", "stderr.txt", *backend.attempt_output_files()):
+    for fname in ("output.jsonl", "stderr.txt", "active-clock.json", *backend.attempt_output_files()):
         src = os.path.join(agent_dir, fname)
         if os.path.isfile(src):
             shutil.move(src, os.path.join(dest, fname))
-    _write_attempt_accounting(dest, time_secs=time_secs, usage=usage, backend=backend)
+    _write_attempt_accounting(dest, time_secs=time_secs, usage=usage, backend=backend, pause_metrics=pause_metrics)
 
 
 def _run_continuations(
@@ -3023,6 +3054,11 @@ def _run_continuations(
             round_result["input_tokens"] = round_usage.legacy_input_tokens
             round_result["output_tokens"] = round_usage.legacy_output_tokens
             segment_agent_time = round_result.get("agent_time_secs")
+            segment_pause_metrics = {
+                field: round_result.get(field)
+                for field in ("agent_wall_time_secs", "agent_paused_time_secs")
+                if field in round_result
+            }
             segment_grading_time = round_result.get("grading_time_secs")
             segment_equivalent_cost = round_result.get("equivalent_cost_usd")
             segment_tool_calls = copy.deepcopy(round_result.get("tool_calls"))
@@ -3067,6 +3103,8 @@ def _run_continuations(
                     result.get("agent_time_secs"),
                     segment_agent_time,
                 )
+                for field, value in segment_pause_metrics.items():
+                    result[field] = _sum_accounting_values(result.get(field), value)
                 result["grading_time_secs"] = _sum_accounting_values(
                     result.get("grading_time_secs"),
                     segment_grading_time,
@@ -3241,6 +3279,8 @@ def _run_backend_container(
         credential_mounts=backend.get_credential_mounts(),
         keep_container=item.keep_container,
         agent_start_marker=(f"__TLAPS_BENCH_AGENT_START_{uuid.uuid4().hex}__" if _supports_cost_time(backend) else ""),
+        pause_supported=propagated_deadline is None,
+        pause_accounting=True,
     )
     name_no_ext = os.path.splitext(os.path.basename(item.benchmark_path))[0]
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", name_no_ext)
@@ -3276,8 +3316,27 @@ def _run_backend_container(
     container_run = None
     agent_started_at: float | None = None
     agent_ended_at: float | None = None
+    active_clock = None
+    agent_started_reading = None
+    agent_ended_reading = None
+
+    def finish_agent():
+        nonlocal agent_ended_at, agent_ended_reading
+        if agent_ended_at is None:
+            agent_ended_reading = active_clock.read() if active_clock else None
+            agent_ended_at = agent_ended_reading.active if agent_ended_reading else time.monotonic()
+
+    def deadline_now():
+        # The host remains runnable while Docker freezes the child. Subtract
+        # only completed/ongoing managed pauses, never ordinary idle/API waits.
+        if active_clock is not None and propagated_deadline is None:
+            return active_clock.now()
+        return time.time()
+
     try:
         container_run = runner.run(config, cmd, stdin_data=stdin_data)
+        candidate_clock = getattr(container_run, "active_clock", None)
+        active_clock = candidate_clock if isinstance(candidate_clock, ActiveClock) else None
         if item.keep_container:
             name = config.container_name
             print(
@@ -3303,7 +3362,7 @@ def _run_backend_container(
             fcntl.fcntl(proc.stderr, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
         stderr_chunks: list[str] = []
-        logical_deadline = propagated_deadline or (time.time() + timeout if timeout else None)
+        logical_deadline = propagated_deadline or (deadline_now() + timeout if timeout else None)
         grace = backend.capabilities.timeout_drain_grace if propagated_deadline is not None else 0.0
         hard_deadline = logical_deadline + grace if logical_deadline is not None else None
         timed_out = False
@@ -3311,7 +3370,7 @@ def _run_backend_container(
         # Stream stdout to file in real-time (and stderr separately)
         with open(agent_jsonl, "w") as jsonl_f:
             while True:
-                now = time.time()
+                now = deadline_now()
                 if logical_deadline is not None and now >= logical_deadline:
                     timed_out = True
                 if timed_out and hard_deadline is not None and now >= hard_deadline:
@@ -3319,8 +3378,8 @@ def _run_backend_container(
                     runner.kill(container_run)
                     result["agent_exit"] = -1
                     result["error"] = f"{backend.name} timeout after {item.timeout}s"
-                    agent_ended_at = time.monotonic()
-                    return agent_ended_at - agent_started_at if agent_started_at is not None else None
+                    finish_agent()
+                    break
 
                 boundary = hard_deadline if timed_out else logical_deadline
                 poll_timeout = min(5.0, max(boundary - now, 0.0)) if boundary is not None else 5.0
@@ -3351,7 +3410,10 @@ def _run_backend_container(
                     for line in lines:
                         if config.agent_start_marker and line.rstrip("\r\n") == config.agent_start_marker:
                             if agent_started_at is None:
-                                agent_started_at = time.monotonic()
+                                agent_started_reading = active_clock.read() if active_clock else None
+                                agent_started_at = (
+                                    agent_started_reading.active if agent_started_reading else time.monotonic()
+                                )
                         else:
                             jsonl_f.write(line)
                             jsonl_f.flush()
@@ -3359,17 +3421,17 @@ def _run_backend_container(
                                 sys.stdout.write(line)
                                 sys.stdout.flush()
                     if proc.poll() is not None and agent_ended_at is None:
-                        agent_ended_at = time.monotonic()
+                        finish_agent()
                     if not chunk and proc.returncode is not None:
                         break
                 elif proc.poll() is not None:
                     if agent_ended_at is None:
-                        agent_ended_at = time.monotonic()
+                        finish_agent()
                     break
 
         if agent_started_at is not None and agent_ended_at is None:
-            agent_ended_at = time.monotonic()
-        if logical_deadline is not None and time.time() >= logical_deadline:
+            finish_agent()
+        if logical_deadline is not None and deadline_now() >= logical_deadline:
             timed_out = True
         result["agent_exit"] = -1 if timed_out else proc.returncode
         # Drain any remaining stderr
@@ -3394,12 +3456,27 @@ def _run_backend_container(
         if container_run:
             runner.kill(container_run)
         if agent_started_at is not None:
-            agent_ended_at = time.monotonic()
+            with contextlib.suppress(OSError):
+                finish_agent()
     finally:
-        # A retained container keeps its credential mount sources so a
-        # `docker start` can still authenticate.
-        if not item.keep_container:
-            runner.cleanup_credential_tmps()
+        try:
+            if active_clock is not None:
+                result["_container_paused_secs"] = active_clock.read().paused
+                if agent_started_reading is not None and agent_ended_reading is not None:
+                    result["agent_wall_time_secs"] = agent_ended_reading.wall - agent_started_reading.wall
+                    result["agent_paused_time_secs"] = agent_ended_reading.paused - agent_started_reading.paused
+                # Agent output is no longer being consumed; preserve an audit copy.
+                shutil.copyfile(active_clock.path, os.path.join(agent_dir, "active-clock.json"))
+        except OSError as exc:
+            result["agent_exit"] = -2
+            result["error"] = result.get("error") or f"cannot preserve active-clock accounting: {exc}"
+            result["agent_wall_time_secs"] = result["agent_paused_time_secs"] = None
+            agent_ended_at = None
+        finally:
+            # A retained container keeps its credential mount sources so a
+            # `docker start` can still authenticate.
+            if not item.keep_container:
+                runner.cleanup_credential_tmps()
     if agent_started_at is None or agent_ended_at is None:
         return None
     return agent_ended_at - agent_started_at
@@ -3591,6 +3668,7 @@ def _run_grader_container(
         # Exactly {target}.tla + canonical deps. Replay-required modes pass a
         # grader-only fresh snapshot, never the one exposed to the agent.
         benchmark_dir=canonical_dir or os.path.dirname(item.benchmark_path),
+        pause_accounting=True,
     )
     config.env["GIT_CONFIG_COUNT"] = "1"
     config.env["GIT_CONFIG_KEY_0"] = "safe.directory"
@@ -3621,6 +3699,10 @@ def _run_grader_container(
         result["error"] = str(e)
     finally:
         runner.cleanup_credential_tmps()
+
+        if isinstance(config.active_clock, ActiveClock):
+            result["_grader_paused_secs"] = config.active_clock.read().paused
+            shutil.copyfile(config.active_clock.path, os.path.join(grading_dir, "active-clock.json"))
 
 
 def _run_grader_local(
@@ -3748,6 +3830,7 @@ def _grade_submission(
         attempt["error"] = f"cannot materialize grading inputs: {exc}"
     finally:
         elapsed = time.monotonic() - started
+        elapsed = max(0.0, elapsed - attempt.pop("_grader_paused_secs", 0.0))
         if attempt.get("check_verdict") == "ERROR":
             attempt["grader_error"] = str(attempt.get("error", ""))
             prior = nonnegative_float(attempt.get("grader_error_time_secs")) or 0.0

@@ -18,6 +18,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common.active_clock import CLOCK_ENV, CLOCK_LABEL, CLOCK_MOUNT, ActiveClock, communicate
+
 IMAGE_TAG = "tlaps-bench-base"
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 _IMAGE_BUILD_FINGERPRINT_LABEL = "org.specula.tlaps-bench.build-sha256"
@@ -148,6 +150,9 @@ class ContainerConfig:
     # Optional stdout marker emitted after install + firewall setup and
     # immediately before the agent command starts.
     agent_start_marker: str = ""
+    pause_supported: bool = True
+    pause_accounting: bool = False
+    active_clock: ActiveClock | None = None
 
 
 @dataclass
@@ -156,6 +161,7 @@ class ContainerRun:
 
     proc: subprocess.Popen
     container_id: str
+    active_clock: ActiveClock | None = None
 
 
 @dataclass(frozen=True)
@@ -349,6 +355,11 @@ class ContainerRunner:
             args.extend(["-v", f"{config.result_dir}:/results:rw"])
         if config.benchmark_dir:
             args.extend(["-v", f"{config.benchmark_dir}:/benchmark:ro"])
+        if config.active_clock is not None:
+            directory = str(config.active_clock.path.parent)
+            args.extend(["-v", f"{directory}:{CLOCK_MOUNT}:ro"])
+            args.extend(["--label", f"{CLOCK_LABEL}={directory}"])
+            args.extend(["-e", f"{CLOCK_ENV}={CLOCK_MOUNT}/state.json"])
 
         # tlapm is baked into the image at /opt/tlapm
 
@@ -422,6 +433,7 @@ class ContainerRunner:
 
     def run(self, config: ContainerConfig, cmd: list[str], stdin_data: str | None = None) -> ContainerRun:
         """Launch a container with the given command. Returns handle."""
+        self._prepare_active_clock(config)
         docker_args, cid_file = self.build_docker_args(config)
         composite = self.build_composite_command(
             cmd,
@@ -447,12 +459,24 @@ class ContainerRunner:
                 pass
 
         container_id = self._read_cidfile(cid_file)
-        return ContainerRun(proc=proc, container_id=container_id)
+        return ContainerRun(proc=proc, container_id=container_id, active_clock=config.active_clock)
+
+    @staticmethod
+    def _prepare_active_clock(config: ContainerConfig) -> None:
+        if not config.pause_accounting or not sys.platform.startswith("linux"):
+            return
+        if config.active_clock is None:
+            # Never place the trusted ledger under /workspace, /results, or an
+            # agent session mount. Keep it after exit for retained containers
+            # and interruption diagnosis; the Docker label identifies it.
+            directory = Path.home() / ".tlaps-bench" / "runtime-clocks" / uuid.uuid4().hex
+            config.active_clock = ActiveClock.create(directory, pause_supported=config.pause_supported)
 
     def run_with_output(
         self, config: ContainerConfig, cmd: list[str], stdin_data: str | None = None, timeout: int | None = None
     ) -> tuple[int, str, str]:
         """Run container to completion. Returns (exit_code, stdout, stderr)."""
+        self._prepare_active_clock(config)
         docker_args, cid_file = self.build_docker_args(config)
         composite = self.build_composite_command(
             cmd,
@@ -463,18 +487,25 @@ class ContainerRunner:
         full_cmd = docker_args + ["bash", "-c", composite]
 
         try:
-            result = subprocess.run(
+            if config.active_clock is None:
+                completed = subprocess.run(full_cmd, input=stdin_data, capture_output=True, text=True, timeout=timeout)
+                return completed.returncode, completed.stdout, completed.stderr
+            proc = subprocess.Popen(
                 full_cmd,
-                input=stdin_data,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout,
             )
-            return result.returncode, result.stdout, result.stderr
-        except subprocess.TimeoutExpired:
+            stdout, stderr = communicate(proc, timeout, clock=config.active_clock, input=stdin_data)
+            return proc.returncode, stdout, stderr
+        except BaseException:
             cid = self._read_cidfile(cid_file)
             if cid:
                 self.kill_by_id(cid)
+            if "proc" in locals():
+                proc.kill()
+                proc.communicate()
             raise
 
     def run_preflight(

@@ -7,6 +7,8 @@ SUBCOMMANDS = [
     ("validate", "Batch-validate source proofs with tlapm"),
     ("generate", "Generate benchmarks (--mode proof-completion|proof-from-scratch; default proof-completion)"),
     ("score", "Score results (pass rate, per-module breakdown) from results.json"),
+    ("pause-container", "Pause a managed Docker container without spending its execution budget"),
+    ("resume-container", "Resume a container paused by pause-container"),
 ]
 
 PROG = "tlaps-bench"
@@ -134,6 +136,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if sub == "run":
         return _dispatch(f"{PROG} run", "evaluator.runner", "main", rest)
+    if sub in {"pause-container", "resume-container"}:
+        return _dispatch(
+            f"{PROG} {sub}",
+            "common.pause_control",
+            "main",
+            rest,
+            entry_kwargs={"pause": sub == "pause-container"},
+        )
     if sub == "check":
         return _dispatch(
             f"{PROG} check",

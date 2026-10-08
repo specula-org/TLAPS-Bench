@@ -651,6 +651,8 @@ def test_interrupted_first_attempt_resume_keeps_accounting_and_uses_only_remaini
             "termination_reason": "INFRA_ERROR",
             "graded_after_interruption": True,
             "agent_time_secs": 3.0,
+            "agent_wall_time_secs": 103.0,
+            "agent_paused_time_secs": 100.0,
             "grading_time_secs": 1.0,
             "logical_timeout_used_secs": 4.0,
             "time_secs": 4.0,
@@ -696,6 +698,8 @@ def test_interrupted_first_attempt_resume_keeps_accounting_and_uses_only_remaini
                 "agent_exit": 0,
                 "termination_reason": "OK",
                 "agent_time_secs": 2.0,
+                "agent_wall_time_secs": 202.0,
+                "agent_paused_time_secs": 200.0,
                 "grading_time_secs": 0.0,
                 "logical_timeout_used_secs": 2.0,
                 "time_secs": 2.0,
@@ -728,6 +732,8 @@ def test_interrupted_first_attempt_resume_keeps_accounting_and_uses_only_remaini
     assert recovered["check_verdict"] == "PASS"
     assert recovered["logical_resume_count"] == 1
     assert recovered["agent_time_secs"] == 5.0
+    assert recovered["agent_wall_time_secs"] == 305.0
+    assert recovered["agent_paused_time_secs"] == 300.0
     assert recovered["logical_timeout_used_secs"] == 6.0
     assert recovered["logical_timeout_remaining_secs"] == 4.0
     assert recovered["grading_time_secs"] > 1.0

@@ -11,9 +11,10 @@ import os
 import resource
 import shutil
 import threading
-import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+from common.active_clock import ActiveClock
 
 POLICY_VERSION = "pfs-module-budget-v1"
 POLICY_ENV = "TLAPS_VERIFICATION_POLICY"
@@ -178,6 +179,7 @@ class CheckSession:
         self._mutex = threading.RLock()
         self._stop = threading.Event()
         self._error = None
+        self.clock = ActiveClock.from_environment()
 
     def __enter__(self):
         self.directory.mkdir(parents=True, exist_ok=True)
@@ -196,19 +198,30 @@ class CheckSession:
                     raise ValueError("invalid check-session state flags")
                 if self.state.get("identity") != self.identity:
                     raise ValueError("cannot resume check with different candidate, canonical inputs, tools, or policy")
-                for field in ("wall_secs", "cpu_secs"):
+                for field in ("wall_secs", "cpu_secs", "active_secs", "paused_secs"):
+                    if field not in self.state:
+                        continue
                     value = self.state[field]
                     if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                         raise ValueError(f"invalid check-session {field}")
+                if {"active_secs", "paused_secs"} & self.state.keys() and (
+                    not {"active_secs", "paused_secs"} <= self.state.keys()
+                    or not math.isclose(
+                        self.state["wall_secs"], self.state["active_secs"] + self.state["paused_secs"], abs_tol=1e-6
+                    )
+                ):
+                    raise ValueError("inconsistent check-session active/pause accounting")
                 if self.state.get("active"):
                     self.state["cpu_complete"] = False
             else:
                 self.state = {"identity": self.identity, "wall_secs": 0.0, "cpu_secs": 0.0, "cpu_complete": True}
             self.prior_wall = self.state["wall_secs"]
+            self.prior_active = self.state.get("active_secs", self.prior_wall)
+            self.prior_paused = self.state.get("paused_secs", 0.0)
             self.prior_cpu = self.state["cpu_secs"]
-            self.started = time.monotonic()
+            self.started = self.clock.read()
             self.cpu_started = cpu_seconds()
-            self.deadline = self.started + max(0, self.timeout - self.prior_wall)
+            self.deadline = self.started.active + max(0, self.timeout - self.prior_active)
             self._save(active=True)
             self._thread = threading.Thread(target=self._heartbeat, daemon=True)
             self._thread.start()
@@ -219,9 +232,13 @@ class CheckSession:
 
     def _save(self, *, active: bool):
         with self._mutex:
-            wall = self.prior_wall + time.monotonic() - self.started
+            reading = self.clock.read()
+            active_secs = self.prior_active + reading.active - self.started.active
+            reservation = min(HEARTBEAT_SECS, max(0, self.timeout - active_secs)) if active else 0
             self.state.update(
-                wall_secs=wall + (min(HEARTBEAT_SECS, max(0, self.timeout - wall)) if active else 0),
+                wall_secs=self.prior_wall + reading.wall - self.started.wall + reservation,
+                active_secs=active_secs + reservation,
+                paused_secs=self.prior_paused + reading.paused - self.started.paused,
                 cpu_secs=self.prior_cpu + max(0, cpu_seconds() - self.cpu_started),
                 active=active,
             )
@@ -238,11 +255,14 @@ class CheckSession:
     def remaining(self) -> float:
         if self._error:
             raise OSError(f"cannot persist check budget: {self._error}")
-        return max(0, self.deadline - time.monotonic())
+        return max(0, self.deadline - self.clock.now())
 
     def metrics(self) -> dict:
+        reading = self.clock.read()
         return {
-            "wall_secs": self.prior_wall + time.monotonic() - self.started,
+            "wall_secs": self.prior_wall + reading.wall - self.started.wall,
+            "active_secs": self.prior_active + reading.active - self.started.active,
+            "paused_secs": self.prior_paused + reading.paused - self.started.paused,
             "cpu_secs": self.prior_cpu + max(0, cpu_seconds() - self.cpu_started),
             "cpu_complete": self.state["cpu_complete"],
             "cpu_source": "getrusage_self_and_reaped_children",
