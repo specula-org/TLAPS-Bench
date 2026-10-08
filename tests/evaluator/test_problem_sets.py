@@ -179,11 +179,15 @@ def test_default_selection_is_recorded_and_compared_on_resume(pfs_mode, preview_
     runner._write_task_list_record(str(tmp_path), "proof-from-scratch", list(CURRENT))
     arguments = ["run", "--resume", "--output-dir", str(tmp_path), "--dry-run"]
     assert cli.main(arguments) == 0
+    assert set(_selected(capsys.readouterr().out)) == set(CURRENT)
     # An old full-suite run must not silently resume as Current.
     old = list(CURRENT) + ["Walgit/WalgitProof.tla"]
     runner._write_task_list_record(str(tmp_path), "proof-from-scratch", old)
+    assert cli.main(arguments) == 0
+    assert set(_selected(capsys.readouterr().out)) == set(old)
+    # Explicitly requesting Current must still reject a changed cohort.
     with pytest.raises(SystemExit) as exc:
-        cli.main(arguments)
+        cli.main([*arguments, "--task-list", "current"])
     assert exc.value.code == 2
     assert "different task list or mode" in capsys.readouterr().err
     assert json.loads((tmp_path / runner.TASK_LIST_RECORD).read_text())["tasks"] == sorted(old)

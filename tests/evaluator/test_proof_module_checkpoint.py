@@ -407,12 +407,23 @@ def test_runner_resume_work_item_carries_checkpoint_identity_and_submission(tmp_
     output_dir.mkdir()
     (tmp_path / "lib" / "tlapm").mkdir(parents=True)
 
+    backend = _ModuleBackend()
     run_identity = {
-        "schema_version": 2,
+        "schema_version": 5,
         "mode": "proof-from-scratch",
         "corpus_digest": "corpus",
         "proof_library_digest": "libraries",
         "verification_toolchain_digest": "toolchain",
+        "execution_policy": runner._execution_policy_identity(
+            backend,
+            use_container=False,
+            timeout=28800,
+            check_timeout=600,
+            infra_retries=3,
+            max_continuations=0,
+            session_dir="",
+            verification_policies={TASK_ID: runner.VerificationPolicy.create(600, (UNIT_ID,)).as_dict()},
+        ),
     }
     canonical_inputs = runner.CanonicalInputs.capture(str(task), task.name, [])
     identity = ModuleCheckpointIdentity(
@@ -431,7 +442,6 @@ def test_runner_resume_work_item_carries_checkpoint_identity_and_submission(tmp_
     (output_dir / "task-list.json").write_text(json.dumps({"mode": "proof-from-scratch", "tasks": [TASK_ID]}))
     (output_dir / "results.json").write_text(json.dumps([{"benchmark": TASK_ID, "check_verdict": "FAIL"}]))
 
-    backend = _ModuleBackend()
     mode = _ModuleMode(benchmark_root, task)
     captured: list[runner.WorkItem] = []
     monkeypatch.setattr(runner, "get_backend", lambda *_args, **_kwargs: backend)
