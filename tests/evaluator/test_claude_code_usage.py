@@ -399,7 +399,7 @@ def test_terminal_turn_count_and_hidden_helper_set_request_floor(tmp_path):
 def test_same_model_hidden_usage_still_makes_request_count_a_lower_bound(tmp_path):
     path = _write(
         tmp_path / "output.jsonl",
-        _assistant(input_tokens=10, output_tokens=2, model="claude-opus-4-8"),
+        _assistant(input_tokens=10, output_tokens=2, cache_read=0, cache_write=0, model="claude-opus-4-8"),
         _result(
             input_tokens=10,
             output_tokens=20,
@@ -520,7 +520,7 @@ def test_non_object_json_invalidates_terminal_cost(tmp_path):
     assert "Claude Code stream contains malformed JSON" in usage.warnings
 
 
-def test_multiple_terminal_results_invalidate_cost(tmp_path):
+def test_unidentified_multiple_results_invalidate_cost(tmp_path):
     path = _write(
         tmp_path / "output.jsonl",
         _assistant(input_tokens=10, output_tokens=2),
@@ -533,7 +533,7 @@ def test_multiple_terminal_results_invalidate_cost(tmp_path):
     assert usage is not None
     assert usage.costs == ()
     assert usage.status == "lower_bound"
-    assert "Claude Code stream contains 2 terminal result events" in usage.warnings
+    assert "Claude Code result_index sequence is missing, duplicated, or out of order" in usage.warnings
 
 
 def test_partially_malformed_model_usage_cannot_silently_omit_a_model(tmp_path):
@@ -850,3 +850,295 @@ def test_legacy_parse_output_total_matches_structured_input_total(tmp_path):
     assert (legacy_in, legacy_out) == (160, 10)
     assert usage.legacy_input_tokens == legacy_in
     assert usage.legacy_output_tokens == legacy_out
+
+
+def _background_events():
+    """Reduced single-session trace with follow-up turns and an empty result.
+
+    result.usage/num_turns are per turn; modelUsage/cost/API duration accumulate.
+    See https://code.claude.com/docs/en/agent-sdk/cost-tracking#track-costs-in-streaming-input-mode.
+    """
+    path = Path(__file__).parent / "fixtures" / "claude_background_results.jsonl"
+    return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+@pytest.mark.parametrize("with_model_usage", [True, False])
+def test_background_results_count_each_turn_and_cumulative_cost_once(tmp_path, with_model_usage):
+    events = _background_events()
+    if not with_model_usage:
+        for event in events:
+            event.pop("modelUsage", None)
+    path = _write(tmp_path / "background.jsonl", *events)
+    backend = ClaudeCodeBackend()
+
+    usage = parse_claude_code_usage(path)
+    _, legacy_in, legacy_out = backend.parse_output(path)
+    tools = backend.parse_run_metadata(path)["tool_calls"]
+
+    assert usage.status == "complete"
+    assert usage.warnings == ()
+    assert (usage.input_tokens, usage.output_tokens) == (27, 42)
+    assert (legacy_in, legacy_out) == (27, 42)
+    assert (usage.cache_read_input_tokens, usage.cache_write_input_tokens) == (2, 3)
+    assert usage.model_requests == 3
+    assert usage.model_time_secs == 2.1
+    assert [request.output_tokens for request in usage.requests] == [None, None, None]
+    assert next(cost.amount for cost in usage.costs if cost.source == "claude_code.total_cost_usd") == 0.21
+    assert tools["complete"] is True
+    assert (tools["total"], tools["tlaps"], tools["other"]) == (2, 1, 1)
+
+
+def test_background_results_keep_cross_model_totals_and_request_lower_bound(tmp_path):
+    events = _background_events()
+    events[-1]["modelUsage"]["claude-haiku-4-5"] = {
+        "inputTokens": 4,
+        "outputTokens": 6,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "costUSD": 0.02,
+    }
+    events[-1]["total_cost_usd"] = 0.23
+    path = _write(tmp_path / "mixed-models.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+    _, legacy_in, legacy_out = ClaudeCodeBackend().parse_output(path)
+
+    assert usage.status == "lower_bound"
+    assert (usage.input_tokens, usage.output_tokens) == (31, 48)
+    assert (legacy_in, legacy_out) == (31, 48)
+    assert usage.model_requests == 4
+    assert any("without streamed request events" in warning for warning in usage.warnings)
+    assert next(cost.amount for cost in usage.costs if cost.source == "claude_code.total_cost_usd") == 0.23
+
+
+@pytest.mark.parametrize(
+    "damage",
+    [
+        "mixed-result-session",
+        "mixed-assistant-session",
+        "missing-session",
+        "missing-index",
+        "bool-index",
+        "gap",
+        "duplicate",
+        "nonzero-start",
+        "reset",
+    ],
+)
+def test_background_results_reject_broken_session_or_delivery_identity(tmp_path, damage):
+    events = _background_events()
+    if damage == "mixed-result-session":
+        events[-1]["session_id"] = "another-session"
+    elif damage == "mixed-assistant-session":
+        events[-2]["session_id"] = "another-session"
+    elif damage == "missing-session":
+        del events[-1]["session_id"]
+    elif damage == "missing-index":
+        del events[-1]["result_index"]
+    elif damage == "bool-index":
+        events[3]["result_index"] = False
+    elif damage == "gap":
+        events[-1]["result_index"] = 4
+    elif damage == "duplicate":
+        events[-1]["result_index"] = 2
+    elif damage == "nonzero-start":
+        events[3]["result_index"] = 1
+    else:
+        events.insert(4, {"type": "system", "subtype": "conversation_reset", "session_id": "background-session"})
+    path = _write(tmp_path / "invalid-identity.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+    tools = ClaudeCodeBackend().parse_run_metadata(path)["tool_calls"]
+
+    assert usage.costs == ()
+    assert usage.status == "lower_bound"
+    assert tools["is_lower_bound"] is True
+    assert tools["total"] == 2
+
+
+@pytest.mark.parametrize("field", ["total_cost_usd", "duration_api_ms", "outputTokens", "costUSD", "missing-model"])
+def test_background_results_reject_cumulative_regressions(tmp_path, field):
+    events = _background_events()
+    if field in {"total_cost_usd", "duration_api_ms"}:
+        events[-1][field] = 0
+    elif field == "missing-model":
+        events[-1]["modelUsage"] = {}
+    else:
+        events[-1]["modelUsage"]["claude-opus-4-8"][field] = 0
+    path = _write(tmp_path / "invalid-totals.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+
+    assert usage.costs == ()
+    assert usage.status == "lower_bound"
+    assert usage.input_tokens >= 27
+    assert usage.output_tokens >= 30
+    assert any("disappeared or decreased" in warning for warning in usage.warnings)
+
+
+@pytest.mark.parametrize("tail_type", ["assistant", "stream_event", "error", "malformed", "non-object"])
+def test_background_results_do_not_finalize_trailing_activity(tmp_path, tail_type):
+    events = _background_events()
+    if tail_type == "assistant":
+        events.append(
+            {**_assistant(input_tokens=9, output_tokens=1, message_id="unfinished"), "session_id": "background-session"}
+        )
+    elif tail_type in {"stream_event", "error"}:
+        events.append({"type": tail_type, "session_id": "background-session"})
+    path = _write(tmp_path / "invalid-tail.jsonl", *events)
+    if tail_type in {"malformed", "non-object"}:
+        with open(path, "a") as stream:
+            stream.write("{broken\n" if tail_type == "malformed" else "[]\n")
+
+    usage = parse_claude_code_usage(path)
+    tools = ClaudeCodeBackend().parse_run_metadata(path)["tool_calls"]
+
+    assert usage.costs == ()
+    assert usage.status == "lower_bound"
+    assert usage.input_tokens == (36 if tail_type == "assistant" else 27)
+    assert usage.output_tokens == 42
+    assert tools["is_lower_bound"] is True
+
+
+def test_background_error_result_keeps_usage_and_does_not_claim_complete(tmp_path):
+    events = _background_events()
+    events[-1]["is_error"] = True
+    events[-1]["subtype"] = "error_max_turns"
+    usage = parse_claude_code_usage(_write(tmp_path / "error-result.jsonl", *events))
+
+    assert usage.status == "lower_bound"
+    assert (usage.input_tokens, usage.output_tokens) == (27, 42)
+    assert next(cost.amount for cost in usage.costs if cost.source == "claude_code.total_cost_usd") == 0.21
+
+
+def test_background_unfinished_tool_does_not_discard_settled_cost(tmp_path):
+    events = [event for event in _background_events() if event["type"] != "user"]
+    path = _write(tmp_path / "unfinished-tools.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+    tools = ClaudeCodeBackend().parse_run_metadata(path)["tool_calls"]
+
+    assert usage.status == "complete"
+    assert next(cost.amount for cost in usage.costs if cost.source == "claude_code.total_cost_usd") == 0.21
+    assert tools["is_lower_bound"] is True
+    assert tools["total"] == 2
+    assert any("unfinished tool call" in warning for warning in tools["warnings"])
+
+
+def test_background_truncated_turn_preserves_completed_output_without_model_usage(tmp_path):
+    events = _background_events()
+    for event in events:
+        event.pop("modelUsage", None)
+    events.append(_assistant(input_tokens=9, output_tokens=1, message_id="unfinished"))
+    usage = parse_claude_code_usage(_write(tmp_path / "truncated.jsonl", *events))
+
+    assert usage.status == "lower_bound"
+    assert usage.costs == ()
+    assert (usage.input_tokens, usage.output_tokens) == (36, 42)
+
+
+def test_background_missing_turn_usage_is_not_silently_exact(tmp_path):
+    events = _background_events()
+    del events[7]["usage"]
+    usage = parse_claude_code_usage(_write(tmp_path / "missing-turn-usage.jsonl", *events))
+
+    assert usage.status == "lower_bound"
+    assert (usage.input_tokens, usage.output_tokens) == (27, 42)
+    assert usage.model_requests == 3
+    assert any("missing from some result turns" in warning for warning in usage.warnings)
+
+
+def test_background_conflicting_message_identity_cannot_finalize_cost(tmp_path):
+    events = _background_events()
+    events[-2]["message"]["id"] = "msg-1"
+    usage = parse_claude_code_usage(_write(tmp_path / "conflicting-message.jsonl", *events))
+
+    assert usage.status == "lower_bound"
+    assert usage.costs == ()
+    assert "Claude Code assistant message ID has conflicting usage" in usage.warnings
+
+
+def test_indexed_single_result_is_still_complete(tmp_path):
+    path = _write(tmp_path / "single-indexed-result.jsonl", *_background_events()[:4])
+    usage = parse_claude_code_usage(path)
+
+    assert usage.status == "complete"
+    assert (usage.input_tokens, usage.output_tokens, usage.model_requests) == (10, 20, 1)
+    assert ClaudeCodeBackend().parse_run_metadata(path)["tool_calls"]["complete"] is True
+
+
+def test_empty_final_background_result_preserves_cumulative_api_duration(tmp_path):
+    path = _write(tmp_path / "empty-final-result.jsonl", *_background_events()[:9])
+    usage = parse_claude_code_usage(path)
+
+    assert usage.status == "complete"
+    assert usage.model_time_secs == 1.5
+    assert (usage.input_tokens, usage.output_tokens, usage.model_requests) == (15, 30, 2)
+    assert next(cost.amount for cost in usage.costs if cost.source == "claude_code.total_cost_usd") == 0.15
+
+
+def test_visible_same_model_helper_does_not_invent_an_extra_request(tmp_path):
+    path = _write(
+        tmp_path / "visible-helper.jsonl",
+        _assistant(input_tokens=10, output_tokens=1, message_id="primary"),
+        _assistant(input_tokens=5, output_tokens=1, message_id="helper"),
+        _result(
+            input_tokens=10,
+            output_tokens=20,
+            total_cost_usd=0.1,
+            num_turns=1,
+            model_usage={
+                "claude-opus-4-8": {
+                    "inputTokens": 15,
+                    "outputTokens": 24,
+                    "cacheReadInputTokens": 0,
+                    "cacheCreationInputTokens": 0,
+                    "costUSD": 0.1,
+                }
+            },
+        ),
+    )
+    usage = parse_claude_code_usage(path)
+
+    assert usage.status == "lower_bound"
+    assert usage.model_requests == 2
+    assert (usage.input_tokens, usage.output_tokens) == (15, 24)
+    assert not any("without streamed request events" in warning for warning in usage.warnings)
+
+
+@pytest.mark.parametrize(
+    ("field", "smaller_total", "summary_field", "expected_floor"),
+    [
+        ("outputTokens", 40, "output_tokens", 42),
+        ("inputTokens", 20, "input_tokens", 27),
+        ("cacheReadInputTokens", 1, "cache_read_input_tokens", 2),
+        ("cacheCreationInputTokens", 2, "cache_write_input_tokens", 3),
+    ],
+)
+def test_monotonic_model_totals_cannot_undercut_primary_usage(
+    tmp_path, field, smaller_total, summary_field, expected_floor
+):
+    events = _background_events()
+    events[-1]["modelUsage"]["claude-opus-4-8"][field] = smaller_total
+    path = _write(tmp_path / "inconsistent-primary-scope.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+
+    assert usage.status == "lower_bound"
+    assert getattr(usage, summary_field) == expected_floor
+    assert any(f"modelUsage {summary_field}" in warning and "smaller than" in warning for warning in usage.warnings)
+    assert [cost.source for cost in usage.costs] == ["claude_code.total_cost_usd"]
+
+
+@pytest.mark.parametrize("missing_bucket", ["input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"])
+@pytest.mark.parametrize("multiple_results", [False, True])
+def test_partial_visible_input_cannot_prove_an_extra_hidden_request(tmp_path, missing_bucket, multiple_results):
+    events = _background_events() if multiple_results else _background_events()[:4]
+    assistant = events[-2]["message"] if multiple_results else events[1]["message"]
+    del assistant["usage"][missing_bucket]
+    path = _write(tmp_path / "partial-visible-input.jsonl", *events)
+
+    usage = parse_claude_code_usage(path)
+
+    assert usage.model_requests == (3 if multiple_results else 1)
+    assert not any("without streamed request events" in warning for warning in usage.warnings)

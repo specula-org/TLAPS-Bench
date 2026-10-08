@@ -6,6 +6,8 @@ import json
 import math
 import os
 import subprocess
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from typing import Any
 
 from evaluator import toolcalls
@@ -155,6 +157,96 @@ def _model_usage_aggregate(
     return totals, aggregate_cost, tuple(model_aggregates), tuple(warnings)
 
 
+@dataclass
+class _ResultStream:
+    """Recognize one run, including indexed background-task follow-up turns.
+
+    Older CLIs emit a single unindexed result. Multiple results need stronger
+    evidence: one session and contiguous delivery indices starting at zero.
+    Activity after an intermediate result is valid only if another result
+    closes it. Session resets/concatenated runs are deliberately unsupported.
+    """
+
+    results: list[dict[str, Any]] = dataclass_field(default_factory=list)
+    session_ids: set[str] = dataclass_field(default_factory=set)
+    warnings: list[str] = dataclass_field(default_factory=list)
+    activity_after_result: bool = False
+
+    def observe(self, event: dict[str, Any]) -> None:
+        session_id = _optional_str(event.get("session_id"))
+        if session_id is not None:
+            self.session_ids.add(session_id)
+        elif "session_id" in event:
+            self.warnings.append("Claude Code stream contains an invalid session_id")
+        event_type = event.get("type")
+        if not isinstance(event_type, str):
+            self.warnings.append("Claude Code stream contains an event without a string type")
+        elif event_type == "result":
+            self.results.append(event)
+            self.activity_after_result = False
+        elif event_type in {"assistant", "user", "system", "stream_event", "error"}:
+            self.activity_after_result = bool(self.results)
+            if event_type == "error" or event.get("subtype") == "conversation_reset":
+                self.warnings.append("Claude Code stream contains an error or conversation reset")
+
+    def identity_warnings(self) -> tuple[str, ...]:
+        warnings = list(self.warnings)
+        if len(self.session_ids) > 1:
+            warnings.append("Claude Code stream contains multiple session IDs")
+        indexed = len(self.results) > 1 or any("result_index" in result for result in self.results)
+        if indexed:
+            for index, result in enumerate(self.results):
+                result_index = result.get("result_index")
+                if type(result_index) is not int or result_index != index:
+                    warnings.append("Claude Code result_index sequence is missing, duplicated, or out of order")
+                if _optional_str(result.get("session_id")) is None:
+                    warnings.append("Claude Code indexed result is missing its session_id")
+        return tuple(dict.fromkeys(warnings))
+
+    def final_warnings(self) -> tuple[str, ...]:
+        warnings = list(self.identity_warnings())
+        if not self.results or self.activity_after_result:
+            warnings.append("Claude Code stream has no final result after its last activity")
+        return tuple(warnings)
+
+
+def _cumulative_result_warnings(results: list[dict[str, Any]]) -> tuple[str, ...]:
+    """Validate only running totals; usage and num_turns are per-result."""
+
+    previous: dict[tuple[str, ...], float] = {}
+    warnings: list[str] = []
+    for result in results:
+        current: dict[tuple[str, ...], float] = {}
+        for name in ("total_cost_usd", "duration_api_ms"):
+            value = nonnegative_float(result.get(name))
+            # Batched background notifications emit empty zero-turn results
+            # with duration_api_ms=0, while cost/model totals remain cumulative.
+            if name == "duration_api_ms" and value == 0 and result.get("num_turns") == 0:
+                value = previous.get((name,))
+            if value is not None:
+                current[(name,)] = value
+        model_usage = result.get("modelUsage")
+        if isinstance(model_usage, dict):
+            for model, usage in model_usage.items():
+                if not isinstance(model, str) or not isinstance(usage, dict):
+                    continue
+                for name in (
+                    "inputTokens",
+                    "cacheReadInputTokens",
+                    "cacheCreationInputTokens",
+                    "outputTokens",
+                    "costUSD",
+                ):
+                    value = nonnegative_float(usage.get(name))
+                    if value is not None:
+                        current[("modelUsage", model, name)] = value
+        for key, value in previous.items():
+            if key not in current or current[key] < value:
+                warnings.append(f"Claude Code cumulative {'.'.join(key)} disappeared or decreased")
+        previous.update(current)
+    return tuple(dict.fromkeys(warnings))
+
+
 def parse_claude_code_usage(
     jsonl_path: str,
     *,
@@ -165,13 +257,15 @@ def parse_claude_code_usage(
 
     Streamed ``assistant`` input/cache are final, but streamed ``output_tokens``
     is a message-start partial, so the settled output and USD cost are taken from
-    the terminal ``result`` event. Without a result event the streamed sums are a
-    lower bound.
+    the last ``result`` event's cumulative ``modelUsage``. Indexed results can
+    follow background-task notifications: sum their turn-local ``usage`` only,
+    never their cumulative cost/model totals. Incomplete streams retain lower
+    bounds from the observed messages and result snapshots.
     """
 
     streamed: list[tuple[dict[str, Any], str | None]] = []
     warnings: list[str] = []
-    result_count = 0
+    result_stream = _ResultStream()
     malformed_json = False
     result_error = False
     result_totals: dict[str, int | None] = {}
@@ -184,7 +278,7 @@ def parse_claude_code_usage(
     num_turns: int | None = None
     # One `assistant` event is streamed per content block, each repeating the
     # turn's whole usage, so collapse to the first event per message id.
-    seen_message_ids: set[str] = set()
+    seen_messages: dict[str, dict[str, Any]] = {}
 
     try:
         with open(jsonl_path) as stream:
@@ -200,6 +294,7 @@ def parse_claude_code_usage(
                 if not isinstance(event, dict):
                     malformed_json = True
                     continue
+                result_stream.observe(event)
                 etype = event.get("type", "")
 
                 if etype == "assistant":
@@ -208,14 +303,16 @@ def parse_claude_code_usage(
                         continue
                     message_id = _optional_str(message.get("id"))
                     if message_id is not None:
-                        if message_id in seen_message_ids:
+                        previous = seen_messages.get(message_id)
+                        if previous is not None:
+                            if any(previous.get(name) != message.get(name) for name in ("usage", "model")):
+                                result_stream.warnings.append("Claude Code assistant message ID has conflicting usage")
                             continue
-                        seen_message_ids.add(message_id)
+                        seen_messages[message_id] = message
                     streamed.append((message, _optional_str(event.get("request_id"))))
 
                 elif etype == "result":
-                    result_count += 1
-                    result_error = event.get("is_error") is True
+                    result_error |= event.get("is_error") is True or str(event.get("subtype", "")).startswith("error")
                     total_input, cache_read, cache_write, output = _message_usage(event.get("usage"))
                     result_totals = {
                         "input_tokens": total_input,
@@ -248,18 +345,35 @@ def parse_claude_code_usage(
                         model_usage_warnings = ("Claude Code modelUsage is malformed",)
                     api_ms = nonnegative_float(event.get("duration_api_ms"))
                     if api_ms is not None:
-                        model_time_secs = api_ms / 1000
+                        model_time_secs = max(model_time_secs or 0, api_ms / 1000)
     except FileNotFoundError:
         return None
 
+    result_count = len(result_stream.results)
     if not streamed and result_count == 0:
         return None
 
     if malformed_json:
         warnings.append("Claude Code stream contains malformed JSON")
-    if result_count > 1:
-        warnings.append(f"Claude Code stream contains {result_count} terminal result events")
-    result_stream_valid = result_count == 1 and not malformed_json
+    lifecycle_warnings = result_stream.final_warnings()
+    cumulative_warnings = _cumulative_result_warnings(result_stream.results)
+    warnings.extend(lifecycle_warnings)
+    warnings.extend(cumulative_warnings)
+    result_stream_valid = bool(result_count) and not (malformed_json or lifecycle_warnings or cumulative_warnings)
+    partial_turn_usage = False
+    if result_count > 1 and not result_stream.identity_warnings():
+        turn_totals = [_message_usage(result.get("usage")) for result in result_stream.results]
+        for index, name in enumerate(
+            ("input_tokens", "cache_read_input_tokens", "cache_write_input_tokens", "output_tokens")
+        ):
+            values = [turn[index] for turn in turn_totals]
+            known = [value for value in values if value is not None]
+            result_totals[name] = sum(known) if known else None
+            if known and len(known) != len(values):
+                partial_turn_usage = True
+                warnings.append(f"Claude Code {name} is missing from some result turns")
+        turns = [nonnegative_int(result.get("num_turns")) for result in result_stream.results]
+        num_turns = sum(turns) if all(turn is not None for turn in turns) else None
 
     requests = [
         _streamed_request(
@@ -267,13 +381,13 @@ def parse_claude_code_usage(
             requested_model,
             provider=provider,
             provider_request_id=provider_request_id,
-            trust_output=result_count == 0,
+            trust_output=not result_stream_valid,
         )
         for message, provider_request_id in streamed
     ]
 
     totals: dict[str, object] = {}
-    input_discrepancy = False
+    token_discrepancy = False
     cost_discrepancy = False
     request_count_lower_bound = False
     missing_core_totals: list[str] = []
@@ -284,6 +398,18 @@ def parse_claude_code_usage(
         for field, value in authoritative_totals.items():
             if value is not None:
                 totals[field] = value
+        if model_usage_totals is not None:
+            # The session aggregate includes the primary turns. Even an
+            # incomplete primary sum is a floor it cannot legitimately undercut.
+            for name, primary_total in result_totals.items():
+                aggregate_total = model_usage_totals.get(name)
+                if primary_total is not None and aggregate_total is not None and aggregate_total < primary_total:
+                    token_discrepancy = True
+                    totals[name] = primary_total
+                    warnings.append(
+                        f"Claude Code modelUsage {name} total {aggregate_total} "
+                        f"is smaller than result usage {primary_total}"
+                    )
 
         authoritative_cost = result_cost if result_stream_valid else None
         if authoritative_cost is None and model_usage_cost is not None:
@@ -294,6 +420,7 @@ def parse_claude_code_usage(
             calculate_model_aggregate_cost_usd(model_usage_aggregates, provider)
             if (
                 result_stream_valid
+                and not token_discrepancy
                 and model_usage_aggregates
                 and all(
                     warning == "Claude Code modelUsage costUSD is missing for some models"
@@ -355,13 +482,26 @@ def parse_claude_code_usage(
                     "Claude Code modelUsage includes model(s) without streamed request events "
                     f"({', '.join(sorted(unstreamed_models))}); model_requests is a lower bound"
                 )
-            elif model_usage_totals is not None and any(
-                model_usage_totals.get(field) != result_totals.get(field)
-                for field in ("input_tokens", "output_tokens")
-                if model_usage_totals.get(field) is not None and result_totals.get(field) is not None
+            elif (
+                result_stream_valid
+                and not partial_turn_usage
+                and model_usage_totals is not None
+                and all(
+                    nonnegative_int(message["usage"].get(name)) is not None
+                    for message, _request_id in streamed
+                    for name in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+                )
+                and any(
+                    model_usage_totals.get(name, 0) > sum(getattr(request, name) for request in requests)
+                    for name in ("input_tokens", "cache_read_input_tokens", "cache_write_input_tokens")
+                    if all(getattr(request, name) is not None for request in requests)
+                )
             ):
                 # Helper calls can use the same model as the primary stream, so
-                # a model-name set alone cannot prove per-request coverage.
+                # a model-name set alone cannot prove per-request coverage. Only
+                # add a request witness when reliable streamed totals are lower;
+                # partial input buckets or visible helpers may already explain
+                # the difference from modelUsage.
                 request_count_lower_bound = True
                 known_request_floor += 1
                 warnings.append(
@@ -404,22 +544,44 @@ def parse_claude_code_usage(
             summary_total = result_totals.get(field)
             observed = sum(getattr(request, field) for request in requests if getattr(request, field) is not None)
             if streamed and summary_total is not None and observed != summary_total:
-                input_discrepancy = True
+                token_discrepancy = True
                 warnings.append(
                     f"Claude Code {field} result total {summary_total} differs from streamed total {observed}"
                 )
     else:
         warnings.append("Claude Code result event missing; usage is a lower bound")
 
+    if not result_stream_valid:
+        # A trailing unfinished turn or a zeroed crash result must not erase
+        # the usage already observed. Maxima are lower bounds, never sums of
+        # cumulative snapshots (which would count the same work repeatedly).
+        for result in result_stream.results:
+            for name, value in zip(
+                ("input_tokens", "cache_read_input_tokens", "cache_write_input_tokens", "output_tokens"),
+                _message_usage(result.get("usage")),
+                strict=True,
+            ):
+                if value is not None:
+                    totals[name] = max(totals.get(name, 0), value)
+            aggregate = _model_usage_aggregate(result.get("modelUsage"), provider=provider)
+            if aggregate is not None:
+                for name, value in aggregate[0].items():
+                    totals[name] = max(totals.get(name, 0), value)
+        for name in ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_write_input_tokens"):
+            values = [getattr(request, name) for request in requests if getattr(request, name) is not None]
+            if values:
+                totals[name] = max(totals.get(name, 0), sum(values))
+
     complete = (
         result_count > 0
         and not result_error
-        and not input_discrepancy
+        and not token_discrepancy
         and not cost_discrepancy
         and not request_count_lower_bound
         and result_stream_valid
         and not model_usage_warnings
         and not missing_core_totals
+        and not partial_turn_usage
         and "costs" in totals
     )
     return UsageSummary.from_requests(
@@ -433,7 +595,7 @@ def parse_claude_code_usage(
 
 
 def _tool_call_summary(jsonl_path: str) -> toolcalls.ToolCallSummary:
-    """Count dispatched ``tool_use`` blocks and require one final result envelope."""
+    """Count dispatched ``tool_use`` blocks across a closed result sequence."""
 
     evidence = toolcalls.EventStreamEvidence()
     commands: list[str | None] = []
@@ -444,14 +606,10 @@ def _tool_call_summary(jsonl_path: str) -> toolcalls.ToolCallSummary:
     anonymous_result_observed = False
     identity_valid = True
     warnings: list[str] = []
-    result_count = 0
-    activity_after_result = False
+    result_stream = _ResultStream()
     for event_index, event in enumerate(toolcalls.iter_events(jsonl_path, evidence)):
+        result_stream.observe(event)
         event_type = event.get("type")
-        if event_type == "result":
-            result_count += 1
-        elif result_count and event_type in {"assistant", "user", "system"}:
-            activity_after_result = True
         if event_type not in {"assistant", "user"}:
             continue
         message = event.get("message")
@@ -541,9 +699,9 @@ def _tool_call_summary(jsonl_path: str) -> toolcalls.ToolCallSummary:
         elif anonymous_result_observed:
             commands.append(None)
 
-    lifecycle_complete = result_count == 1 and not activity_after_result and identity_valid
-    if result_count != 1 or activity_after_result:
-        warnings.append("Claude Code tool-call stream has no unique final result")
+    lifecycle_warnings = result_stream.final_warnings()
+    lifecycle_complete = not lifecycle_warnings and identity_valid
+    warnings.extend(lifecycle_warnings)
     return toolcalls.summarize(commands, evidence, lifecycle_complete=lifecycle_complete, warnings=warnings)
 
 
@@ -677,12 +835,6 @@ class ClaudeCodeBackend(AgenticBackend):
 
     def parse_output(self, jsonl_path: str) -> tuple[str, int, int]:
         lines: list[str] = []
-        in_tok = 0
-        out_tok = 0
-        final_in = None
-        final_out = None
-        # A turn's usage is echoed on every content-block event; count each once.
-        counted_message_ids: set[str] = set()
 
         try:
             with open(jsonl_path) as f:
@@ -694,11 +846,15 @@ class ClaudeCodeBackend(AgenticBackend):
                         event = json.loads(raw)
                     except json.JSONDecodeError:
                         continue
+                    if not isinstance(event, dict):
+                        continue
 
                     etype = event.get("type", "")
 
                     if etype == "assistant":
                         message = event.get("message", {})
+                        if not isinstance(message, dict):
+                            continue
                         content = message.get("content", [])
                         if isinstance(content, list):
                             for block in content:
@@ -721,20 +877,10 @@ class ClaudeCodeBackend(AgenticBackend):
                                         tinput_str = tinput_str[:1500] + " ...(truncated)"
                                     lines.append(f"[TOOL] {tname} {tinput_str}")
                                     lines.append("")
-                        # Accumulate per-turn token usage as a fallback.
-                        usage = message.get("usage", {})
-                        message_id = message.get("id")
-                        already_counted = isinstance(message_id, str) and message_id in counted_message_ids
-                        if isinstance(usage, dict) and not already_counted:
-                            if isinstance(message_id, str):
-                                counted_message_ids.add(message_id)
-                            in_tok += usage.get("input_tokens", 0)
-                            in_tok += usage.get("cache_creation_input_tokens", 0)
-                            in_tok += usage.get("cache_read_input_tokens", 0)
-                            out_tok += usage.get("output_tokens", 0)
-
                     elif etype == "user":
                         message = event.get("message", {})
+                        if not isinstance(message, dict):
+                            continue
                         content = message.get("content", [])
                         if isinstance(content, list):
                             for block in content:
@@ -755,15 +901,6 @@ class ClaudeCodeBackend(AgenticBackend):
                                     lines.append("")
 
                     elif etype == "result":
-                        # Final summary — authoritative token totals if present.
-                        usage = event.get("usage", {})
-                        if isinstance(usage, dict):
-                            final_in = (
-                                usage.get("input_tokens", 0)
-                                + usage.get("cache_creation_input_tokens", 0)
-                                + usage.get("cache_read_input_tokens", 0)
-                            )
-                            final_out = usage.get("output_tokens", 0)
                         subtype = event.get("subtype", "")
                         result_text = event.get("result", "")
                         if result_text:
@@ -779,11 +916,12 @@ class ClaudeCodeBackend(AgenticBackend):
         except FileNotFoundError:
             pass
 
-        # Prefer the final 'result' event totals over per-turn accumulation.
-        if final_in is not None and final_out is not None:
-            in_tok, out_tok = final_in, final_out
-
-        return "\n".join(lines), in_tok, out_tok
+        usage = parse_claude_code_usage(jsonl_path, requested_model=self.model, provider=self.provider)
+        return (
+            "\n".join(lines),
+            usage.legacy_input_tokens if usage is not None else 0,
+            usage.legacy_output_tokens if usage is not None else 0,
+        )
 
     def parse_usage(self, jsonl_path: str, *, input_tokens: int, output_tokens: int) -> UsageSummary:
         usage = parse_claude_code_usage(jsonl_path, requested_model=self.model, provider=self.provider)

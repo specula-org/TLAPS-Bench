@@ -337,7 +337,7 @@ def test_missing_stream_is_unavailable_not_an_exact_zero(tmp_path):
         "is_lower_bound": False,
         "warnings": [
             "tool-call event stream is missing or unreadable",
-            "Claude Code tool-call stream has no unique final result",
+            "Claude Code stream has no final result after its last activity",
         ],
     }
 
