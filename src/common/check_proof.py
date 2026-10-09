@@ -58,6 +58,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -107,6 +108,7 @@ from common.verification_budget import (
     TOOLCHAIN_ENV,
     VERIFICATION_RESULT_PREFIX,
     CheckSession,
+    FrozenPolicyMismatch,
     content_digest,
     cpu_limit,
     policy_for_check,
@@ -1307,7 +1309,7 @@ def _module_unit_result(
     )
 
 
-def run_module_task_check(*, check_session=None, check_cpus=None, no_cache=False, **kwargs) -> int:
+def run_module_task_check(*, check_session=None, check_cpus=None, no_cache=False, no_git_track=False, **kwargs) -> int:
     """Start a fresh examination, or resume one explicit, input-bound session."""
     emit = kwargs["emit"]
     try:
@@ -1401,6 +1403,39 @@ def run_module_task_check(*, check_session=None, check_cpus=None, no_cache=False
                     VERIFICATION_RESULT_PREFIX
                     + json.dumps({"policy": policy.as_dict(), **session.metrics()}, sort_keys=True)
                 )
+    except FrozenPolicyMismatch as exc:
+        emit(f"ERROR: cannot run module verification: {exc}")
+        if exc.same_task:
+            command = (
+                [sys.executable] if getattr(sys, "frozen", False) else [sys.executable, "-m", "common.check_proof"]
+            )
+            command += [
+                kwargs["filepath"],
+                "--mode",
+                "proof-from-scratch",
+                "--no-container",
+                "--timeout",
+                str(exc.policy.effective_timeout_secs),
+                "--check-cpus",
+                str(exc.policy.cpus),
+                "--benchmark-dir",
+                kwargs["benchmark_dir"],
+                "--output",
+                kwargs["output_path"],
+                "--tlapm",
+                kwargs["tlapm_path"],
+                "--tlapm-lib",
+                kwargs["tlapm_lib"],
+            ]
+            if check_session:
+                command.extend(["--check-session", str(check_session)])
+            if no_cache:
+                command.append("--no-cache")
+            if no_git_track:
+                command.append("--no-git-track")
+            emit("RETRY-COMMAND: " + shlex.join(command))
+            emit("No proof or integrity verdict was produced; rerun the check before submitting.")
+        return 3
     except (OSError, ValueError) as exc:
         emit(f"ERROR: cannot run module verification: {exc}")
         return 3
@@ -1975,6 +2010,7 @@ def main(*, require_canonical_for_proof_from_scratch: bool = False):
             check_session=args.check_session,
             check_cpus=args.check_cpus,
             no_cache=args.no_cache,
+            no_git_track=not git_track,
         )
         write_result_and_exit(exit_code)
 
