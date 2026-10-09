@@ -237,24 +237,28 @@ def claude_code_result_error(ctx: TerminationContext) -> str | None:
     """claude_code rule: the run ended on an execution error (or never emitted a
     terminal result at all).
 
-    Claude Code closes a run with one ``type == "result"`` event whose
-    ``subtype`` is ``success`` on a clean finish, or an ``error_*`` value
-    otherwise (observed: ``error_during_execution``). We flag INFRA_ERROR for
-    such an execution error, or when the stream has events but no terminal
-    ``result`` (cut off mid-run). ``error_max_turns`` — the agent exhausting its
-    turn budget — is a LIMIT, not infrastructure, so it is NOT flagged here.
+    Background work can produce several ``result`` events. The final result
+    must follow the last conversation activity; an earlier success cannot
+    finalize a truncated follow-up turn. Malformed streams and execution-error
+    results are INFRA_ERROR. ``error_max_turns`` remains a turn-budget LIMIT,
+    not infrastructure, when it closes the stream.
     """
     if ctx.backend != "claude_code":
         return None
     events = ctx.events()
     if not events:
         return None
+    if not ctx.event_stream_valid():
+        return TerminationReason.INFRA_ERROR
     last_result = None
     for ev in events:
-        if ev.get("type") == "result":
+        event_type = ev.get("type")
+        if event_type == "result":
             last_result = ev
+        elif event_type in ("assistant", "user", "system", "stream_event", "error"):
+            last_result = None
     if last_result is None:
-        # Had a stream but no terminal result event: cut off mid-run.
+        # No result closes the latest activity, including background turns.
         return TerminationReason.INFRA_ERROR
     subtype = last_result.get("subtype", "")
     if subtype.startswith("error") and subtype != "error_max_turns":

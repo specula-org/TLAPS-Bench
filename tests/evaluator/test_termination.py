@@ -1030,6 +1030,63 @@ def test_cc_truncated_is_infra(tmp_path):
     assert classify(_ctx(p, backend="claude_code")) == TerminationReason.INFRA_ERROR
 
 
+@pytest.mark.parametrize(
+    "activity",
+    [
+        {"type": "assistant", "message": {"role": "assistant"}},
+        {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "call-1"}]}},
+        {"type": "system", "subtype": "task_notification"},
+        {"type": "stream_event", "event": {"type": "message_start"}},
+        {"type": "error", "message": "connection closed"},
+    ],
+)
+@pytest.mark.parametrize("agent_exit", [0, 137])
+def test_cc_activity_after_success_requires_another_result(tmp_path, activity, agent_exit):
+    p = _write_jsonl(tmp_path / "unfinished-background.jsonl", [*CC_SUCCESS, activity])
+    error = "container OOM killed (exit 137)" if agent_exit == 137 else ""
+    assert classify(_ctx(p, backend="claude_code", agent_exit=agent_exit, error=error)) == TerminationReason.INFRA_ERROR
+
+
+@pytest.mark.parametrize(
+    "terminal,expected",
+    [
+        (CC_SUCCESS[-1], TerminationReason.OK),
+        (CC_MAX_TURNS[-1], TerminationReason.OK),
+        (CC_EXEC_ERROR[-1], TerminationReason.INFRA_ERROR),
+    ],
+)
+def test_cc_completed_background_sequence_uses_its_final_result(tmp_path, terminal, expected):
+    events = [
+        *CC_SUCCESS[:-1],
+        {**CC_SUCCESS[-1], "session_id": "s1", "result_index": 0},
+        {**CC_SUCCESS[-1], "session_id": "s1", "result_index": 1, "num_turns": 0},
+        {"type": "system", "subtype": "task_notification", "session_id": "s1"},
+        {"type": "assistant", "session_id": "s1", "message": {"role": "assistant"}},
+        {**terminal, "session_id": "s1", "result_index": 2},
+    ]
+    p = _write_jsonl(tmp_path / "background.jsonl", events)
+    assert classify(_ctx(p, backend="claude_code", agent_exit=int(terminal["is_error"]))) == expected
+
+
+@pytest.mark.parametrize("tail", ['{"type":"result",', "[]\n"])
+def test_cc_malformed_tail_cannot_reuse_an_earlier_success(tmp_path, tail):
+    p = _write_jsonl(tmp_path / "malformed-background.jsonl", CC_SUCCESS)
+    with open(p, "a") as stream:
+        stream.write(tail)
+    assert classify(_ctx(p, backend="claude_code")) == TerminationReason.INFRA_ERROR
+
+
+def test_cc_runner_timeout_takes_precedence_over_unfinished_background_turn(tmp_path):
+    p = _write_jsonl(tmp_path / "timeout-background.jsonl", [*CC_SUCCESS, *CC_TRUNCATED[1:]])
+    ctx = _ctx(p, backend="claude_code", agent_exit=-1, error="claude_code timeout after 7200s")
+    assert classify(ctx) == TerminationReason.TIMEOUT
+
+
+def test_cc_rate_limit_telemetry_after_success_does_not_reopen_the_turn(tmp_path):
+    p = _write_jsonl(tmp_path / "telemetry.jsonl", [*CC_SUCCESS, {"type": "rate_limit_event"}])
+    assert classify(_ctx(p, backend="claude_code")) == TerminationReason.OK
+
+
 def test_cc_rule_only_applies_to_claude_code(tmp_path):
     # codex stream through the claude rule must abstain.
     p = _write_jsonl(tmp_path / "infra.jsonl", INFRA_STREAM)
