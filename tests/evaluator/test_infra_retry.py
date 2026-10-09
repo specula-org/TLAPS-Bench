@@ -581,6 +581,38 @@ def test_retry_time_keeps_only_formal_attempt_and_separates_infra_time(tmp_path,
     assert diagnostic["time_secs"] == 2.0
 
 
+def test_retry_pause_metrics_follow_formal_attempt_and_keep_diagnostics(tmp_path, monkeypatch):
+    backend = _ScriptedBackend()
+    calls = _install_agent(monkeypatch, backend, [STARTUP, GENUINE_FAIL])
+    local_agent = runner._run_backend_local
+    _install_grader(monkeypatch, verdict="FAIL")
+    monkeypatch.setattr(runner, "_run_grader_container", runner._run_grader_local)
+    _no_sleep(monkeypatch)
+
+    def container(item, backend, workspace, agent_dir, agent_jsonl, prompt, result, canonical_dir, **_kwargs):
+        local_agent(item, backend, item.mode, workspace, agent_dir, agent_jsonl, prompt, result, "", canonical_dir)
+        active, paused = ((2.0, 100.0), (5.0, 200.0))[calls["n"] - 1]
+        result.update(
+            agent_wall_time_secs=active + paused, agent_paused_time_secs=paused, _container_paused_secs=paused
+        )
+        return active
+
+    monkeypatch.setattr(runner, "_run_backend_container", container)
+    times = iter((10.0, 112.0, 120.0, 325.0, 330.0, 331.0))
+    monkeypatch.setattr(runner.time, "monotonic", lambda: next(times))
+    item = _work_item(tmp_path, backend, infra_retries=1)
+    item.use_container = True
+    result = runner.run_single_benchmark(item)
+    assert result["agent_time_secs"] == 5
+    assert result["agent_wall_time_secs"] == 205
+    assert result["agent_paused_time_secs"] == 200
+    assert result["logical_timeout_used_secs"] == 5
+    diagnostic = json.loads((tmp_path / "out/Foo/Bar/agent/attempts/attempt-0/accounting.json").read_text())
+    assert diagnostic["time_secs"] == 2
+    assert diagnostic["agent_wall_time_secs"] == 102
+    assert diagnostic["agent_paused_time_secs"] == 100
+
+
 def test_container_timeout_before_agent_marker_does_not_publish_setup_time(tmp_path, monkeypatch):
     backend = _ScriptedBackend()
     item = _work_item(tmp_path, backend, infra_retries=0)

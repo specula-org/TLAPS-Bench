@@ -751,6 +751,12 @@ class ClaudeCodeBackend(AgenticBackend):
         self.model = model or DEFAULT_MODEL
         self.provider = "amazon-bedrock" if self._uses_aws_provider() else PROVIDER
 
+    def execution_environment(self, result_dir: str) -> dict[str, str]:
+        # Claude's print-mode background ceiling uses wall time, including
+        # container freezes. Keep pending checks alive until they finish or
+        # the benchmark's own execution deadline ends the attempt.
+        return {**super().execution_environment(result_dir), "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "0"}
+
     def get_credential_mounts(self) -> list[str]:
         if self._uses_aws_provider() and needs_aws_shared_credentials():
             return ["aws"]

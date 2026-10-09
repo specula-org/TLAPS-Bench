@@ -42,13 +42,15 @@ def _string_list(value: object, *, label: str) -> list[str]:
 
 
 def validate_verification_metrics(metrics, expected=None):
-    if type(metrics) is not dict or set(metrics) != {
+    required = {
         "policy",
         "wall_secs",
         "cpu_secs",
         "cpu_complete",
         "cpu_source",
-    }:
+    }
+    pause_fields = {"active_secs", "paused_secs"}
+    if type(metrics) is not dict or set(metrics) not in (required, required | pause_fields):
         raise ModuleResultError("invalid module verification metrics")
     try:
         policy = VerificationPolicy.from_dict(metrics["policy"])
@@ -56,9 +58,13 @@ def validate_verification_metrics(metrics, expected=None):
         raise ModuleResultError(str(exc)) from exc
     if expected is not None and policy.proof_unit_ids != tuple(expected):
         raise ModuleResultError("verification policy has different proof units")
-    for field in ("wall_secs", "cpu_secs"):
+    for field in ("wall_secs", "cpu_secs", *sorted(pause_fields & metrics.keys())):
         if type(metrics[field]) not in (int, float) or not math.isfinite(metrics[field]) or metrics[field] < 0:
             raise ModuleResultError(f"invalid verification {field}")
+    if pause_fields <= metrics.keys() and not math.isclose(
+        metrics["wall_secs"], metrics["active_secs"] + metrics["paused_secs"], abs_tol=1e-6
+    ):
+        raise ModuleResultError("verification wall time differs from active plus paused time")
     if type(metrics["cpu_complete"]) is not bool or metrics["cpu_source"] != "getrusage_self_and_reaped_children":
         raise ModuleResultError("invalid verification CPU accounting")
 

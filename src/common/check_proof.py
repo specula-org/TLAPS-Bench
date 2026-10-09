@@ -64,7 +64,6 @@ import signal
 import subprocess
 import sys
 import tempfile
-import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from pathlib import Path
@@ -206,7 +205,9 @@ def run_killgroup(cmd, timeout, cwd):
         start_new_session=True,
     )
     try:
-        out, err = proc.communicate(timeout=timeout)
+        from common.active_clock import communicate
+
+        out, err = communicate(proc, timeout)
         return out, err, proc.returncode
     except BaseException:
         # Interrupting a check must also stop its backends before recovery.
@@ -1219,7 +1220,9 @@ def _module_unit_result(
             "SANY did not provide a valid theorem location",
         )
 
-    remaining = None if deadline is None else deadline - time.monotonic()
+    from common.active_clock import ActiveClock
+
+    remaining = None if deadline is None else deadline - ActiveClock.from_environment().now()
     if remaining is not None and remaining <= 0:
         return (
             {
@@ -1498,7 +1501,7 @@ def _run_module_task_check(
             emit(f"ERROR: cannot stage module task inputs: {exc}")
             return 3
 
-        remaining = None if deadline is None else deadline - time.monotonic()
+        remaining = session.remaining()
         if remaining is not None and remaining <= 0 and session.load("submitted-sany") is None:
             emit("SANY-STATUS: unavailable")
             emit("CHECK-TIMEOUT: module checker budget exhausted before SANY validation")
@@ -1533,7 +1536,7 @@ def _run_module_task_check(
             return 1
 
         assert sany_run.raw is not None
-        remaining = None if deadline is None else deadline - time.monotonic()
+        remaining = session.remaining()
         if remaining is not None and remaining <= 0 and session.load("canonical-sany") is None:
             emit("CHECK-TIMEOUT: module checker budget exhausted before canonical SANY validation")
             emit("ERROR: module checker timeout exhausted before canonical SANY validation")
