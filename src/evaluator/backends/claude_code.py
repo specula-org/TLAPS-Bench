@@ -640,18 +640,21 @@ class ClaudeCodeBackend(AgenticBackend):
                 return None
             return "claude_code: Bedrock/Mantle selected but no AWS credentials detected"
         # Fast path: env var present.
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        if not self._needs_claude_credentials():
             return None
         # Slow path: probe the CLI with --no-session-persistence so the
         # probe doesn't pollute the user's resume history. This makes one
         # tiny API call but covers OAuth / subscription auth that env-var
         # checks can't see.
+        # Keep this credential-only probe cheap without changing the experiment's
+        # effort or the parent environment (the model preflight checks those).
         try:
             r = subprocess.run(
                 ["claude", "--print", "--no-session-persistence", "--output-format", "text", "ok"],
                 capture_output=True,
                 text=True,
                 timeout=30,
+                env={**os.environ, "CLAUDE_CODE_EFFORT_LEVEL": "low"},
             )
             if r.returncode == 0:
                 return None

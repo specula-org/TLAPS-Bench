@@ -23,6 +23,7 @@ from common.verification_budget import POLICY_ENV, VerificationPolicy
 from evaluator import runner
 from evaluator.backends.agentic import AgenticBackend
 from evaluator.backends.base import BackendCapabilities, SubmissionDisposition, SubmissionPlan
+from evaluator.backends.claude_code import ClaudeCodeBackend
 from evaluator.modes.proof_from_scratch import ProofFromScratch
 
 
@@ -610,3 +611,72 @@ def test_container_proof_from_scratch_uses_image_environment(tmp_path, monkeypat
     assert inspected_images == ["tlaps-bench-base:locked"]
     assert captured_items[0].container_image == "tlaps-bench-base:locked"
     assert captured_items[0].canonical_inputs.proof_library_catalog == _catalog().to_bytes()
+
+
+@pytest.mark.parametrize("changed_sources", [False, True])
+def test_resume_restores_policy_through_dispatch_and_retains_source_gate(tmp_path, monkeypatch, changed_sources):
+    benchmark_root, _suite, task, *_ = _write_fixture(tmp_path)
+    mode = ProofFromScratch(str(benchmark_root), "/checker")
+    backend = ClaudeCodeBackend(model="claude-opus-4-8")
+    backend.set_reasoning_effort("low")
+    policy = VerificationPolicy.create(1200, mode.module_task_spec(str(task)).proof_unit_ids, 4)
+    output = tmp_path / "output"
+    output.mkdir()
+    identity = runner._proof_from_scratch_run_identity(
+        mode,
+        _catalog(),
+        _toolchain(),
+        runner._execution_policy_identity(
+            backend,
+            use_container=True,
+            timeout=0,
+            check_timeout=1200,
+            infra_retries=5,
+            max_continuations=2,
+            session_dir="",
+            verification_policies={MODULE_TASK_ID: policy.as_dict()},
+        ),
+        runner.AgentSkillsSnapshot.capture(backend, runner.SKILLS_DIR),
+    )
+    if changed_sources:
+        identity["execution_source_digest"] = "previous-execution-sources"
+    runner._write_run_manifest(str(output), identity)
+    runner._write_task_list_record(str(output), mode.name, [MODULE_TASK_ID])
+    original_records = {p.name: p.read_bytes() for p in output.iterdir()}
+    items = []
+    model_setup = []
+    monkeypatch.setattr(runner, "get_mode", lambda *args, **kwargs: mode)
+    monkeypatch.setattr(runner, "ensure_image", lambda **kwargs: "test-image")
+    monkeypatch.setattr(runner, "_container_verification_environment", lambda _: (_catalog(), _toolchain()))
+    monkeypatch.setattr(runner, "_run_sany_preflight", lambda **kwargs: None)
+    monkeypatch.setattr(runner, "_confirm_public_pricing", lambda *args, **kwargs: True)
+    monkeypatch.setattr(ClaudeCodeBackend, "check_auth", lambda self: model_setup.append("auth"))
+    monkeypatch.setattr(runner, "_run_preflight", lambda *args: model_setup.append("preflight"))
+    monkeypatch.setattr(runner.quota, "fetch_usage", lambda *args: None)
+    monkeypatch.setattr(runner, "update_summary", lambda *args: None)
+    monkeypatch.setattr(
+        runner,
+        "run_single_benchmark",
+        lambda item: items.append(item) or {"benchmark": MODULE_TASK_ID, "check_verdict": "ERROR", "time_secs": 0},
+    )
+    monkeypatch.setattr(sys, "argv", ["tlaps-bench", "--resume", "--output-dir", str(output)])
+
+    if changed_sources:
+        with pytest.raises(SystemExit, match="2"):
+            runner.main()
+        assert model_setup == []
+        assert items == []
+        assert {p.name: p.read_bytes() for p in output.iterdir()} == original_records
+    else:
+        runner.main()
+        assert model_setup == ["auth", "preflight"]
+        assert len(items) == 1
+        item = items[0]
+        assert item.backend.name == "claude_code"
+        assert item.backend.model == "claude-opus-4-8"
+        assert item.backend.reasoning_effort == "low"
+        assert item.timeout == 0
+        assert item.verification_policy == policy
+        assert item.infra_retries == 5
+        assert item.max_continuations == 2
+        assert (output / runner.RUN_MANIFEST_RECORD).read_bytes() == original_records[runner.RUN_MANIFEST_RECORD]

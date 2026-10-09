@@ -1760,6 +1760,150 @@ def _write_task_list_record(output_dir: str, mode_name: str, task_ids: list[str]
         f.write("\n")
 
 
+def _read_resume_options(output_dir: str) -> tuple[dict[str, object], list[str] | None]:
+    """Recover only recorded CLI inputs; identity validation still runs afterward."""
+
+    def read_record(filename):
+        path = os.path.join(output_dir, filename)
+        try:
+            with open(path, encoding="utf-8") as stream:
+                value = json.load(stream)
+        except FileNotFoundError:
+            return None
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"cannot read resume record {path!r}: {exc}") from exc
+        if type(value) is not dict:
+            raise ValueError(f"invalid resume record {path!r}: expected an object")
+        return value
+
+    options = {}
+    task_ids = None
+    tasks = read_record(TASK_LIST_RECORD)
+    if tasks is not None:
+        task_ids = tasks.get("tasks")
+        if (
+            set(tasks) != {"mode", "tasks"}
+            or tasks["mode"] not in list_modes()
+            or type(task_ids) is not list
+            or not task_ids
+            or any(type(task_id) is not str or not task_id for task_id in task_ids)
+            or len(set(task_ids)) != len(task_ids)
+        ):
+            raise ValueError(f"invalid recorded task list in {TASK_LIST_RECORD}")
+        options["mode"] = tasks["mode"]
+
+    manifest = read_record(RUN_MANIFEST_RECORD)
+    if manifest is None:
+        return options, task_ids
+    if type(manifest.get("schema_version")) is not int or manifest["schema_version"] != 5:
+        raise ValueError(f"unsupported recorded {RUN_MANIFEST_RECORD} schema; keep the original checkout for this run")
+    if manifest.get("mode") != "proof-from-scratch":
+        raise ValueError(f"invalid recorded mode in {RUN_MANIFEST_RECORD}")
+    if options.get("mode", manifest["mode"]) != manifest["mode"]:
+        raise ValueError("recorded task list and run manifest have different modes")
+    options["mode"] = manifest["mode"]
+    policy = manifest.get("execution_policy")
+    if type(policy) is not dict:
+        raise ValueError("invalid recorded execution policy")
+    for name, types in (
+        ("backend", (str,)),
+        ("model", (str, type(None))),
+        ("reasoning_effort", (str, type(None))),
+        ("max_output_tokens", (int, type(None))),
+        ("timeout", (int,)),
+        ("check_timeout", (int,)),
+        ("infra_retries", (int,)),
+        ("max_continuations", (int,)),
+    ):
+        if name not in policy or type(policy[name]) not in types:
+            raise ValueError(f"invalid recorded execution option {name!r}")
+        value = policy[name]
+        if type(value) is str and not value:
+            raise ValueError(f"empty recorded execution option {name!r}")
+        if type(value) is int and value < (1 if name in {"check_timeout", "max_output_tokens"} else 0):
+            raise ValueError(f"invalid recorded execution option {name!r}")
+        options[name] = value
+    if options["backend"] not in list_backends() or policy.get("environment") not in ("container", "local"):
+        raise ValueError("invalid recorded backend or execution environment")
+    options["no_container"] = policy["environment"] == "local"
+
+    session = policy.get("session")
+    if (
+        type(session) is not dict
+        or type(session.get("persistence")) is not bool
+        or type(session.get("root")) not in {str, type(None)}
+        or session["persistence"] != bool(session["root"])
+        or (session["root"] is not None and not os.path.isabs(session["root"]))
+        or session.get("key_scheme") != SESSION_KEY_SCHEME
+    ):
+        raise ValueError("invalid recorded session policy")
+    options["session_dir"] = session["root"]
+
+    verification = policy.get("verification")
+    if (
+        type(verification) is not dict
+        or verification.get("version") != POLICY_VERSION
+        or type(verification.get("modules")) is not dict
+        or not verification["modules"]
+    ):
+        raise ValueError("invalid recorded verification policy")
+    cpus = set()
+    for value in verification["modules"].values():
+        module_policy = VerificationPolicy.from_dict(value)
+        if module_policy.base_timeout_secs != options["check_timeout"]:
+            raise ValueError("recorded module budget differs from the execution policy")
+        cpus.add(module_policy.cpus)
+    if len(cpus) != 1:
+        raise ValueError("recorded module CPU limits are inconsistent")
+    options["check_cpus"] = cpus.pop()
+    return options, task_ids
+
+
+def _parse_run_args(parser: argparse.ArgumentParser) -> tuple[argparse.Namespace, list[str] | None]:
+    # A sentinel distinguishes omission from explicitly supplying a default
+    # value, including --backend codex, --timeout 28800, and --no-container.
+    names = (
+        "mode",
+        "backend",
+        "model",
+        "reasoning_effort",
+        "max_output_tokens",
+        "timeout",
+        "check_timeout",
+        "check_cpus",
+        "infra_retries",
+        "max_continuations",
+        "no_container",
+        "session_dir",
+    )
+    omitted = object()
+    args = parser.parse_args(namespace=argparse.Namespace(**dict.fromkeys(names, omitted)))
+    recorded_options = {}
+    recorded_tasks = None
+    if args.resume:
+        if not args.output_dir:
+            parser.error("--resume requires --output-dir")
+        try:
+            recorded_options, recorded_tasks = _read_resume_options(args.output_dir)
+        except ValueError as exc:
+            parser.error(str(exc))
+    for name in names:
+        value = getattr(args, name)
+        if value is omitted:
+            setattr(args, name, recorded_options.get(name, parser.get_default(name)))
+        elif name in recorded_options and name != "session_dir" and value != recorded_options[name]:
+            parser.error(
+                f"cannot resume with different --{name.replace('_', '-')}; recorded value is {recorded_options[name]!r}"
+            )
+    if "session_dir" in recorded_options:
+        session_dir = _resolve_session_dir(args.session_dir, args.keep_container, not args.no_container)
+        if session_dir != (recorded_options["session_dir"] or ""):
+            parser.error("cannot resume with a different persistent session directory")
+    if args.filter is not None or args.task_list is not None:
+        recorded_tasks = None
+    return args, recorded_tasks
+
+
 def _update_identity_digest(digest, value: bytes) -> None:
     digest.update(len(value).to_bytes(8, byteorder="big"))
     digest.update(value)
@@ -4080,7 +4224,7 @@ def main():
     parser.add_argument(
         "--resume",
         action="store_true",
-        help="Reuse --output-dir: skip benchmarks already SKIP or genuinely passed there (first-attempt or continuation), run the rest",
+        help="Reuse --output-dir, inherit recorded settings for omitted options, skip benchmarks already SKIP or genuinely passed there, and run the rest",
     )
     parser.add_argument(
         "--min-free-gb",
@@ -4146,7 +4290,7 @@ def main():
         action="store_true",
         help="Continue when public API pricing is unavailable; equivalent_cost_usd will be blank",
     )
-    args = parser.parse_args()
+    args, resume_task_ids = _parse_run_args(parser)
 
     # Container mode is default; --no-container disables it
     use_container = not args.no_container
@@ -4163,7 +4307,11 @@ def main():
     mode = get_mode(args.mode, benchmark_root, checker_binary)
     task_ids = None
     try:
-        if args.filter is not None:
+        if resume_task_ids is not None:
+            task_ids = resume_task_ids
+            benchmark_files = _select_exact_tasks(mode, task_ids)
+            selection_label = f"recorded cohort from {TASK_LIST_RECORD}"
+        elif args.filter is not None:
             if not any(pattern.strip() for pattern in args.filter.split(",")):
                 raise ValueError("--filter requires at least one non-empty pattern")
             benchmark_files = mode.get_benchmark_files(args.filter)
