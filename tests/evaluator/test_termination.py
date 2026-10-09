@@ -17,6 +17,7 @@ import pytest
 
 from evaluator.backends import get_backend
 from evaluator.backends.agentic import AgenticBackend
+from evaluator.score import is_non_genuine
 from evaluator.termination import (
     INFRA_RULES,
     TerminationContext,
@@ -1017,6 +1018,47 @@ def test_cc_success_is_ok(tmp_path):
 def test_cc_exec_error_is_infra(tmp_path):
     p = _write_jsonl(tmp_path / "err.jsonl", CC_EXEC_ERROR)
     assert classify(_ctx(p, backend="claude_code")) == TerminationReason.INFRA_ERROR
+
+
+@pytest.mark.parametrize("agent_exit", [0, 1])
+def test_cc_success_subtype_with_error_flag_is_infra(tmp_path, agent_exit):
+    events = [
+        *CC_SUCCESS,
+        {"type": "system", "subtype": "task_notification"},
+        {"type": "rate_limit_event", "rate_limit_info": {"status": "rejected", "rateLimitType": "five_hour"}},
+        {
+            "type": "assistant",
+            "error": "rate_limit",
+            "message": {"content": [{"type": "text", "text": "You've hit your session limit"}]},
+        },
+        {"type": "result", "subtype": "success", "is_error": True, "stop_reason": "stop_sequence"},
+    ]
+    p = _write_jsonl(tmp_path / "quota-after-background.jsonl", events)
+    reason = classify(_ctx(p, backend="claude_code", agent_exit=agent_exit))
+    assert reason == TerminationReason.INFRA_ERROR
+    assert is_non_genuine({"termination_reason": reason, "check_verdict": "TIMEOUT"})
+
+
+def test_cc_error_flag_does_not_require_quota_text(tmp_path):
+    p = _write_jsonl(tmp_path / "flagged-error.jsonl", [{"type": "result", "subtype": "success", "is_error": True}])
+    assert classify(_ctx(p, backend="claude_code")) == TerminationReason.INFRA_ERROR
+
+
+def test_cc_error_flag_recovered_by_later_success_is_ok(tmp_path):
+    events = [
+        {"type": "result", "subtype": "success", "is_error": True},
+        *CC_SUCCESS,
+    ]
+    p = _write_jsonl(tmp_path / "recovered-error-flag.jsonl", events)
+    assert classify(_ctx(p, backend="claude_code")) == TerminationReason.OK
+
+
+def test_cc_runner_timeout_precedes_result_error_flag(tmp_path):
+    p = _write_jsonl(
+        tmp_path / "timeout-error-flag.jsonl", [{"type": "result", "subtype": "success", "is_error": True}]
+    )
+    ctx = _ctx(p, backend="claude_code", agent_exit=-1, error="claude_code timeout after 7200s")
+    assert classify(ctx) == TerminationReason.TIMEOUT
 
 
 def test_cc_max_turns_is_not_infra(tmp_path):
