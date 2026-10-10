@@ -84,7 +84,7 @@ configVars == <<config, reconfigCount>>
 VARIABLE 
     durableState
 
-vars == <<messageVars, serverVars, candidateVars, leaderVars, logVars, configVars, durableState>>
+protocolVars == <<messageVars, serverVars, candidateVars, leaderVars, logVars, configVars, durableState>>
 
 Quorum(c) == {i \in SUBSET(c) : Cardinality(i) * 2 > Cardinality(c)}
 
@@ -164,7 +164,7 @@ InitDurableState ==
         config |-> config[i]
     ]]
 
-Init == /\ InitMessageVars
+ProtocolInit == /\ InitMessageVars
         /\ InitServerVars
         /\ InitCandidateVars
         /\ InitLeaderVars
@@ -508,9 +508,26 @@ NextUnreliable ==
         /\ messages[m] = 1
         /\ DropMessage(m)
 
-Next == \/ NextAsync
+ProtocolNext == \/ NextAsync
         \/ NextCrash
         \/ NextUnreliable
+
+VARIABLE commitHistory, electionHistory
+historyVars == <<commitHistory, electionHistory>>
+vars == <<protocolVars, historyVars>>
+
+Init == ProtocolInit /\ commitHistory = {} /\ electionHistory = {}
+
+RecordEvents ==
+    /\ commitHistory' = commitHistory \cup
+         {[server |-> s, term |-> currentTerm'[s],
+           entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
+            s \in {i \in Server : commitIndex'[i] > commitIndex[i]}}
+    /\ electionHistory' = electionHistory \cup
+         {[server |-> s, term |-> currentTerm'[s], entries |-> log'[s]] :
+            s \in {i \in Server : state[i] # Leader /\ state'[i] = Leader}}
+
+Next == ProtocolNext /\ RecordEvents
 
 Spec == Init /\ [][Next]_vars
 

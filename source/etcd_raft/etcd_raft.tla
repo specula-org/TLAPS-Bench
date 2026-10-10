@@ -143,8 +143,8 @@ VARIABLE
 \* End of per server variables.
 ----
 
-\* All variables; used for stuttering (asserting state hasn't changed).
-vars == <<messageVars, serverVars, candidateVars, leaderVars, logVars, configVars, durableState>>
+\* Protocol variables, before adding passive history observers below.
+protocolVars == <<messageVars, serverVars, candidateVars, leaderVars, logVars, configVars, durableState>>
 
 
 ----
@@ -263,7 +263,7 @@ InitDurableState ==
         config |-> config[i]
     ]]
 
-Init == /\ InitMessageVars
+ProtocolInit == /\ InitMessageVars
         /\ InitServerVars
         /\ InitCandidateVars
         /\ InitLeaderVars
@@ -722,7 +722,7 @@ NextAsync ==
         
 NextCrash == \E i \in Server : Restart(i)
 
-NextAsyncCrash ==
+ProtocolNextAsyncCrash ==
     \/ NextAsync
     \/ NextCrash
 
@@ -737,20 +737,40 @@ NextUnreliable ==
         /\ DropMessage(m)
 
 \* Most pessimistic network model
-Next == \/ NextAsync
+ProtocolNext == \/ NextAsync
         \/ NextCrash
         \/ NextUnreliable
 
 \* Membership changes
-NextDynamic ==
-    \/ Next
+ProtocolNextDynamic ==
+    \/ ProtocolNext
     \/ \E i, j \in Server : AddNewServer(i, j)
     \/ \E i, j \in Server : AddLearner(i, j)
     \/ \E i, j \in Server : DeleteServer(i, j)
     \/ \E i \in Server : ApplySimpleConfChange(i)
 
-\* The specification must start with the initial state and transition according
-\* to Next.
+\* Observers retain commit and election events across crashes. Protocol actions
+\* never read these variables or use them as guards.
+VARIABLE commitHistory, electionHistory
+historyVars == <<commitHistory, electionHistory>>
+vars == <<protocolVars, historyVars>>
+
+Init == ProtocolInit /\ commitHistory = {} /\ electionHistory = {}
+
+RecordEvents ==
+    /\ commitHistory' = commitHistory \cup
+         {[server |-> s, term |-> currentTerm'[s],
+           entries |-> SubSeq(log'[s], 1, commitIndex'[s])] :
+            s \in {i \in Server : commitIndex'[i] > commitIndex[i]}}
+    /\ electionHistory' = electionHistory \cup
+         {[server |-> s, term |-> currentTerm'[s], entries |-> log'[s]] :
+            s \in {i \in Server : state[i] # Leader /\ state'[i] = Leader}}
+
+Next == ProtocolNext /\ RecordEvents
+NextAsyncCrash == ProtocolNextAsyncCrash /\ RecordEvents
+NextDynamic == ProtocolNextDynamic /\ RecordEvents
+
+\* The specification includes the observers without restricting protocol steps.
 Spec == Init /\ [][Next]_vars
 
 (***************************************************************************)
@@ -862,21 +882,13 @@ MoreUpToDateCorrectInv ==
            /\ Len(log[i]) >= Len(log[j])) =>
        IsPrefix(Committed(j), log[i])
 
-\* If a log entry is committed in a given term, then that
-\* entry will be present in the logs of the leaders
-\* for all higher-numbered terms
-\* See: https://github.com/uwplse/verdi-raft/blob/master/raft/LeaderCompletenessInterface.v
-LeaderCompletenessInv == 
-    \A i \in Server :
-        LET committed == Committed(i) IN
-        \A idx \in 1..Len(committed) :
-            LET entry == log[i][idx] IN 
-            \* if the entry is committed 
-            \A l \in CurrentLeaders :
-                \* all leaders with higher-number terms
-                currentTerm[l] > entry.term =>
-                \* have the entry at the same log position
-                log[l][idx] = entry
+\* A commit observation uses the server's term when its commit index advances,
+\* including when a follower learns a committed prefix. Entry creation terms
+\* can precede commitment; only later-term elections must contain that prefix.
+\* See Raft Figure 3 and sections 5.4.2-5.4.3: https://raft.github.io/raft.pdf
+LeaderCompletenessInv ==
+    \A c \in commitHistory, e \in electionHistory :
+        c.term < e.term => IsPrefix(c.entries, e.entries)
 
 \* Any entry committed by leader shall be persisted already
 CommittedIsDurableInv ==
