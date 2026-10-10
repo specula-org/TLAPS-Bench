@@ -997,7 +997,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "etcd_raft/etcd_raft.tla",
-        "source_sha256": "5a8441bde8cd7051dad1c59be8b9ec7870a26ce99d28002ff3ccf83387fd35db",
+        "source_sha256": "e6aa5a22b17d9556f7cb97a659cdae152d2b9b038d56739068697d8cd3aa3d3f",
         "proof_units": [
           {
             "task_id": "etcd_raft/etcd_raft_LogInv.tla",

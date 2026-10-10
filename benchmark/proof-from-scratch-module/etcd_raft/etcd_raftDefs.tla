@@ -4,8 +4,6 @@ EXTENDS etcd_raftModel
 
 MaxOrZero(s) == IF s = {} THEN 0 ELSE Max(s)
 
-CurrentLeaders == {i \in Server : state[i] = Leader}
-
 Committed(i) == SubSeq(log[i],1,commitIndex[i])
 
 LogInv ==
@@ -46,17 +44,9 @@ MoreUpToDateCorrectInv ==
            /\ Len(log[i]) >= Len(log[j])) =>
        IsPrefix(Committed(j), log[i])
 
-LeaderCompletenessInv == 
-    \A i \in Server :
-        LET committed == Committed(i) IN
-        \A idx \in 1..Len(committed) :
-            LET entry == log[i][idx] IN 
-            
-            \A l \in CurrentLeaders :
-                
-                currentTerm[l] > entry.term =>
-                
-                log[l][idx] = entry
+LeaderCompletenessInv ==
+    \A c \in commitHistory, e \in electionHistory :
+        c.term < e.term => IsPrefix(c.entries, e.entries)
 
 CommittedIsDurableInv ==
     \A i \in Server :

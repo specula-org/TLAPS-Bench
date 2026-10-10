@@ -12,7 +12,7 @@ RecvT(ty, d) == \E m \in DOMAIN messages : m.mtype = ty /\ m.mdest = d /\ Receiv
 
 SInit == Init /\ pc = 0
 
-SNext ==
+SProtocolNext ==
   \/ Step(0,  Timeout(s1))
   \/ Step(1,  Ready(s1))
   \/ Step(2,  RequestVote(s1,s1))
@@ -48,6 +48,8 @@ SNext ==
   \/ Step(31, IF RecoveryCase = "persist" THEN Ready(s1) ELSE UNCHANGED vars)
   \/ Step(32, Restart(s1))
   \/ (pc = 33 /\ UNCHANGED <<pc, vars>>)
+
+SNext == SProtocolNext /\ RecordEvents
 
 SSpec == SInit /\ [][SNext]_<<pc, vars>>
 
