@@ -21,7 +21,7 @@ CURRENT = {
     "CahillSSI/CahillSerializability.tla": 1,
     "ivy_examples_tlb/ivy_examples_tlb.tla": 2,
     "OpenAddressing/OpenAddressing.tla": 5,
-    "etcd_raft/etcd_raft.tla": 8,
+    "etcd_raft/etcd_raft.tla": 9,
     "HashicorpRaft/HashicorpRaft.tla": 6,
     "ZooKeeper_LowLevel/ZkV3_7_0.tla": 9,
     "MongoDB/MultiShardTxnSnapshot.tla": 1,
@@ -52,7 +52,7 @@ def test_default_and_explicit_current_are_the_nine_official_modules(extra, previ
     assert cli.main(["run", *extra, "--dry-run", "--output-dir", str(output)]) == 0
     printed = capsys.readouterr().out
     assert set(_selected(printed)) == set(CURRENT)
-    assert "9 specifications, 56 proof units" in printed
+    assert "9 specifications, 57 proof units" in printed
     assert not output.exists()
 
 
