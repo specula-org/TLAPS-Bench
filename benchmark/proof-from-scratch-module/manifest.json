@@ -946,7 +946,7 @@
       "spec": {
         "format_version": 1,
         "task_id": "ZooKeeper_LowLevel/ZkV3_7_0.tla",
-        "source_sha256": "7bd7c6a0255cb602654e51b2c0a42425695757fce723f1d7468f4698d316693b",
+        "source_sha256": "735f96db53ff13a54bc855d0d2dc77d5fdaf670ed98ddd42e278dc5543687a0c",
         "proof_units": [
           {
             "task_id": "ZooKeeper_LowLevel/ZkV3_7_0_Leadership1.tla",

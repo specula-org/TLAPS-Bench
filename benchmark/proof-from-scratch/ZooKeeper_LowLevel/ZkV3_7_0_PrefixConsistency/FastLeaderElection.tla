@@ -206,32 +206,6 @@ InitLeaderVarsL == leadingVoteSet = [s \in Server |-> {}]
 
 -----------------------------------------------------------------------------
 
-ZabTimeout(i) ==
-        /\ state[i] \in {LEADING, FOLLOWING}
-        /\ state'          = [state          EXCEPT ![i] = LOOKING]
-        /\ lastProcessed'  = [lastProcessed  EXCEPT ![i] = InitLastProcessed(i)]
-        /\ logicalClock'   = [logicalClock   EXCEPT ![i] = logicalClock[i] + 1]
-        /\ currentVote'    = [currentVote    EXCEPT ![i] = [proposedLeader |-> i,
-                                                            proposedZxid   |-> lastProcessed'[i].zxid,
-                                                            proposedEpoch  |-> currentEpoch[i]]]
-        /\ receiveVotes'   = [receiveVotes   EXCEPT ![i] = [v \in Server |-> [vote    |-> InitialVote,
-                                                                              round   |-> 0,
-                                                                              state   |-> LOOKING,
-                                                                              version |-> 0]]]
-        /\ outOfElection'  = [outOfElection  EXCEPT ![i] = [v \in Server |-> [vote    |-> InitialVote,
-                                                                              round   |-> 0,
-                                                                              state   |-> LOOKING,
-                                                                              version |-> 0]]]
-        /\ recvQueue'      = [recvQueue      EXCEPT ![i] = << >>]  
-        /\ waitNotmsg'     = [waitNotmsg     EXCEPT ![i] = FALSE]
-        /\ leadingVoteSet' = [leadingVoteSet EXCEPT ![i] = {}]
-        /\ BroadcastNotmsg(i, [mtype   |-> NOTIFICATION,
-                               msource |-> i,
-                               mstate  |-> LOOKING,
-                               mround  |-> logicalClock'[i],
-                               mvote   |-> currentVote'[i]])
-        /\ UNCHANGED <<currentEpoch, history>>
-
 ReceiveNotmsg(i, j) ==
         /\ electionMsgs[j][i] /= << >>
         /\ LET notmsg == electionMsgs[j][i][1]
