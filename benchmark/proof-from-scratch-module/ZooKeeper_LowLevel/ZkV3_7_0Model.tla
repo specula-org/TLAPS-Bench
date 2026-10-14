@@ -199,7 +199,9 @@ InitElectionVars == InitElectionVarsL
 
 InitFollowerVars == /\ connectInfo = [s \in Server |-> [sid |-> NullPoint,
                                                         syncMode |-> NONE,
-                                                        nlRcv |-> FALSE ] ]
+                                                        nlRcv |-> FALSE,
+                                                        backup |-> [history |-> <<BootstrapTxn>>,
+                                                                    committed |-> [index |-> 1, zxid |-> BootstrapZxid]] ] ]
                     /\ packetsSync = [s \in Server |->
                                         [ notCommitted |-> << >>,
                                           committed    |-> << >> ] ]
@@ -297,11 +299,25 @@ InitialVotes == [ vote    |-> InitialVote,
 
 InitialConnectInfo == [sid        |-> NullPoint,
                        syncMode   |-> NONE,
-                       nlRcv      |-> FALSE ]
+                       nlRcv      |-> FALSE,
+                       backup |-> [history |-> <<BootstrapTxn>>,
+                                   committed |-> [index |-> 1, zxid |-> BootstrapZxid]] ]
+
+RecoverIncompleteSnapshot(S) ==
+    /\ history' = [s \in Server |->
+         IF s \in S /\ connectInfo[s].syncMode = SNAP
+         THEN connectInfo[s].backup.history ELSE history[s]]
+    /\ lastCommitted' = [s \in Server |->
+         IF s \in S /\ connectInfo[s].syncMode = SNAP
+         THEN connectInfo[s].backup.committed ELSE lastCommitted[s]]
+
+EndOfHistory(his) == IF his = <<>> THEN [index |-> 0, zxid |-> <<0,0>>]
+                    ELSE [index |-> Len(his), zxid |-> his[Len(his)].zxid]
 
 ZabTimeoutInCluster(S) ==
+        /\ RecoverIncompleteSnapshot(S)
         /\ state' = [s \in Server |-> IF s \in S THEN LOOKING ELSE state[s] ]
-        /\ lastProcessed' = [s \in Server |-> IF s \in S THEN InitLastProcessed(s)
+        /\ lastProcessed' = [s \in Server |-> IF s \in S THEN EndOfHistory(history'[s])
                                                          ELSE lastProcessed[s] ]
         /\ logicalClock' = [s \in Server |-> IF s \in S THEN logicalClock[s] + 1 
                                                         ELSE logicalClock[s] ]
@@ -318,14 +334,38 @@ ZabTimeoutInCluster(S) ==
                                                      ELSE recvQueue[s] ]
         /\ waitNotmsg' = [s \in Server |-> IF s \in S THEN FALSE ELSE waitNotmsg[s] ]
         /\ leadingVoteSet' = [s \in Server |-> IF s \in S THEN {} ELSE leadingVoteSet[s] ]
-        /\ UNCHANGED <<electionMsgs, currentEpoch, history>>
+        /\ UNCHANGED <<electionMsgs, currentEpoch>>
         /\ zabState' = [s \in Server |-> IF s \in S THEN ELECTION ELSE zabState[s] ]
         /\ connectInfo' = [s \in Server |-> IF s \in S THEN InitialConnectInfo
                                                        ELSE connectInfo[s] ]
         /\ CleanInputBufferInCluster(S)
 
 FollowerShutdown(i) ==
-        /\ ZabTimeout(i)
+        /\ RecoverIncompleteSnapshot({i})
+        /\ state[i] \in {LEADING, FOLLOWING}
+        /\ state'          = [state          EXCEPT ![i] = LOOKING]
+        /\ lastProcessed'  = [lastProcessed  EXCEPT ![i] = EndOfHistory(history'[i])]
+        /\ logicalClock'   = [logicalClock   EXCEPT ![i] = logicalClock[i] + 1]
+        /\ currentVote'    = [currentVote    EXCEPT ![i] = [proposedLeader |-> i,
+                                                            proposedZxid   |-> lastProcessed'[i].zxid,
+                                                            proposedEpoch  |-> currentEpoch[i]]]
+        /\ receiveVotes'   = [receiveVotes   EXCEPT ![i] = [v \in Server |-> [vote    |-> InitialVote,
+                                                                              round   |-> 0,
+                                                                              state   |-> LOOKING,
+                                                                              version |-> 0]]]
+        /\ outOfElection'  = [outOfElection  EXCEPT ![i] = [v \in Server |-> [vote    |-> InitialVote,
+                                                                              round   |-> 0,
+                                                                              state   |-> LOOKING,
+                                                                              version |-> 0]]]
+        /\ recvQueue'      = [recvQueue      EXCEPT ![i] = << >>]
+        /\ waitNotmsg'     = [waitNotmsg     EXCEPT ![i] = FALSE]
+        /\ leadingVoteSet' = [leadingVoteSet EXCEPT ![i] = {}]
+        /\ BroadcastNotmsg(i, [mtype   |-> NOTIFICATION,
+                               msource |-> i,
+                               mstate  |-> LOOKING,
+                               mround  |-> logicalClock'[i],
+                               mvote   |-> currentVote'[i]])
+        /\ UNCHANGED currentEpoch
         /\ zabState'    = [zabState    EXCEPT ![i] = ELECTION]
         /\ connectInfo' = [connectInfo EXCEPT ![i] = InitialConnectInfo]
 
@@ -379,9 +419,9 @@ PartitionStart(i, j) ==
               /\ IsLooking(j)
               /\ IdCompare(i, j)
               /\ UNCHANGED <<varsL, zabState, connectInfo, msgs, learners,
-                             forwarding, connecting, electing, ackldRecv>>
+                             forwarding, connecting, electing, ackldRecv, lastCommitted>>
         /\ partition' = [partition EXCEPT ![i][j] = TRUE, ![j][i] = TRUE ]
-        /\ UNCHANGED <<acceptedEpoch, lastCommitted, lastSnapshot, tempMaxEpoch,
+        /\ UNCHANGED <<acceptedEpoch, lastSnapshot, tempMaxEpoch,
                        initialHistory, verifyVars, packetsSync, status>>
 
 PartitionRecover(i, j) ==
@@ -399,7 +439,7 @@ NodeCrash(i) ==
         /\ status' = [status EXCEPT ![i] = OFFLINE ]
         /\ \/ /\ IsLooking(i)
               /\ UNCHANGED <<varsL, zabState, connectInfo, msgs, learners,
-                             forwarding, connecting, electing, ackldRecv>>
+                             forwarding, connecting, electing, ackldRecv, lastCommitted>>
            \/ /\ IsFollower(i)
               /\ LET connectedWithLeader == HasLeader(i)
                  IN \/ /\ connectedWithLeader
@@ -420,7 +460,7 @@ NodeCrash(i) ==
            \/ /\ IsLeader(i)
               /\ LeaderShutdown(i)
               /\ UNCHANGED <<electing, connecting, ackldRecv>>
-        /\ UNCHANGED <<acceptedEpoch, lastCommitted, lastSnapshot, tempMaxEpoch,
+        /\ UNCHANGED <<acceptedEpoch, lastSnapshot, tempMaxEpoch,
                        initialHistory, verifyVars, packetsSync, partition>>
 
 NodeStart(i) ==
@@ -529,14 +569,14 @@ FollowerProcessLEADERINFO(i, j) ==
                           /\ Discard(j, i)
                           /\ UNCHANGED <<acceptedEpoch, zabState>>
                     /\ UNCHANGED <<varsL, connectInfo, learners, forwarding, electing,
-                                   connecting, ackldRecv>>
+                                   connecting, ackldRecv, lastCommitted>>
                  \/ 
                     /\ ~epochOk 
                     /\ FollowerShutdown(i)
                     /\ Clean(i, connectInfo[i].sid)
                     /\ RemoveLearner(connectInfo[i].sid, i)
                     /\ UNCHANGED <<acceptedEpoch>>
-        /\ UNCHANGED <<history, lastCommitted, tempMaxEpoch, initialHistory, lastSnapshot,
+        /\ UNCHANGED <<tempMaxEpoch, initialHistory, lastSnapshot,
                        proposalMsgsLog, epochLeader, packetsSync, envVars>>
 UpdateAckSidHelper(his, cur, end, target) ==
         LET updateTxn(txn) == [ zxid   |-> txn.zxid,
@@ -795,7 +835,7 @@ LeaderSyncFollower(i, j) ==
 TruncateLog(his, index) == IF index <= 0 THEN << >>
                            ELSE SubSeq(his, 1, index)
 
-FollowerProcessSyncMessage(i, j) ==
+FollowerProcessSyncMessageOK(i, j) ==
         /\ IsON(i)
         /\ IsFollower(i)
         /\ msgs[j][i] /= << >>
@@ -817,12 +857,10 @@ FollowerProcessSyncMessage(i, j) ==
                           /\ connectInfo' = [connectInfo EXCEPT ![i].syncMode = TRUNC]
                           /\ LET truncZxid  == msg.mtruncZxid
                                  truncIndex == ZxidToIndex(history[i], truncZxid)
-                                 truncOk    == /\ truncIndex >= lastCommitted[i].index
+                                 truncOk    == /\ truncIndex >= 0
                                                /\ truncIndex <= Len(history[i])
                              IN
-                             \/ /\ ~truncOk
-                                /\ UNCHANGED <<history, initialHistory, lastProcessed, lastCommitted>>
-                             \/ /\ truncOk
+                             /\ truncOk
                                 /\ history' = [history EXCEPT 
                                                     ![i] = TruncateLog(history[i], truncIndex)]
                                 /\ initialHistory' = [initialHistory EXCEPT ![i] = history'[i]]
@@ -833,7 +871,8 @@ FollowerProcessSyncMessage(i, j) ==
                                                     ![i] = [ index |-> truncIndex,
                                                              zxid  |-> truncZxid] ]
                        \/ /\ msg.mtype = SNAP
-                          /\ connectInfo' = [connectInfo EXCEPT ![i].syncMode = SNAP]
+                          /\ connectInfo' = [connectInfo EXCEPT ![i].syncMode = SNAP,
+                              ![i].backup = [history |-> history[i], committed |-> lastCommitted[i]]]
                           /\ history' = [history EXCEPT ![i] = msg.msnapshot]
                           /\ initialHistory' = [initialHistory EXCEPT ![i] = history'[i]]
                           /\ lastProcessed' = [lastProcessed EXCEPT 
@@ -846,6 +885,18 @@ FollowerProcessSyncMessage(i, j) ==
         /\ UNCHANGED <<state, currentEpoch, zabState, acceptedEpoch, electionVars,
                        leaderVars, tempMaxEpoch, packetsSync, lastSnapshot,
                        proposalMsgsLog, epochLeader, electionMsgs, envVars>>
+
+RejectTrunc(i, j) ==
+    /\ IsON(i) /\ IsFollower(i) /\ IsMyLeader(i, j)
+    /\ zabState[i] = SYNCHRONIZATION
+    /\ msgs[j][i] /= <<>>
+    /\ msgs[j][i][1].mtype = TRUNC
+    /\ LET idx == ZxidToIndex(history[i], msgs[j][i][1].mtruncZxid)
+       IN ~(idx \in 0..Len(history[i]))
+
+FollowerProcessSyncMessage(i, j) ==
+    IF RejectTrunc(i, j) THEN NodeCrash(i)
+    ELSE FollowerProcessSyncMessageOK(i, j)
 
 SnapshotNeeded(i) == \/ connectInfo[i].syncMode = TRUNC
                      \/ connectInfo[i].syncMode = SNAP
@@ -986,11 +1037,7 @@ FollowerProcessCOMMITInSync(i, j) ==
 
 ShouldSnapshot(i) == lastCommitted[i].index - lastSnapshot[i].index >= 2
 
- TakeSnapshot(i) == LET snapOk == lastSnapshot[i].index <= lastCommitted[i].index
-                    IN \/ /\ snapOk
-                          /\ lastSnapshot' = [ lastSnapshot EXCEPT ![i] = lastCommitted[i] ]
-                       \/ /\ ~snapOk
-                          /\ UNCHANGED lastSnapshot
+TakeSnapshot(i) == lastSnapshot' = [lastSnapshot EXCEPT ![i] = lastCommitted[i]]
 
 ACKInBatches(queue, packets) ==
         queue \o [i \in 1..Len(packets) |-> [ mtype |-> ACK,
