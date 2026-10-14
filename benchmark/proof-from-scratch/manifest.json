@@ -776,6 +776,12 @@
       "ZooKeeper_LowLevel/ZkV3_7_0_TotalOrderDefs.tla"
     ]
   },
+  "etcd_raft/etcd_raft_CommitLiveness.tla": {
+    "spec_id": "etcd_raft/etcd_raft.tla",
+    "context": [
+      "etcd_raft/etcd_raft_CommitLivenessDefs.tla"
+    ]
+  },
   "etcd_raft/etcd_raft_CommittedIsDurable.tla": {
     "spec_id": "etcd_raft/etcd_raft.tla",
     "context": [

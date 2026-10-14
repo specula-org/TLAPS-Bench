@@ -482,7 +482,7 @@ DropMessage(m) ==
     /\ Discard(m)
     /\ UNCHANGED <<pendingMessages, serverVars, candidateVars, leaderVars, logVars, configVars, durableState>>
 
-NextAsync == 
+ReplicationNext ==
     \/ \E i,j \in Server : RequestVote(i, j)
     \/ \E i \in Server : BecomeLeader(i)
     \/ \E i \in Server: ClientRequest(i, 0)
@@ -492,8 +492,11 @@ NextAsync ==
     \/ \E i,j \in Server : Heartbeat(i, j)
     \/ \E i,j \in Server : \E index \in 1..commitIndex[i] : SendSnapshot(i, j, index)
     \/ \E m \in DOMAIN messages : Receive(m)
-    \/ \E i \in Server : Timeout(i)
     \/ \E i \in Server : Ready(i)
+
+NextAsync ==
+    \/ ReplicationNext
+    \/ \E i \in Server : Timeout(i)
     \/ \E i \in Server : StepDownToFollower(i)
         
 NextCrash == \E i \in Server : Restart(i)

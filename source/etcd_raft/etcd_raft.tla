@@ -706,7 +706,7 @@ DropMessage(m) ==
 ----
 
 \* Defines how the variables may transition.
-NextAsync == 
+ReplicationNext ==
     \/ \E i,j \in Server : RequestVote(i, j)
     \/ \E i \in Server : BecomeLeader(i)
     \/ \E i \in Server: ClientRequest(i, 0)
@@ -716,8 +716,11 @@ NextAsync ==
     \/ \E i,j \in Server : Heartbeat(i, j)
     \/ \E i,j \in Server : \E index \in 1..commitIndex[i] : SendSnapshot(i, j, index)
     \/ \E m \in DOMAIN messages : Receive(m)
-    \/ \E i \in Server : Timeout(i)
     \/ \E i \in Server : Ready(i)
+
+NextAsync ==
+    \/ ReplicationNext
+    \/ \E i \in Server : Timeout(i)
     \/ \E i \in Server : StepDownToFollower(i)
         
 NextCrash == \E i \in Server : Restart(i)
@@ -871,16 +874,17 @@ QuorumLogInv ==
         \E j \in S :
             IsPrefix(Committed(i), log[j])
 
-\* The "up-to-date" check performed by servers
-\* before issuing a vote implies that i receives
-\* a vote from j only if i has all of j's committed
-\* entries
+\* Freshness relative to a quorum protects committed prefixes. Freshness
+\* relative to one voter alone does not: an older uncommitted branch can have
+\* a higher last-entry term than that voter's indirectly committed prefix.
 MoreUpToDateCorrectInv ==
-    \A i, j \in Server :
-       (\/ LastTerm(log[i]) > LastTerm(log[j])
-        \/ /\ LastTerm(log[i]) = LastTerm(log[j])
-           /\ Len(log[i]) >= Len(log[j])) =>
-       IsPrefix(Committed(j), log[i])
+    \A i \in Server :
+       (\E Q \in Quorum(GetConfig(i)) :
+           \A j \in Q :
+               \/ LastTerm(log[i]) > LastTerm(log[j])
+               \/ /\ LastTerm(log[i]) = LastTerm(log[j])
+                  /\ Len(log[i]) >= Len(log[j])) =>
+       \A j \in Server : IsPrefix(Committed(j), log[i])
 
 \* A commit observation uses the server's term when its commit index advances,
 \* including when a follower learns a committed prefix. Entry creation terms
@@ -923,6 +927,82 @@ THEOREM MoreUpToDate == Spec => []MoreUpToDateCorrectInv
 PROOF OBVIOUS
 
 THEOREM QuorumLog == Spec => []QuorumLogInv
+PROOF OBVIOUS
+
+\* A stable replication period may still have failures outside Q. Within Q,
+\* nodes do not restart and RPCs are not lost. Election timeouts stop during
+\* this period; leader election itself is not the liveness claim below.
+StableReplicationNext(l, Q) ==
+    /\ RecordEvents
+    /\ currentTerm'[l] = currentTerm[l]
+    /\ state'[l] = Leader
+    /\ \/ ReplicationNext
+       \/ \E i \in Server \ Q : Restart(i)
+       \/ \E i \in Server \ {l} : StepDownToFollower(i)
+       \/ \E m \in DOMAIN messages :
+           /\ messages[m] = 1
+           /\ \/ DuplicateMessage(m)
+              \/ /\ ~(m.msource \in Q /\ m.mdest \in Q)
+                 /\ DropMessage(m)
+
+StableReplication(l, Q) ==
+    /\ l \in Q
+    /\ <>[] (state[l] = Leader /\ \A j \in Q : currentTerm[j] <= currentTerm[l])
+    /\ <>[][StableReplicationNext(l, Q)]_vars
+
+\* Fairly retry a suffix covering index n until this peer acknowledges it.
+SendThrough(l, j, n) ==
+    /\ n \in 1..Len(log[l])
+    /\ matchIndex[l][j] < n
+    /\ AppendEntries(l, j, <<matchIndex[l][j] + 1, n + 1>>)
+    /\ RecordEvents
+
+ReceiveThrough(l, j, n) ==
+    /\ \E m \in DOMAIN messages :
+        /\ m.mtype = AppendEntriesRequest
+        /\ m.msource = l /\ m.mdest = j
+        /\ m.mterm = currentTerm[l]
+        /\ m.msubtype = "app"
+        /\ m.mprevLogIndex < n
+        /\ m.mprevLogIndex + Len(m.mentries) >= n
+        /\ Receive(m)
+    /\ RecordEvents
+
+ReceiveAckThrough(l, j, n) ==
+    /\ \E m \in DOMAIN messages :
+        /\ m.mtype = AppendEntriesResponse
+        /\ m.msource = j /\ m.mdest = l
+        /\ m.mterm = currentTerm[l]
+        /\ m.msuccess /\ m.mmatchIndex >= n
+        /\ Receive(m)
+    /\ RecordEvents
+
+ReplicationFairness(l, Q, n) ==
+    /\ \A j \in Q : WF_vars(Ready(j) /\ RecordEvents)
+    /\ WF_vars(matchIndex[l][l] < n /\ AppendEntriesToSelf(l) /\ RecordEvents)
+    /\ WF_vars(AdvanceCommitIndex(l) /\ RecordEvents)
+    /\ \A j \in Q : SF_vars(ReceiveAckThrough(l, j, n))
+    /\ \A j \in Q \ {l} :
+        /\ WF_vars(SendThrough(l, j, n))
+        /\ SF_vars(ReceiveThrough(l, j, n))
+
+LiveSpec(l, Q, n) ==
+    /\ Spec
+    /\ StableReplication(l, Q)
+    /\ ReplicationFairness(l, Q, n)
+
+CurrentTermEntry(l, n) ==
+    /\ state[l] = Leader
+    /\ n \in 1..Len(log[l])
+    /\ log[l][n].term = currentTerm[l]
+
+\* Finite disruption before stabilization may discard uncommitted entries.
+\* After stabilization, each current-term entry must eventually be committed.
+CommitProgress(l, n) == <>[] (CurrentTermEntry(l, n) ~> commitIndex[l] >= n)
+
+THEOREM CommitLiveness ==
+    \A l \in InitServer : \A Q \in Quorum(InitServer) : \A n \in Nat \ {0} :
+        LiveSpec(l, Q, n) => CommitProgress(l, n)
 PROOF OBVIOUS
 
 ===============================================================================

@@ -1,6 +1,6 @@
 # etcd Raft benchmark model
 
-The model is derived from the etcd Raft example distributed with Specula. Its eight selected safety theorem statements and task IDs are preserved; the definition of `LeaderCompletenessInv` is corrected below.
+The model is derived from the etcd Raft example distributed with Specula. Its eight safety theorem statements and task IDs are preserved. `MoreUpToDateCorrectInv` and `LeaderCompletenessInv` are corrected below; `CommitLiveness` adds a ninth target.
 
 The local constant-domain and pending-message repairs remain in place. The crash-recovery repair stores `logEntries` alongside the existing numeric `durableState[i].log` field in `InitDurableState` and `PersistState`. `Restart` restores the saved entries directly.
 
@@ -36,3 +36,41 @@ rejected when an incomplete log wins the later election. These finite
 regressions do not constitute an unbounded proof. Frozen experiments using the
 old context retain their original results and must be distinguished from runs
 against the corrected model.
+
+## Quorum log freshness
+
+A single voter can have a committed old-term prefix while a disconnected server
+has a conflicting, uncommitted entry with a larger last term. The original
+pointwise freshness predicate incorrectly rejected this legal execution.
+`MoreUpToDateCorrectInv` now requires freshness relative to an entire quorum
+before concluding that a log contains every committed prefix. Raft requires
+quorum votes, not one vote, to elect a leader (Raft sections 5.4.1–5.4.3).
+
+`LogFreshness.tla` in `tests/fixtures/etcd_raft` replays a five-server, 70-step
+late-commit execution under `Spec`. The old predicate fails; the corrected
+predicate holds. A control that disables vote freshness and elects an
+incomplete leader is rejected by the corrected predicate.
+
+## Stable-period commit progress
+
+`CommitLiveness` concerns replication after a stable period begins; it does not
+prove leader election or unconditional availability. Its parameters range over
+a leader, a quorum and an arbitrary positive log index. The environment eventually
+stops election timeouts, keeps that leader in the same term, and stops crashes
+and RPC loss within the quorum; minority failures remain allowed. Persistence,
+retries and commitment are weakly fair. Processing relevant replication requests
+and successful acknowledgments is strongly fair, so an enabled RPC class cannot
+be perpetually starved by other traffic.
+
+Under those conditions, after finite disruption, a current-term entry at that
+index eventually becomes committed. These are explicit scheduling and failure
+assumptions, not an assumption that commitment occurs. `Spec` and the eight
+safety targets retain their original failure model; `ReplicationNext` only
+factors existing actions out of `NextAsync`.
+
+The progress fixture explores finite interleavings from a real election with
+two uncommitted entries. A separate fair witness checks that the assumptions
+are satisfiable. Removing commit fairness or replacing commitment with a no-op
+produces a liveness counterexample. These checks are finite regressions, not an
+unbounded TLAPS proof. Old eight-target results retain their original version;
+new nine-target runs start with fresh sessions and separate result directories.
