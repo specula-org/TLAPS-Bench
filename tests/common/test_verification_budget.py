@@ -4,10 +4,10 @@ import json
 import os
 import subprocess
 import sys
-import time
 
 import pytest
 
+from common.active_clock import ActiveClock, ClockReading
 from common.verification_budget import (
     POLICY_ENV,
     CheckSession,
@@ -50,18 +50,24 @@ def test_checker_consumes_effective_budget_without_scaling_again(monkeypatch):
         policy_for_check(14400, policy.proof_unit_ids)
 
 
-def test_examinations_are_independent_but_resume_spends_remaining_budget(tmp_path):
+def test_examinations_are_independent_but_resume_spends_remaining_budget(tmp_path, monkeypatch):
+    now = 0.0
+    clock = ActiveClock()
+    monkeypatch.setattr(clock, "read", lambda: ClockReading(now, 0.0))
+    monkeypatch.setattr(ActiveClock, "from_environment", classmethod(lambda cls: clock))
     identity = {"candidate": "same"}
     with CheckSession(tmp_path / "self-check", identity, 0.4) as session:
-        time.sleep(0.13)
+        now += 0.13
         remaining = session.remaining()
+        assert remaining == pytest.approx(0.27)
+    now += 30  # Time outside an examination does not consume its budget.
     with CheckSession(tmp_path / "self-check", identity, 0.4) as session:
-        assert 0 < session.remaining() <= remaining
-        time.sleep(session.remaining() + 0.01)
+        assert session.remaining() == pytest.approx(remaining)
+        now += session.remaining() + 0.01
         assert session.remaining() == 0
     for name in ("grader", "next-self-check"):
         with CheckSession(tmp_path / name, identity, 0.4) as session:
-            assert session.remaining() > 0.3
+            assert session.remaining() == pytest.approx(0.4)
     with CheckSession(tmp_path / "self-check", identity, 0.4) as session:
         assert session.remaining() == 0
 
