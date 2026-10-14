@@ -57,7 +57,7 @@ This file is generated; regenerate it with `python3 scripts/dataset_table.py`.
 | [ZooKeeper_LowLevel](https://github.com/Disalg-ICS-NJU/zookeeper-tla-spec/tree/main/low-level-spec/zk-3.7) | ZooKeeper (Remix) | – | 9 | 9 |
 | [ben-or83](https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16c1a801ff8ac64eb9aca038/ben-or83) | apalache-examples (Konnov) | 209 | – | 209 |
 | [tendermint](https://github.com/konnov/apalache-examples/tree/af360379b7cbcd1e16c1a801ff8ac64eb9aca038/tendermint) | apalache-examples (Konnov) | 48 | – | 48 |
-| [etcd_raft](https://github.com/specula-org/Specula/blob/main/skills/spec_generation/examples/etcdraft.tla) | etcd (Specula) | – | 8 | 8 |
+| [etcd_raft](https://github.com/specula-org/Specula/blob/main/skills/spec_generation/examples/etcdraft.tla) | etcd (Specula) | – | 9 | 9 |
 | [ewd998](https://github.com/tlaplus/Examples/tree/master/specifications/ewd998) | tlaplus/Examples | 52 | 7 | 59 |
 | [byzpaxos](https://github.com/tlaplus/Examples/tree/master/specifications/byzpaxos) | tlaplus/Examples | 41 | 11 | 52 |
 | [lamport_mutex](https://github.com/tlaplus/Examples/tree/master/specifications/lamport_mutex) | tlaplus/Examples | 20 | 2 | 22 |

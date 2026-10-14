@@ -43,4 +43,11 @@ THEOREM QuorumLog == Spec => []QuorumLogInv
 \* BEGIN AGENT PROOF etcd_raft/etcd_raft_QuorumLog.tla
 PROOF OMITTED
 \* END AGENT PROOF etcd_raft/etcd_raft_QuorumLog.tla
+
+THEOREM CommitLiveness ==
+    \A l \in InitServer : \A Q \in Quorum(InitServer) : \A n \in Nat \ {0} :
+        LiveSpec(l, Q, n) => CommitProgress(l, n)
+\* BEGIN AGENT PROOF etcd_raft/etcd_raft_CommitLiveness.tla
+PROOF OMITTED
+\* END AGENT PROOF etcd_raft/etcd_raft_CommitLiveness.tla
 ====
