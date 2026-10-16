@@ -240,8 +240,9 @@ def claude_code_result_error(ctx: TerminationContext) -> str | None:
     Background work can produce several ``result`` events. The final result
     must follow the last conversation activity; an earlier success cannot
     finalize a truncated follow-up turn. Malformed streams and execution-error
-    results are INFRA_ERROR. ``error_max_turns`` remains a turn-budget LIMIT,
-    not infrastructure, when it closes the stream.
+    results are INFRA_ERROR, including ``is_error`` on a ``success`` subtype.
+    ``error_max_turns`` remains a turn-budget LIMIT, not infrastructure, when
+    it closes the stream.
     """
     if ctx.backend != "claude_code":
         return None
@@ -261,7 +262,7 @@ def claude_code_result_error(ctx: TerminationContext) -> str | None:
         # No result closes the latest activity, including background turns.
         return TerminationReason.INFRA_ERROR
     subtype = last_result.get("subtype", "")
-    if subtype.startswith("error") and subtype != "error_max_turns":
+    if subtype != "error_max_turns" and (last_result.get("is_error") is True or subtype.startswith("error")):
         return TerminationReason.INFRA_ERROR
     return None
 
