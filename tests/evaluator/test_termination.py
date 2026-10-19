@@ -173,6 +173,33 @@ def test_turn_completed_is_ok(tmp_path):
     assert classify(_ctx(p)) == TerminationReason.OK
 
 
+@pytest.mark.parametrize(
+    "activity",
+    [
+        {"type": "turn.started"},
+        {"type": "thread.started", "thread_id": "t3"},
+        {"type": "item.started", "item": {"id": "late", "type": "command_execution"}},
+        {"type": "item.completed", "item": {"id": "late", "type": "command_execution"}},
+        {"type": "error", "message": "stream disconnected before completion"},
+    ],
+)
+def test_activity_after_completed_turn_is_infra(tmp_path, activity):
+    p = _write_jsonl(tmp_path / "unfinished-turn.jsonl", [*GENUINE_STREAM, activity])
+    assert classify(_ctx(p)) == TerminationReason.INFRA_ERROR
+
+
+def test_completed_follow_up_turn_is_ok(tmp_path):
+    events = [
+        *GENUINE_STREAM,
+        {"type": "turn.started"},
+        {"type": "item.completed", "item": {"id": "i1", "type": "agent_message", "text": "done"}},
+        {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}},
+        {"type": "tlaps.codex_child_usage", "version": 5, "complete": True},
+    ]
+    p = _write_jsonl(tmp_path / "second-turn.jsonl", events)
+    assert classify(_ctx(p)) == TerminationReason.OK
+
+
 def test_codex_single_turn_uses_codex_terminal_contract(tmp_path):
     audit_start = {"type": "tlaps.codex_child_usage.started", "version": 5}
     audit = {

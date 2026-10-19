@@ -158,8 +158,10 @@ def codex_turn_failed(ctx: TerminationContext) -> str | None:
 
     We flag INFRA_ERROR when the last terminal turn event is a failure, when the
     stream ends without a terminal, or when the required JSON stream is empty.
-    A run that hit a transient error mid-way but recovered and completed a turn
-    is NOT flagged.
+    A later ``turn.started``, ``thread.started``, item event, or ``error`` clears
+    an earlier terminal, so an earlier success cannot close a truncated follow-up
+    turn. A run that hit a transient error mid-way but recovered and completed a
+    turn is NOT flagged. A trailing usage audit is not turn activity.
     """
     if ctx.backend not in {"codex", "codex_single_turn"}:
         return None
@@ -173,6 +175,8 @@ def codex_turn_failed(ctx: TerminationContext) -> str | None:
             last_terminal = "completed"
         elif t == "turn.failed":
             last_terminal = "failed"
+        elif t in {"turn.started", "thread.started", "error"} or (isinstance(t, str) and t.startswith("item.")):
+            last_terminal = None
     if last_terminal == "failed":
         return TerminationReason.INFRA_ERROR
     if last_terminal is None:
