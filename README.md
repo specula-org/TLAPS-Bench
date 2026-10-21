@@ -45,7 +45,7 @@ For more problems, check out [the full problem set](https://github.com/specula-o
 
 ## Next Problem Set
 
-The `next` collection includes [PirateShip consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/PirateShip/PirateShipProof.tla): one specification with eleven safety goals. Its [source notes](source/PirateShip/README.md) describe the model scope, validation, and upstream MIT license. Preview it with `uv run tlaps-bench run --task-list next --dry-run`.
+The `next` collection includes [CCF Raft](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/CCF/CCFProof.tla) (2 safety goals) and [PirateShip consensus](https://github.com/specula-org/TLAPS-Bench/blob/main/benchmark/proof-from-scratch-module/PirateShip/PirateShipProof.tla) (11 safety goals): 2 specifications with 13 goals in total. Their source notes ([CCF](source/CCF/README.md), [PirateShip](source/PirateShip/README.md)) describe model scope, validation, and upstream licenses. [Wildfire](https://github.com/specula-org/TLAPS-Bench/pull/164) is pending inclusion. Preview the included tasks with `uv run tlaps-bench run --task-list next --dry-run`.
 
 ## Retired Problems (Proofs Available)
 
