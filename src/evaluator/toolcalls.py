@@ -99,6 +99,8 @@ _WRAPPER_OPTIONS_WITH_VALUE = {
 
 _TLAPS_EXECUTABLES = frozenset({"tlapm"})
 _CHECK_PROOF_EXECUTABLES = frozenset({"check_proof", "check_proof_bin"})
+
+
 _TLC_EXECUTABLES = frozenset({"tlc", "tlc2"})
 _JAVA_MAIN_CLASS = re.compile(r"^[a-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+$")
 _JAVA_OPTIONS_WITH_VALUE = frozenset(
@@ -537,6 +539,23 @@ def _category(executable: str, args: list[str]) -> str | None:
     if executable == "java":
         return _java_category(args)
     return None
+
+
+def blocking_proof_check_command(name: object, arguments: object, namespace: object = None) -> str | None:
+    """Classify the known MCP checker just like its underlying CLI command."""
+    if not (
+        name in ("mcp__tlaps_check__check_proof", "mcp__tlaps_check.check_proof")
+        or (namespace == "mcp__tlaps_check" and name == "check_proof")
+    ):
+        return None
+    if not isinstance(arguments, dict) or not isinstance(arguments.get("file"), str):
+        return None
+    if type(arguments.get("sany_only", False)) is not bool:
+        return None
+    command = ["check_proof_bin", arguments["file"], "--mode", "proof-from-scratch"]
+    if arguments.get("sany_only"):
+        command.append("--sany-only")
+    return shlex.join(command)
 
 
 def classify_command(command: str | None) -> str:

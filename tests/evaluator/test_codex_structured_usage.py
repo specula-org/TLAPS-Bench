@@ -805,7 +805,14 @@ def test_codex_cli_install_uses_latest_release():
 def test_codex_command_wraps_native_multi_agent_execution_without_disabling_it():
     command = CodexBackend(model="gpt-test").build_command("/workspace", "/result")
 
-    assert command[:4] == ["python3", "/opt/codex_usage_wrapper.py", "--", "codex"]
+    assert command[:6] == [
+        "python3",
+        "/opt/codex_usage_wrapper.py",
+        "--proof-check-workspace",
+        "/workspace",
+        "--",
+        "codex",
+    ]
     overrides = {command[index + 1] for index, value in enumerate(command[:-1]) if value == "-c"}
     assert not any("multi_agent" in override or "fanout" in override for override in overrides)
 
@@ -817,7 +824,7 @@ def test_codex_local_command_uses_the_installed_usage_wrapper(tmp_path):
     command = CodexBackend(model="gpt-test").build_command(str(tmp_path), str(tmp_path / "result"))
 
     assert Path(command[1]).resolve() == Path("src/evaluator/backends/codex_usage_wrapper.py").resolve()
-    assert command[2:4] == ["--", "codex"]
+    assert command[2:6] == ["--proof-check-workspace", str(tmp_path), "--", "codex"]
     completed = subprocess.run(command[:2] + ["--help"], capture_output=True, text=True, timeout=10)
     assert completed.returncode == 0, completed.stderr
 
