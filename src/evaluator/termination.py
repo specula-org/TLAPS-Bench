@@ -346,24 +346,45 @@ def cursor_result_error(ctx: TerminationContext) -> str | None:
     return None
 
 
+# Events the LiteLLM agent emits while it is still working, mirroring the set
+# its tool-call accounting treats as activity (see backends/litellm.py).
+_LITELLM_ACTIVITY_EVENTS = frozenset({"error", "request_usage", "response", "tool_call", "tool_result"})
+
+
 def litellm_completion_error(ctx: TerminationContext) -> str | None:
-    """LiteLLM rule: the agent stopped on a completion error.
+    """LiteLLM rule: require the agent's terminal usage record and a clean outcome.
 
     The LiteLLM agent emits an ``error`` event and stops its loop when a
     provider rejects the request or inference otherwise fails. A later
     ``response`` would indicate recovery, so only the last response/error
     outcome determines whether the run was cut short.
+
+    The agent also emits exactly one terminal ``usage`` event after that loop,
+    on every exit path, so a stream without it was cut off mid-run — a killed
+    container, an exhausted host, or an unhandled agent fault — and is not a
+    genuine attempt. Tool-call accounting already requires the same record, so
+    both readings of a truncated stream agree. A terminal ``usage`` does not
+    excuse a preceding ``error``: the agent emits it on that path too.
     """
     if ctx.backend != "litellm":
         return None
     last_outcome = None
+    terminals = 0
+    activity_after_terminal = False
     for event in ctx.events():
         event_type = event.get("type")
+        if event_type == "usage":
+            terminals += 1
+            continue
+        if terminals and event_type in _LITELLM_ACTIVITY_EVENTS:
+            activity_after_terminal = True
         if event_type == "response":
             last_outcome = "response"
         elif event_type == "error":
             last_outcome = "error"
     if last_outcome == "error":
+        return TerminationReason.INFRA_ERROR
+    if terminals != 1 or activity_after_terminal:
         return TerminationReason.INFRA_ERROR
     return None
 

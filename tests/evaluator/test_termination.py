@@ -339,6 +339,90 @@ def test_litellm_response_after_error_is_ok(tmp_path):
     assert classify(_ctx(path, backend="litellm")) == TerminationReason.OK
 
 
+# The LiteLLM agent emits one terminal "usage" event after its loop on every
+# exit path, so a stream without it was cut off mid-run.
+LITELLM_TRUNCATED_STREAM = [
+    {"type": "request_usage", "iteration": 1, "input_tokens": 100, "output_tokens": 20},
+    {"type": "tool_call", "toolCallId": "c1", "name": "bash", "args": {"command": "tlapm Spec.tla"}, "iteration": 1},
+    {"type": "tool_result", "toolCallId": "c1", "name": "bash", "result": "ok", "iteration": 1},
+]
+
+LITELLM_TERMINAL_USAGE = {"type": "usage", "input_tokens": 100, "output_tokens": 20, "model_requests": 1}
+
+
+@pytest.mark.parametrize("agent_exit", [None, 0, 1, 137])
+def test_litellm_stream_without_terminal_usage_is_infra(tmp_path, agent_exit):
+    # Killed mid tool-loop: no response, no error, and no terminal usage event.
+    path = _write_jsonl(tmp_path / f"litellm-truncated-{agent_exit}.jsonl", LITELLM_TRUNCATED_STREAM)
+
+    assert classify(_ctx(path, backend="litellm", agent_exit=agent_exit)) == TerminationReason.INFRA_ERROR
+
+
+def test_litellm_response_without_terminal_usage_is_infra(tmp_path):
+    # The model answered, but the stream died before the agent recorded usage.
+    path = _write_jsonl(
+        tmp_path / "litellm-cut-after-response.jsonl",
+        [*LITELLM_TRUNCATED_STREAM, {"type": "response", "text": "here is the proof", "iteration": 2}],
+    )
+
+    assert classify(_ctx(path, backend="litellm", agent_exit=1)) == TerminationReason.INFRA_ERROR
+
+
+def test_litellm_empty_or_missing_stream_is_infra_even_after_zero_exit(tmp_path):
+    empty = tmp_path / "litellm-empty.jsonl"
+    empty.write_text("")
+
+    assert classify(_ctx(str(empty), backend="litellm", agent_exit=0)) == TerminationReason.INFRA_ERROR
+    assert (
+        classify(_ctx(str(tmp_path / "litellm-missing.jsonl"), backend="litellm", agent_exit=0))
+        == TerminationReason.INFRA_ERROR
+    )
+
+
+@pytest.mark.parametrize(
+    "trailing",
+    [
+        {"type": "request_usage", "iteration": 2, "input_tokens": 5, "output_tokens": 1},
+        {"type": "tool_call", "toolCallId": "c2", "name": "bash", "args": {}, "iteration": 2},
+        {"type": "tool_result", "toolCallId": "c2", "name": "bash", "result": "ok", "iteration": 2},
+        {"type": "response", "text": "late", "iteration": 2},
+        {"type": "error", "message": "stream disconnected", "iteration": 2},
+        LITELLM_TERMINAL_USAGE,
+    ],
+)
+def test_litellm_activity_after_terminal_usage_is_infra(tmp_path, trailing):
+    # One terminal usage closes the run; anything after it means the stream is
+    # not the single settled run the accounting assumes.
+    path = _write_jsonl(
+        tmp_path / "litellm-after-terminal.jsonl",
+        [*LITELLM_TRUNCATED_STREAM, LITELLM_TERMINAL_USAGE, trailing],
+    )
+
+    assert classify(_ctx(path, backend="litellm", agent_exit=0)) == TerminationReason.INFRA_ERROR
+
+
+def test_litellm_complete_run_is_ok(tmp_path):
+    path = _write_jsonl(
+        tmp_path / "litellm-complete.jsonl",
+        [
+            *LITELLM_TRUNCATED_STREAM,
+            {"type": "response", "text": "here is the proof", "iteration": 2},
+            LITELLM_TERMINAL_USAGE,
+        ],
+    )
+
+    assert litellm_completion_error(_ctx(path, backend="litellm", agent_exit=0)) is None
+    assert classify(_ctx(path, backend="litellm", agent_exit=0)) == TerminationReason.OK
+
+
+def test_litellm_truncated_run_killed_by_watchdog_is_timeout(tmp_path):
+    # A recorded wall-clock timeout stays a LIMIT: classify() checks it first.
+    path = _write_jsonl(tmp_path / "litellm-timeout.jsonl", LITELLM_TRUNCATED_STREAM)
+
+    ctx = _ctx(path, backend="litellm", agent_exit=-1, error="litellm timeout after 3600s")
+    assert classify(ctx) == TerminationReason.TIMEOUT
+
+
 def test_pi_session_header_only_startup_failure_is_infra(tmp_path):
     path = _write_jsonl(
         tmp_path / "pi-startup.jsonl",
