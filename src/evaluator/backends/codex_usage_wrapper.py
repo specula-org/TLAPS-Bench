@@ -286,6 +286,10 @@ def _tool_dispatch(payload: dict[str, object]) -> tuple[str | None, str | None] 
             if arguments is not None:
                 command_key = "cmd" if name == "exec_command" else "command"
                 command = _shell_command(arguments.get(command_key))
+        else:
+            command = _toolcalls.blocking_proof_check_command(
+                name, _call_arguments(payload.get("arguments")), payload.get("namespace")
+            )
         return (call_id if isinstance(call_id, str) and call_id else None, command)
     if item_type == "custom_tool_call":
         name = payload.get("name")
@@ -878,11 +882,24 @@ def _stream_codex(command: Sequence[str]) -> tuple[int, str | None, bool]:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--proof-check-workspace")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     command = args.command[1:] if args.command[:1] == ["--"] else args.command
     if not command:
         parser.error("a Codex command is required after --")
+
+    if args.proof_check_workspace:
+        if __package__:
+            from evaluator.backends.codex_proof_check import configure_codex
+        else:
+            from codex_proof_check import configure_codex
+
+        try:
+            command = configure_codex(command, args.proof_check_workspace)
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            print(f"cannot configure blocking proof tool: {exc}", file=sys.stderr)
+            return 1
 
     sessions_dir = _codex_home() / "sessions"
     started = datetime.now().astimezone()

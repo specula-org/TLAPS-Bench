@@ -670,6 +670,10 @@ def _parse_codex_run(jsonl_path: str) -> _ParsedCodexRun:
 
 
 def _tool_command(item: dict[str, Any]) -> str | None:
+    if item.get("type") == "mcp_tool_call":
+        return toolcalls.blocking_proof_check_command(
+            item.get("tool"), item.get("arguments"), f"mcp__{item.get('server')}"
+        )
     command = item.get("command")
     return command if item.get("type") == "command_execution" and isinstance(command, str) else None
 
@@ -993,6 +997,8 @@ class CodexBackend(AgenticBackend):
         # `@openai/codex`), so `npx codex` resolves to an unrelated bogus package.
         cmd = [
             *wrapper,
+            "--proof-check-workspace",
+            workspace,
             "--",
             "codex",
             "exec",
