@@ -384,6 +384,8 @@ uv run tlaps-bench generate --mode proof-completion --legacy --shared-model  # a
 
 `--output-dir` works with the default layered generator and with `--legacy --shared-model`. The flat `--legacy` generator writes only to `benchmark/proof-completion/`. Legacy generator outputs are archival and are not accepted by the manifest-only evaluator.
 
+The layered generator also accepts unnamed theorems with reference proofs. It derives a task filename from the goal's primary name, falling back to the source line when necessary, and preserves the unnamed theorem statement. Filename collisions receive numeric suffixes without renaming existing named tasks. Repository regeneration still uses the reviewed manifest selection; this support does not automatically add tasks to the shipped suite. Use `--source-dir` with a separate source directory and `--output-dir` to inspect new candidates before reviewing their inclusion.
+
 Every task is parsed back through the evaluator's own contract, then gated: each one must parse under standalone SANY with only its manifest context, and any task whose `PROOF OBVIOUS` placeholder already verifies is dropped as degenerate. `--skip-gates` bypasses both for fast iteration; a shipped dataset is generated with them. A `--filter` or positional-file run regenerates only the tasks belonging to the sources it processed and needs the existing manifest to preserve the rest. `benchmark/<mode>/audit.log` records every drop, every leak check, and every task that the previous dataset had but the run did not regenerate.
 
 ---

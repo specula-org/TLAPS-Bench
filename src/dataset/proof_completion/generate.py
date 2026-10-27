@@ -52,7 +52,7 @@ from common.proof_completion_contract import (
     parse_proof_completion_region,
 )
 from common.task_contract import MANIFEST_FILENAME
-from dataset.proof_completion.reference_steps import reference_proof_steps_for_name
+from dataset.proof_completion.reference_steps import count_reference_proof_steps, reference_proof_steps_for_name
 from dataset.specification_identity import source_spec_id
 
 COMMUNITY_MODULES = _tla_modules.COMMUNITY_MODULES
@@ -1030,7 +1030,9 @@ def _is_structured_proof(sm, t, lines):
     ploc = t.get("proof_loc")
     if not (ploc and ploc.get("line_start", -1) > 0):
         return False
-    body = "".join(lines[ploc["line_start"] - 1 : ploc["line_end"]])
+    proof_lines = lines[ploc["line_start"] - 1 : ploc["line_end"]]
+    proof_lines[0] = proof_lines[0][ploc.get("column_start", 1) - 1 :]
+    body = "".join(proof_lines)
     body = sm.strip_comments(body).strip()
     if body.startswith("PROOF"):
         body = body[5:].lstrip()
@@ -1434,6 +1436,8 @@ def _audit_scaffold(audit_writer, task_key, scaffold_key, scaffold_text, target_
     """Flag a scaffold that leaks the target or keeps a real proof."""
     if _STRUCTURED_PROOF_SCAN.search(scaffold_text):
         audit_writer.write(f"[audit] {task_key}: LEAK scaffold {scaffold_key} still contains proof steps\n")
+    if not target_name:
+        return
     stated = re.search(
         rf"(?m)^[ \t]*(THEOREM|LEMMA|COROLLARY|PROPOSITION)\s+{re.escape(target_name)}\s*==",
         scaffold_text,
@@ -1445,25 +1449,50 @@ def _audit_scaffold(audit_writer, task_key, scaffold_key, scaffold_text, target_
 def _plan_targets(sm, dump, source_lines, base_module, subdir, reference_task_keys, audit_writer):
     """Choose this source's task targets and their module names, in file order.
 
-    A target is a NAMED theorem carrying a structured proof, so every task has a
+    A target is a theorem carrying a structured proof, so every new task has a
     reference proof to validate against. A theorem whose task the dataset
     already ships is kept even without one: dropping it would silently shrink
     the benchmark, and the boundary this issue is about does not depend on where
     the reference proof lives. Naming (including the `_2` suffix for a repeated
     theorem name) follows the flat generator, so regeneration keeps task keys.
+    Unnamed targets reuse proof-from-scratch's semantic filename or line-number
+    fallback without naming the theorem itself. Reserve named task modules first
+    so an unnamed goal cannot steal an existing task's key. Repeated unnamed
+    statements keep distinct keys: their preceding context may differ.
     """
     planned = []
     used_names = {}
+    reserved = set()
+    named_counts = {}
+    for theorem in dump["theorems"]:
+        if theorem.get("name"):
+            module = f"{base_module}_{theorem['name']}"
+            count = named_counts.get(module, 0)
+            named_module = module if count == 0 else f"{module}_{count}"
+            reserved.update((named_module, f"{named_module}Scaffold"))
+            named_counts[module] = count + 1
+    unnamed_modules = set()
     for target_thm in dump["theorems"]:
         name = target_thm.get("name")
-        if not name:
-            continue
-        module = f"{base_module}_{name}"
-        emitted = used_names.get(module, 0)
-        task_module = module if emitted == 0 else f"{module}_{emitted}"
+        structured = _is_structured_proof(sm, target_thm, source_lines)
+        if name:
+            module = f"{base_module}_{name}"
+            emitted = used_names.get(module, 0)
+            task_module = module if emitted == 0 else f"{module}_{emitted}"
+        else:
+            if not structured:
+                continue
+            label, _sanitized = sm.target_theorem_name(target_thm)
+            module = f"{base_module}_{label}"
+            task_module = module
+            suffix = 0
+            while {task_module, f"{task_module}Scaffold"} & (reserved | unnamed_modules):
+                suffix += 1
+                task_module = f"{module}_{suffix}"
+            unnamed_modules.update((task_module, f"{task_module}Scaffold"))
         task_key = f"{subdir}/{task_module}.tla"
 
-        if not _is_structured_proof(sm, target_thm, source_lines):
+        if not structured:
             if reference_task_keys is None or task_key not in reference_task_keys:
                 continue
             audit_writer.write(
@@ -1478,7 +1507,8 @@ def _plan_targets(sm, dump, source_lines, base_module, subdir, reference_task_ke
             )
             continue
 
-        used_names[module] = emitted + 1
+        if name:
+            used_names[module] = emitted + 1
         planned.append((target_thm, task_module, task_key))
     return planned
 
@@ -1581,10 +1611,17 @@ def emit_layered_source(
         if model_module:
             context.append(f"{subdir}/{model_module}.tla")
         context += write_task_dependencies(sm, dump, source_path, out_dir, subdir, task_module, audit_writer, written)
+        if target_thm.get("name"):
+            reference_steps = reference_proof_steps_for_name(source_lines, target_thm["name"])
+        else:
+            ploc = target_thm["proof_loc"]
+            proof_lines = source_lines[ploc["line_start"] - 1 : ploc["line_end"]]
+            proof_lines[0] = proof_lines[0][ploc.get("column_start", 1) - 1 :]
+            reference_steps = count_reference_proof_steps(proof_lines)
         manifest[task_key] = {
             "spec_id": spec_id,
             "context": sorted(set(context)),
-            "reference_proof_steps": reference_proof_steps_for_name(source_lines, target_thm["name"]),
+            "reference_proof_steps": reference_steps,
         }
         audit_state.setdefault("scaffold_owner", {}).setdefault(f"{subdir}/{scaffold_module}.tla", []).append(task_key)
 
