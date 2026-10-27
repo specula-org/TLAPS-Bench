@@ -85,13 +85,6 @@ Proof-from-scratch requires a tool-using backend that can inspect the official
 library interfaces and iterate with the checker, so strict one-shot backends
 and `codex_single_turn` fail before making a model request in that mode.
 
-Codex proof-from-scratch runs also receive a direct `mcp__tlaps_check.check_proof`
-tool. It runs the existing `check_proof_bin` command with the frozen verification
-policy and waits for its result outside Code Mode, avoiding repeated shell or
-Code Mode polling. The returned checker output and exit code determine whether
-the proof passed. Cancellation stops that check and its solvers; `check_session`
-can resume an interrupted check of unchanged input. Final grading remains independent.
-
 ### OpenAI-compatible endpoints
 
 To target any OpenAI-compatible endpoint (a self-hosted gateway, a vendor's
