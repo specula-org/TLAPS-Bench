@@ -49,6 +49,7 @@ def _run_checker(
     submitted: str,
     *,
     missing_workspace_context: frozenset[str] = frozenset(),
+    statement: str = "THEOREM Target == TRUE",
 ) -> subprocess.CompletedProcess[str]:
     canonical = tmp_path / "canonical"
     workspace = tmp_path / "workspace"
@@ -58,7 +59,7 @@ def _run_checker(
         "Model.tla": "---- MODULE Model ----\n====\n",
         "Scaffold.tla": "---- MODULE Scaffold ----\nEXTENDS Model\nTHEOREM Given == TRUE\nPROOF OMITTED\n====\n",
     }
-    (canonical / "Task.tla").write_text(_task())
+    (canonical / "Task.tla").write_text(_task(statement=statement))
     (workspace / "Task.tla").write_text(submitted)
     for name, source in context.items():
         (canonical / name).write_text(source)
@@ -124,3 +125,21 @@ def test_real_checker_accepts_target_proof_and_rejects_boundary_violations(tmp_p
 
     assert missing_context.returncode == 1, missing_context.stdout + missing_context.stderr
     assert "Dependency file Model.tla was removed or renamed" in missing_context.stdout
+
+
+def test_real_checker_preserves_an_unnamed_target_statement(tmp_path):
+    valid = _run_checker(
+        tmp_path / "valid",
+        _task(statement="THEOREM TRUE", proof="PROOF BY Given"),
+        statement="THEOREM TRUE",
+    )
+    assert valid.returncode == 0, valid.stdout + valid.stderr
+    assert "PASS — target goal genuinely proved" in valid.stdout
+
+    changed = _run_checker(
+        tmp_path / "changed",
+        _task(statement="THEOREM FALSE", proof="PROOF BY Given"),
+        statement="THEOREM TRUE",
+    )
+    assert changed.returncode == 1, changed.stdout + changed.stderr
+    assert "fixed task scaffold outside editable regions was modified" in changed.stdout
