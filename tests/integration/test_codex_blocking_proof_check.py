@@ -16,7 +16,8 @@ from evaluator.backends.codex import CodexBackend
 
 @pytest.mark.skipif(shutil.which("codex") is None, reason="requires native Codex CLI")
 @pytest.mark.parametrize("code_mode", ["true", "false"])
-def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode):
+@pytest.mark.parametrize("tool_name", ["check_proof", "run_tlapm"])
+def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode, tool_name):
     workspace, profile, results = (tmp_path / name for name in ("workspace", "profile", "results"))
     for directory in (workspace, profile, results):
         directory.mkdir()
@@ -24,6 +25,10 @@ def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode):
     checker = tmp_path / "check_proof_bin"
     checker.write_text(f'#!{sys.executable}\nimport time\ntime.sleep(1)\nprint("PASS scripted checker")\n')
     checker.chmod(0o755)
+    (tmp_path / "tlapm").symlink_to(checker)
+    arguments = (
+        {"file": "Target.tla"} if tool_name == "check_proof" else {"args": ["--toolbox", "1", "2", "Target.tla"]}
+    )
     requests = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -38,9 +43,9 @@ def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode):
                     "type": "function_call",
                     "id": "fc_check",
                     "call_id": "check_call",
-                    "name": "check_proof",
+                    "name": tool_name,
                     "namespace": "mcp__tlaps_check",
-                    "arguments": json.dumps({"file": "Target.tla"}),
+                    "arguments": json.dumps(arguments),
                 }
             else:
                 item = {
@@ -92,7 +97,7 @@ def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode):
     try:
         result = subprocess.run(
             command,
-            input="Call check_proof for Target.tla and report its result.",
+            input=f"Call {tool_name} for Target.tla and report its result.",
             cwd=workspace,
             env=env,
             text=True,
@@ -109,8 +114,8 @@ def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode):
     events = [json.loads(line) for line in result.stdout.splitlines()]
     completed = [event["item"] for event in events if event["type"] == "item.completed"]
     check = next(item for item in completed if item["type"] == "mcp_tool_call")
-    assert check["server"] == "tlaps_check" and check["tool"] == "check_proof"
-    assert "CHECKER-EXIT-CODE: 0\nPASS scripted checker" in check["result"]["content"][0]["text"]
+    assert check["server"] == "tlaps_check" and check["tool"] == tool_name
+    assert "EXIT-CODE: 0\nPASS scripted checker" in check["result"]["content"][0]["text"]
     assert not any(item["type"] == "command_execution" for item in completed)
     audit = next(event for event in events if event["type"] == "tlaps.codex_child_usage")
     assert audit["tool_calls"]["total"] == audit["tool_calls"]["tlaps"] == 1

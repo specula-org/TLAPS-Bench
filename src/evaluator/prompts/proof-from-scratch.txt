@@ -23,6 +23,8 @@ For local feedback, use TLAPM's existing range selection. For example, to check 
 {tlapm_path}/bin/tlapm --strict --toolbox 120 160 -I {tlapm_lib} -I "$COMMUNITY_LIB" {benchmark_basename}
 ~~~
 
+When `mcp__tlaps_check.run_tlapm` is available, prefer it for these local checks: pass the native arguments after the executable in `args`, with actual paths instead of shell variables. It also accepts scratch modules and waits for completion without shell or Code Mode polling. You may set `timeout_seconds` to bound a local call. Choose the range and timing yourself, as in the examples above.
+
 A local result covers the selected range; referenced lemmas may still be unproved. Decide whether and when to check them separately or expand the range.
 
 Before submitting, run this authoritative check at least once on the final candidate. A complete solution must report PASS:

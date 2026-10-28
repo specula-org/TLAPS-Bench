@@ -542,7 +542,16 @@ def _category(executable: str, args: list[str]) -> str | None:
 
 
 def blocking_proof_check_command(name: object, arguments: object, namespace: object = None) -> str | None:
-    """Classify the known MCP checker just like its underlying CLI command."""
+    """Classify the known blocking proof tools like their underlying commands."""
+    if name in ("mcp__tlaps_check__run_tlapm", "mcp__tlaps_check.run_tlapm") or (
+        namespace == "mcp__tlaps_check" and name == "run_tlapm"
+    ):
+        if not isinstance(arguments, dict):
+            return None
+        args = arguments.get("args")
+        if not isinstance(args, list) or not all(isinstance(arg, str) for arg in args):
+            return None
+        return shlex.join(["tlapm", *args])
     if not (
         name in ("mcp__tlaps_check__check_proof", "mcp__tlaps_check.check_proof")
         or (namespace == "mcp__tlaps_check" and name == "check_proof")
