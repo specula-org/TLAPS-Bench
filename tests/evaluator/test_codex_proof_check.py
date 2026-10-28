@@ -93,8 +93,11 @@ def test_registration_rejects_unknown_feature_state(workspace, checker, monkeypa
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("exit_code", [0, 1, 3])
-async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, exit_code):
+@pytest.mark.parametrize("tool_name", ["check_proof", "run_tlapm"])
+async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, exit_code, tool_name):
+    (workspace / "tlapm").symlink_to(checker)
     env = {
+        "PATH": str(workspace) + os.pathsep + os.environ["PATH"],
         tool.POLICY_ENV: '{"effective_timeout_secs":7200}',
         "TLAPS_BENCHMARK_DIR": "/canonical",
         "TLAPS_ACTIVE_CLOCK": "/clock",
@@ -107,11 +110,22 @@ async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, ex
     )
     async with stdio_client(parameters) as (read, write), ClientSession(read, write) as client:
         await client.initialize()
-        assert [item.name for item in (await client.list_tools()).tools] == ["check_proof"]
+        assert {item.name for item in (await client.list_tools()).tools} == {"check_proof", "run_tlapm"}
+        arguments = {"file": "Target.tla", "check_session": "verification"}
+        expected_argv = [
+            str(workspace / "Target.tla"),
+            "--mode",
+            "proof-from-scratch",
+            "--check-session",
+            str(workspace / "verification"),
+        ]
+        if tool_name == "run_tlapm":
+            expected_argv = ["--strict", "--toolbox", "4", "8", "-I", "library with spaces", "scratch/Part.tla"]
+            arguments = {"args": expected_argv}
         pending = asyncio.create_task(
             client.call_tool(
-                "check_proof",
-                {"file": "Target.tla", "check_session": "verification"},
+                tool_name,
+                arguments,
                 read_timeout_seconds=timedelta(seconds=10),
             )
         )
@@ -122,17 +136,15 @@ async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, ex
         (workspace / "release").touch()
         result = await pending
         text = result.content[0].text
-        assert f"CHECKER-EXIT-CODE: {exit_code}" in text
+        prefix = "CHECKER" if tool_name == "check_proof" else "TLAPM"
+        assert f"{prefix}-EXIT-CODE: {exit_code}" in text
+        if tool_name == "run_tlapm":
+            assert "LOCAL TLAPM RESULT" in text
+            assert "TLAPM-TIMED-OUT: false" in text
         assert "checker stderr" in text
         receipt = next(json.loads(line) for line in text.splitlines() if line.startswith("{"))
         assert receipt == {
-            "argv": [
-                str(workspace / "Target.tla"),
-                "--mode",
-                "proof-from-scratch",
-                "--check-session",
-                str(workspace / "verification"),
-            ],
+            "argv": expected_argv,
             "policy": env[tool.POLICY_ENV],
             "canonical": "/canonical",
             "clock": "/clock",
@@ -151,15 +163,19 @@ async def test_syntax_check_and_workspace_paths(workspace, checker):
 
 
 @pytest.mark.anyio
-async def test_mcp_cancellation_stops_check_and_keeps_server_usable(workspace, checker):
+@pytest.mark.parametrize("tool_name", ["check_proof", "run_tlapm"])
+async def test_mcp_cancellation_stops_check_and_keeps_server_usable(workspace, checker, tool_name):
+    (workspace / "tlapm").symlink_to(checker)
     parameters = StdioServerParameters(
         command=sys.executable,
         args=[str(Path(tool.__file__)), "--workspace", str(workspace), "--checker", checker],
+        env={"PATH": str(workspace) + os.pathsep + os.environ["PATH"]},
     )
     async with stdio_client(parameters) as (read, write), ClientSession(read, write) as client:
         await client.initialize()
         request_id = client._request_id
-        pending = asyncio.create_task(client.call_tool("check_proof", {"file": "Target.tla"}))
+        arguments = {"file": "Target.tla"} if tool_name == "check_proof" else {"args": ["Target.tla"]}
+        pending = asyncio.create_task(client.call_tool(tool_name, arguments))
         async with asyncio.timeout(5):
             while not (workspace / "started").exists():
                 await asyncio.sleep(0.01)
@@ -176,45 +192,64 @@ async def test_mcp_cancellation_stops_check_and_keeps_server_usable(workspace, c
             while Path(f"/proc/{pid}").exists():
                 await asyncio.sleep(0.01)
         (workspace / "release").touch()
-        result = await client.call_tool("check_proof", {"file": "Target.tla"})
-        assert "CHECKER-EXIT-CODE: 0" in result.content[0].text
+        result = await client.call_tool(tool_name, arguments)
+        assert "EXIT-CODE: 0" in result.content[0].text
 
 
 @pytest.mark.anyio
-async def test_cancel_stops_checker_and_solver_in_separate_session(workspace):
+@pytest.mark.parametrize("local_timeout", [False, True])
+async def test_cancel_stops_checker_and_solver_in_separate_session(workspace, monkeypatch, local_timeout):
     checker = executable(
         workspace / "check_proof_bin",
         "import os, subprocess, sys, time\nfrom pathlib import Path\n"
         "child=subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], start_new_session=True)\n"
         "Path('pids').write_text(f'{os.getpid()} {child.pid}')\n"
+        "print('partial diagnostic', flush=True)\n"
         "time.sleep(60)\n",
     )
-    pending = asyncio.create_task(tool.run_check(workspace, checker, "Target.tla"))
+    if local_timeout:
+        (workspace / "tlapm").symlink_to(checker)
+        monkeypatch.setenv("PATH", str(workspace) + os.pathsep + os.environ["PATH"])
+        pending = asyncio.create_task(tool.run_tlapm(workspace, ["Target.tla"], timeout_seconds=1))
+    else:
+        pending = asyncio.create_task(tool.run_check(workspace, checker, "Target.tla"))
     async with asyncio.timeout(5):
         while not (workspace / "pids").exists():
             await asyncio.sleep(0.01)
     pids = [int(pid) for pid in (workspace / "pids").read_text().split()]
-    pending.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await pending
+    if local_timeout:
+        output = await pending
+        assert "TLAPM-TIMED-OUT: true" in output
+        assert "partial diagnostic" in output
+    else:
+        pending.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await pending
     for pid in pids:
         stat = Path(f"/proc/{pid}/stat")
         assert not stat.exists() or stat.read_text().rpartition(") ")[2].split()[0] == "Z"
 
 
-@pytest.mark.parametrize("sany_only,category", [(False, "tlaps"), (True, "other")])
-def test_direct_tool_is_counted_in_rollout_and_cli(workspace, sany_only, category):
-    arguments = {"file": "Target.tla", "sany_only": sany_only}
+@pytest.mark.parametrize(
+    "tool_name,arguments,category",
+    [
+        ("check_proof", {"file": "Target.tla"}, "tlaps"),
+        ("check_proof", {"file": "Target.tla", "sany_only": True}, "other"),
+        ("run_tlapm", {"args": ["--strict", "--toolbox", "4", "8", "scratch/Part.tla"]}, "tlaps"),
+        ("run_tlapm", {"args": ["--help"]}, "tlaps"),
+    ],
+)
+def test_direct_tool_is_counted_in_rollout_and_cli(workspace, tool_name, arguments, category):
     dispatch = _tool_dispatch(
         {
             "type": "function_call",
-            "name": "mcp__tlaps_check__check_proof",
+            "name": f"mcp__tlaps_check__{tool_name}",
             "call_id": "c",
             "arguments": json.dumps(arguments),
         }
     )
     assert classify_command(dispatch[1]) == category
-    item = {"id": "c", "type": "mcp_tool_call", "server": "tlaps_check", "tool": "check_proof", "arguments": arguments}
+    item = {"id": "c", "type": "mcp_tool_call", "server": "tlaps_check", "tool": tool_name, "arguments": arguments}
     events = [
         {"type": "thread.started", "thread_id": "r"},
         {"type": "turn.started"},

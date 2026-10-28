@@ -7,9 +7,9 @@ description: Validate candidate inductive invariants for TLA+ safety proofs with
 
 Use a model checker to falsify a candidate invariant before investing in its TLAPS proof. Treat a successful finite check as evidence only: prove the invariant in TLAPS, and finish with the benchmark's authoritative `check_proof_bin` command.
 
-## Run the three Apalache checks
+## Choose among the three Apalache checks
 
-Shape the candidate as `IndInv == TypeOK /\ H`, where `TypeOK` contains one finite-domain membership clause for every variable and `H` contains the additional facts needed for induction. Given a target module `Target`, a typed wrapper `APTarget.tla`, and a safety predicate `Safety`, run:
+Shape the candidate as `IndInv == TypeOK /\ H`, where `TypeOK` contains one finite-domain membership clause for every variable and `H` contains the additional facts needed for induction. Given a target module `Target`, a typed wrapper `APTarget.tla`, and a safety predicate `Safety`, these commands explore different parts of the argument:
 
 ```sh
 apalache-mc check --config=APTarget.cfg --init=Init --inv=IndInv --length=0 APTarget.tla
@@ -31,7 +31,11 @@ When a check fails, read the counterexample. Apalache writes `violation1.tla` in
 - A failure of the second check gives a state satisfying `IndInv` and a successor violating it. The trailing `InvariantViolation` formula identifies the broken conjunct and usually exposes the fact missing from `H`.
 - A failure of the third check means the candidate does not imply the safety goal.
 
-Strengthen or correct the candidate from the trace, then rerun all three checks.
+Strengthen or correct the candidate from the trace. Choose which checks to run and when based on the changes, previous feedback, and their cost; related edits can be checked together. For example:
+
+- After a consecution counterexample, rerunning the second check can quickly test a repair. Once the candidate stabilizes, the first and third checks can expose other gaps.
+- If only a TLAPS proof changes while the invariant and model stay the same, repeating model checking usually adds no new information.
+- Changing a shared definition or the candidate invariant may affect several obligations, so broader checking can be useful.
 
 ## Build a non-invasive Apalache wrapper
 

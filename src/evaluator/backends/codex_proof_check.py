@@ -1,4 +1,4 @@
-"""Direct, blocking access to the existing PFS checker for Codex runs."""
+"""Direct, blocking access to the PFS checker and native TLAPM for Codex runs."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import contextlib
 import json
+import math
 import os
 import shutil
 import signal
@@ -98,8 +99,6 @@ async def run_check(
     workspace: Path, checker: str, file: str, *, sany_only: bool = False, check_session: str | None = None
 ) -> str:
     """Wait for one checker invocation without returning intermediate statuses."""
-    from anyio import CancelScope
-
     candidate = (workspace / file).resolve()
     if not candidate.is_relative_to(workspace.resolve()) or not candidate.is_file() or candidate.suffix != ".tla":
         raise ValueError("file must be an existing .tla file in the task workspace")
@@ -111,6 +110,16 @@ async def run_check(
         if not session.is_relative_to(workspace.resolve()):
             raise ValueError("check_session must be inside the task workspace")
         command.extend(["--check-session", str(session)])
+    returncode, output, _ = await _run_command(workspace, command)
+    return f"CHECKER-EXIT-CODE: {returncode}\n{output}"
+
+
+async def _run_command(
+    workspace: Path, command: list[str], timeout_seconds: float | None = None
+) -> tuple[int, str, bool]:
+    """Wait for output, retaining diagnostics when a local timeout stops a run."""
+    from anyio import CancelScope
+
     process = await asyncio.create_subprocess_exec(
         *command,
         cwd=workspace,
@@ -119,14 +128,39 @@ async def run_check(
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
+    communication = asyncio.create_task(process.communicate())
+    timed_out = False
     try:
-        output, _ = await process.communicate()
+        await asyncio.wait_for(asyncio.shield(communication), timeout_seconds)
+    except TimeoutError:
+        timed_out = True
     finally:
         if process.returncode is None:
             _kill_check(process.pid)
-            with CancelScope(shield=True):
-                await process.wait()
-    return f"CHECKER-EXIT-CODE: {process.returncode}\n{output.decode('utf-8', errors='replace')}"
+        with CancelScope(shield=True):
+            output, _ = await communication
+    return process.returncode, output.decode("utf-8", errors="replace"), timed_out
+
+
+async def run_tlapm(workspace: Path, args: list[str], timeout_seconds: float | None = None) -> str:
+    """Forward native arguments without expanding the requested proof scope."""
+    if not args:
+        raise ValueError("provide TLAPM arguments, including a file or --help")
+    if timeout_seconds is not None and (not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
+        raise ValueError("timeout_seconds must be positive and finite")
+    executable = shutil.which("tlapm")
+    if executable is None:
+        executable = next(
+            (str(path) for path in (Path("/opt/tlapm/bin/tlapm"), Path.home() / ".tlapm/bin/tlapm") if path.is_file()),
+            None,
+        )
+    if executable is None:
+        raise ValueError("tlapm is not installed")
+    returncode, output, timed_out = await _run_command(workspace, [executable, *args], timeout_seconds)
+    return (
+        "LOCAL TLAPM RESULT: dependencies and submission integrity are not certified.\n"
+        f"TLAPM-TIMED-OUT: {str(timed_out).lower()}\nTLAPM-EXIT-CODE: {returncode}\n{output}"
+    )
 
 
 async def serve(workspace: Path, checker: str) -> None:
@@ -138,7 +172,8 @@ async def serve(workspace: Path, checker: str) -> None:
     async def check_proof(file: str, sany_only: bool = False, check_session: str | None = None) -> str:
         """Run check_proof_bin in proof-from-scratch mode and wait for its result.
 
-        Prefer this direct tool call to shell execution or Code Mode exec/wait.
+        Prefer this direct tool for full checks and syntax checks. For local
+        TLAPM checks, use run_tlapm with native range-selection arguments.
         The checker retains the run's frozen budget, canonical context and all
         integrity checks. No polling is needed. sany_only checks syntax only.
         Use check_session only to resume an interrupted check of unchanged input.
@@ -146,6 +181,23 @@ async def serve(workspace: Path, checker: str) -> None:
         exit code and checker output determine the result, not MCP call success.
         """
         return await run_check(workspace, checker, file, sany_only=sany_only, check_session=check_session)
+
+    @server.tool(name="run_tlapm", structured_output=False)
+    async def local_tlapm(args: list[str], timeout_seconds: float | None = None) -> str:
+        """Run native TLAPM in the task workspace and wait without polling.
+
+        Prefer this direct tool to shell or Code Mode exec/wait for local checks.
+        Pass the arguments after the tlapm executable unchanged, including -I
+        search paths and the submitted or scratch filename. For example, use
+        --strict --toolbox START END to check a chosen line range. No dependencies
+        are automatically added to that scope. Arguments are passed directly,
+        so shell variables, redirection and pipelines are not expanded.
+        timeout_seconds optionally sets a wall-clock limit for this local call;
+        omit it to wait until completion or cancellation by the caller/runner.
+        Timeout or cancellation stops TLAPM and its solvers. Local success does
+        not replace the authoritative check_proof self-check before submission.
+        """
+        return await run_tlapm(workspace, args, timeout_seconds)
 
     task = asyncio.current_task()
     assert task is not None
