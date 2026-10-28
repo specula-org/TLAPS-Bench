@@ -31,6 +31,10 @@ def executable(path, body):
     return str(path)
 
 
+def saved_file(response, marker):
+    return Path(next(line.removeprefix(marker) for line in response.splitlines() if line.startswith(marker)))
+
+
 @pytest.fixture
 def workspace(tmp_path):
     (tmp_path / "Target.tla").write_text("---- MODULE Target ----\n====\n")
@@ -93,8 +97,8 @@ def test_registration_rejects_unknown_feature_state(workspace, checker, monkeypa
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("exit_code", [0, 1, 3])
-@pytest.mark.parametrize("tool_name", ["check_proof", "run_tlapm"])
-async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, exit_code, tool_name):
+@pytest.mark.parametrize("tool_name,output_mode", [("check_proof", None), ("run_tlapm", None), ("run_tlapm", "full")])
+async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, exit_code, tool_name, output_mode):
     (workspace / "tlapm").symlink_to(checker)
     env = {
         "PATH": str(workspace) + os.pathsep + os.environ["PATH"],
@@ -110,7 +114,11 @@ async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, ex
     )
     async with stdio_client(parameters) as (read, write), ClientSession(read, write) as client:
         await client.initialize()
-        assert {item.name for item in (await client.list_tools()).tools} == {"check_proof", "run_tlapm"}
+        listed = {item.name: item for item in (await client.list_tools()).tools}
+        assert listed.keys() == {"check_proof", "run_tlapm"}
+        output_schema = listed["run_tlapm"].inputSchema["properties"]["output"]
+        assert output_schema["default"] == "summary"
+        assert output_schema["enum"] == ["summary", "full"]
         arguments = {"file": "Target.tla", "check_session": "verification"}
         expected_argv = [
             str(workspace / "Target.tla"),
@@ -122,6 +130,8 @@ async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, ex
         if tool_name == "run_tlapm":
             expected_argv = ["--strict", "--toolbox", "4", "8", "-I", "library with spaces", "scratch/Part.tla"]
             arguments = {"args": expected_argv}
+            if output_mode is not None:
+                arguments["output"] = output_mode
         pending = asyncio.create_task(
             client.call_tool(
                 tool_name,
@@ -141,14 +151,102 @@ async def test_mcp_waits_for_checker_and_preserves_output(workspace, checker, ex
         if tool_name == "run_tlapm":
             assert "LOCAL TLAPM RESULT" in text
             assert "TLAPM-TIMED-OUT: false" in text
-        assert "checker stderr" in text
-        receipt = next(json.loads(line) for line in text.splitlines() if line.startswith("{"))
+            diagnostic = saved_file(text, "TLAPM-FULL-LOG: ").read_text()
+            summary = saved_file(text, "TLAPM-SUMMARY-FILE: ").read_text()
+            assert "TLAPM-SUMMARY: unavailable" in summary
+            if output_mode is None:
+                assert text == summary
+                assert "checker stderr" not in text
+            else:
+                assert text.endswith(diagnostic)
+        else:
+            diagnostic = text
+        assert "checker stderr" in diagnostic
+        receipt = next(json.loads(line) for line in diagnostic.splitlines() if line.startswith("{"))
         assert receipt == {
             "argv": expected_argv,
             "policy": env[tool.POLICY_ENV],
             "canonical": "/canonical",
             "clock": "/clock",
         }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("output_mode", ["summary", "full"])
+@pytest.mark.parametrize(
+    "exit_code,native_summary",
+    [
+        (0, "[INFO]: All 78 obligations proved.\n"),
+        (10, "[ERROR]: 1/13 obligations failed.\n"),
+        (
+            11,
+            '[ERROR]: Proof incomplete in module "Target": 1 missing, 2 omitted proof step(s).\n'
+            "[INFO]: All 1 obligation proved.\n",
+        ),
+        (12, "[ERROR]: No proof obligation found for the selected target.\n[INFO]: All 0 obligations proved.\n"),
+        (1, ""),
+    ],
+)
+async def test_local_output_modes_preserve_raw_logs(workspace, monkeypatch, output_mode, exit_code, native_summary):
+    diagnostic = "@!!BEGIN\n@!!status:being proved\n" + "ASSUME large context PROVE goal\n" * 1000
+    raw_output = diagnostic + "@!!END\n" + native_summary
+    stderr = "backend diagnostic: unknown\n"
+    executable(
+        workspace / "tlapm",
+        f"import sys\nsys.stdout.write({raw_output!r})\nsys.stdout.flush()\n"
+        f"sys.stderr.write({stderr!r})\nsys.exit({exit_code})\n",
+    )
+    monkeypatch.setenv("PATH", str(workspace) + os.pathsep + os.environ["PATH"])
+    # Artifact paths must remain usable when the task directory has spaces.
+    task = workspace / "task with spaces"
+    task.mkdir()
+    result = await tool.run_tlapm(task, ["Target.tla"], output=output_mode)
+    log = saved_file(result, "TLAPM-FULL-LOG: ")
+    summary_file = saved_file(result, "TLAPM-SUMMARY-FILE: ")
+    assert log.is_relative_to(task) and log.parent == summary_file.parent
+    assert log.read_text() == raw_output + stderr
+    summary = summary_file.read_text()
+    assert f"TLAPM-EXIT-CODE: {exit_code}\n" in summary
+    assert "TLAPM-TIMED-OUT: false\n" in summary
+    assert "large context" not in summary and "backend diagnostic" not in summary
+    if native_summary:
+        assert summary.endswith("TLAPM-SUMMARY: " + native_summary)
+    else:
+        assert "TLAPM-SUMMARY: unavailable; read the full log." in summary
+    if output_mode == "summary":
+        assert result == summary
+    else:
+        assert result.endswith(raw_output + stderr)
+
+
+@pytest.mark.anyio
+async def test_local_logs_are_independent_and_reading_does_not_rerun(workspace, monkeypatch):
+    executable(
+        workspace / "tlapm",
+        "from pathlib import Path\n"
+        "with Path('invocations').open('a') as f: f.write('run\\n')\n"
+        "print('detailed output')\nprint('[INFO]: All 1 obligation proved.')\n",
+    )
+    monkeypatch.setenv("PATH", str(workspace) + os.pathsep + os.environ["PATH"])
+    first, second = await asyncio.gather(
+        tool.run_tlapm(workspace, ["Target.tla"]), tool.run_tlapm(workspace, ["Target.tla"], output="full")
+    )
+    logs = [saved_file(result, "TLAPM-FULL-LOG: ") for result in (first, second)]
+    assert logs[0] != logs[1]
+    for log in logs:
+        assert log.read_text() == "detailed output\n[INFO]: All 1 obligation proved.\n"
+        selected = subprocess.run(["sed", "-n", "1p", str(log)], capture_output=True, text=True, check=True)
+        assert selected.stdout == "detailed output\n"
+    assert (workspace / "invocations").read_text() == "run\nrun\n"
+
+
+@pytest.mark.anyio
+async def test_invalid_local_output_mode_does_not_start_a_check(workspace, monkeypatch):
+    executable(workspace / "tlapm", "from pathlib import Path\nPath('started').touch()\n")
+    monkeypatch.setenv("PATH", str(workspace) + os.pathsep + os.environ["PATH"])
+    with pytest.raises(ValueError, match="output must be summary or full"):
+        await tool.run_tlapm(workspace, ["Target.tla"], output="tail")
+    assert not (workspace / "started").exists()
 
 
 @pytest.mark.anyio
@@ -220,7 +318,10 @@ async def test_cancel_stops_checker_and_solver_in_separate_session(workspace, mo
     if local_timeout:
         output = await pending
         assert "TLAPM-TIMED-OUT: true" in output
-        assert "partial diagnostic" in output
+        assert "TLAPM-EXIT-CODE: -9" in output
+        assert "TLAPM-SUMMARY: unavailable" in output
+        assert "partial diagnostic" not in output
+        assert "partial diagnostic" in saved_file(output, "TLAPM-FULL-LOG: ").read_text()
     else:
         pending.cancel()
         with pytest.raises(asyncio.CancelledError):

@@ -8,11 +8,14 @@ import contextlib
 import json
 import math
 import os
+import re
 import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from typing import Literal
 
 SERVER_NAME = "tlaps_check"
 TOOL_NAMESPACE = "mcp__tlaps_check"
@@ -142,10 +145,26 @@ async def _run_command(
     return process.returncode, output.decode("utf-8", errors="replace"), timed_out
 
 
-async def run_tlapm(workspace: Path, args: list[str], timeout_seconds: float | None = None) -> str:
+_TLAPM_SUMMARY = re.compile(
+    r"^(?:\[INFO\]: All \d+ obligations? proved\."
+    r"|\[ERROR\]: \d+/\d+ obligations? failed\."
+    r"|\[ERROR\]: Proof incomplete in module [^\r\n]+: \d+ missing, \d+ omitted proof step\(s\)\."
+    r"|\[ERROR\]: No proof obligation found for the selected target\.)$",
+    re.MULTILINE,
+)
+
+
+async def run_tlapm(
+    workspace: Path,
+    args: list[str],
+    timeout_seconds: float | None = None,
+    output: Literal["summary", "full"] = "summary",
+) -> str:
     """Forward native arguments without expanding the requested proof scope."""
     if not args:
         raise ValueError("provide TLAPM arguments, including a file or --help")
+    if output not in {"summary", "full"}:
+        raise ValueError("output must be summary or full")
     if timeout_seconds is not None and (not math.isfinite(timeout_seconds) or timeout_seconds <= 0):
         raise ValueError("timeout_seconds must be positive and finite")
     executable = shutil.which("tlapm")
@@ -156,11 +175,21 @@ async def run_tlapm(workspace: Path, args: list[str], timeout_seconds: float | N
         )
     if executable is None:
         raise ValueError("tlapm is not installed")
-    returncode, output, timed_out = await _run_command(workspace, [executable, *args], timeout_seconds)
-    return (
+    log_root = workspace.resolve() / ".tlacache" / "tool-output"
+    log_root.mkdir(parents=True, exist_ok=True)
+    log_dir = Path(tempfile.mkdtemp(prefix="run-", dir=log_root))
+    full_log, summary_file = log_dir / "full.log", log_dir / "summary.txt"
+    returncode, raw_output, timed_out = await _run_command(workspace, [executable, *args], timeout_seconds)
+    full_log.write_text(raw_output, encoding="utf-8")
+    header = (
         "LOCAL TLAPM RESULT: dependencies and submission integrity are not certified.\n"
-        f"TLAPM-TIMED-OUT: {str(timed_out).lower()}\nTLAPM-EXIT-CODE: {returncode}\n{output}"
+        f"TLAPM-TIMED-OUT: {str(timed_out).lower()}\nTLAPM-EXIT-CODE: {returncode}\n"
+        f"TLAPM-SUMMARY-FILE: {summary_file}\nTLAPM-FULL-LOG: {full_log}\n"
     )
+    native_summary = "\n".join(_TLAPM_SUMMARY.findall(raw_output))
+    summary = header + "TLAPM-SUMMARY: " + (native_summary or "unavailable; read the full log.") + "\n"
+    summary_file.write_text(summary, encoding="utf-8")
+    return summary if output == "summary" else header + raw_output
 
 
 async def serve(workspace: Path, checker: str) -> None:
@@ -183,7 +212,9 @@ async def serve(workspace: Path, checker: str) -> None:
         return await run_check(workspace, checker, file, sany_only=sany_only, check_session=check_session)
 
     @server.tool(name="run_tlapm", structured_output=False)
-    async def local_tlapm(args: list[str], timeout_seconds: float | None = None) -> str:
+    async def local_tlapm(
+        args: list[str], timeout_seconds: float | None = None, output: Literal["summary", "full"] = "summary"
+    ) -> str:
         """Run native TLAPM in the task workspace and wait without polling.
 
         Prefer this direct tool to shell or Code Mode exec/wait for local checks.
@@ -196,8 +227,14 @@ async def serve(workspace: Path, checker: str) -> None:
         omit it to wait until completion or cancellation by the caller/runner.
         Timeout or cancellation stops TLAPM and its solvers. Local success does
         not replace the authoritative check_proof self-check before submission.
+
+        output defaults to summary: exit code, timeout, native result summary
+        when available, and paths to summary.txt and full.log. No summary means
+        read the full log; diagnostics are not automatically expanded. Use full
+        to return all output, or read/search either saved file after completion
+        for any part you need. Reading saved output does not rerun verification.
         """
-        return await run_tlapm(workspace, args, timeout_seconds)
+        return await run_tlapm(workspace, args, timeout_seconds, output)
 
     task = asyncio.current_task()
     assert task is not None
