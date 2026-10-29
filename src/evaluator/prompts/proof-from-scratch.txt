@@ -25,8 +25,6 @@ For local feedback, use TLAPM's existing range selection. For example, to check 
 
 When `mcp__tlaps_check.run_tlapm` is available, prefer it for these local checks: pass the native arguments after the executable in `args`, with actual paths instead of shell variables. It also accepts scratch modules and waits for completion without shell or Code Mode polling. You may set `timeout_seconds` to bound a local call. Choose the range and timing yourself, as in the examples above.
 
-The tool defaults to `output="summary"`, returning the exit code, timeout status, any native result summary, and paths to saved `summary.txt` and `full.log` files. For example, read or search `full.log` for a failed proof's diagnostics, or request `output="full"` to receive all output directly. If no summary is available, inspect the log as needed. You can read any part of either saved file without rerunning verification; choose how much detail you need.
-
 A local result covers the selected range; referenced lemmas may still be unproved. Decide whether and when to check them separately or expand the range.
 
 Before submitting, run this authoritative check at least once on the final candidate. A complete solution must report PASS:
