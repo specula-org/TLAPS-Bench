@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
@@ -115,7 +116,21 @@ def test_native_codex_waits_for_direct_proof_tool(tmp_path, code_mode, tool_name
     completed = [event["item"] for event in events if event["type"] == "item.completed"]
     check = next(item for item in completed if item["type"] == "mcp_tool_call")
     assert check["server"] == "tlaps_check" and check["tool"] == tool_name
-    assert "EXIT-CODE: 0\nPASS scripted checker" in check["result"]["content"][0]["text"]
+    output = check["result"]["content"][0]["text"]
+    assert "EXIT-CODE: 0\n" in output
+    if tool_name == "run_tlapm":
+        assert "TLAPM-SUMMARY: unavailable" in output
+        assert "PASS scripted checker" not in output
+        log = Path(
+            next(
+                line.removeprefix("TLAPM-FULL-LOG: ")
+                for line in output.splitlines()
+                if line.startswith("TLAPM-FULL-LOG: ")
+            )
+        )
+        assert log.read_text() == "PASS scripted checker\n"
+    else:
+        assert "PASS scripted checker" in output
     assert not any(item["type"] == "command_execution" for item in completed)
     audit = next(event for event in events if event["type"] == "tlaps.codex_child_usage")
     assert audit["tool_calls"]["total"] == audit["tool_calls"]["tlaps"] == 1
