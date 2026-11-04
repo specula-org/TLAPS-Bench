@@ -9,6 +9,7 @@
 Formally Proving the Correctness of Complex Protocols and Systems <br>using TLA+ Proof System (TLAPS)
 </h2>
 
+[![arXiv](https://img.shields.io/badge/arXiv-2611.02849-b31b1b.svg)](https://arxiv.org/abs/2611.02849)
 [![CI](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml/badge.svg)](https://github.com/specula-org/tlaps-bench/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -16,7 +17,7 @@ Check out [TLAPS-Bench Leaderboard](https://specula-org.github.io/tlaps-bench-we
 
 **Our vision.** To prove the correctness of any given critical protocols and systems using [TLA+ Proof System (TLAPS)](https://proofs.tlapl.us/doc/web/content/Home.html)
 
-TLAPS-Bench evaluates whether AI agents can formally prove (or disprove) the correctness of complex protocols and systems using TLAPS. 
+TLAPS-Bench evaluates whether AI agents can formally prove (or disprove) the correctness of complex protocols and systems using TLAPS. For more details, see our [paper](https://arxiv.org/abs/2611.02849).
 
 Each problem in TLAPS-Bench is a TLA+ specification (including the formal model and the invariants that specify correctness properties). AI agents are asked to prove that the formal model satisfies the invariants. We consider each task in TLAPS-Bench to formally prove one invariant of a given specification.
 
@@ -124,6 +125,23 @@ uv run tlaps-bench run --jobs 4
 ```
 
 How to set up an agent (`--backend` and `--model`) and its credentials, the full CLI reference, and native (`--no-container`) setup are described in our [usage guide](https://github.com/specula-org/tlaps-bench/blob/main/docs/USAGE.md).
+
+## Citation
+
+```bibtex
+@misc{cheng2026tlapsbench,
+  title         = {{TLAPS-Bench}: Formally Proving Correctness of Real-World System Specifications with {TLA+} Proof System},
+  author        = {Cheng, Qian and Tang, Ruize and Pial, Saad Mohammad Rafid and Cai, Zhizhen Cathy and
+                   Su, Yiming and Clark, Jackson and Thahmid, Munim and Sukanya, Mahdiya Rahman and
+                   Newcombe, Chris and Konnov, Igor and Merz, Stephan and Sun, Xudong and
+                   Demirbas, Murat and Huang, Yu and Kuppe, Markus Alexander and Xu, Tianyin},
+  year          = {2026},
+  eprint        = {2611.02849},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.AI},
+  url           = {https://arxiv.org/abs/2611.02849}
+}
+```
 
 ## Acknowledgement
 
